@@ -14,6 +14,11 @@
 	.globl	asm_assert
 	.globl	do_panic
 	.globl	report_exception
+#if AARCH32_EXCEPTION_DEBUG
+	.globl	report_undef_inst
+	.globl	report_prefetch_abort
+	.globl	report_data_abort
+#endif
 
 /* Since the max decimal input number is 65536 */
 #define MAX_DEC_DIVISOR		10000
@@ -205,3 +210,38 @@ func report_exception
 	bl	plat_report_exception
 	no_ret	plat_panic_handler
 endfunc report_exception
+
+#if AARCH32_EXCEPTION_DEBUG
+	/***********************************************************
+	 * This function is called from the vector table for
+	 * undefined instruction. The lr_und is given as an
+	 * argument to platform handler.
+	 ***********************************************************/
+func report_undef_inst
+	mrs	r0, lr_und
+	bl	plat_report_undef_inst
+	no_ret	plat_panic_handler
+endfunc report_undef_inst
+
+	/***********************************************************
+	 * This function is called from the vector table for
+	 * unhandled exceptions. The lr_abt is given as an
+	 * argument to platform handler.
+	 ***********************************************************/
+func report_prefetch_abort
+	mrs	r0, lr_abt
+	bl	plat_report_prefetch_abort
+	no_ret	plat_panic_handler
+endfunc report_prefetch_abort
+
+	/***********************************************************
+	 * This function is called from the vector table for
+	 * unhandled exceptions. The lr_abt is given as an
+	 * argument to platform handler.
+	 ***********************************************************/
+func report_data_abort
+	mrs	r0, lr_abt
+	bl	plat_report_data_abort
+	no_ret	plat_panic_handler
+endfunc report_data_abort
+#endif
