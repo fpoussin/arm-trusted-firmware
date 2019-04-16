@@ -438,6 +438,32 @@ skip_console_init:
 }
 
 #if defined(AARCH32_SP_OPTEE)
+static void set_mem_params_info(entry_point_info_t *ep_info,
+				image_info_t *unpaged, image_info_t *paged)
+{
+	uintptr_t bl32_ep = 0;
+
+	/* Use the default dram setup if no valid ep found */
+	if (get_optee_header_ep(ep_info, &bl32_ep) &&
+	    (bl32_ep >= STM32MP_OPTEE_BASE) &&
+	    (bl32_ep < (STM32MP_OPTEE_BASE + STM32MP_OPTEE_SIZE))) {
+		assert((STM32MP_OPTEE_BASE >= BL2_LIMIT) ||
+		       ((STM32MP_OPTEE_BASE + STM32MP_OPTEE_SIZE) <= BL2_BASE));
+
+		unpaged->image_base = STM32MP_OPTEE_BASE;
+		unpaged->image_max_size = STM32MP_OPTEE_SIZE;
+	} else {
+		unpaged->image_base = STM32MP_DDR_BASE + dt_get_ddr_size() -
+				      STM32MP_DDR_S_SIZE -
+				      STM32MP_DDR_SHMEM_SIZE;
+		unpaged->image_max_size = STM32MP_DDR_S_SIZE;
+	}
+	paged->image_base = STM32MP_DDR_BASE + dt_get_ddr_size() -
+			    STM32MP_DDR_S_SIZE - STM32MP_DDR_SHMEM_SIZE;
+	paged->image_max_size = STM32MP_DDR_S_SIZE;
+}
+#endif
+
 /*******************************************************************************
  * This function can be used by the platforms to update/use image
  * information for given `image_id`.
@@ -446,29 +472,29 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 {
 	int err = 0;
 	bl_mem_params_node_t *bl_mem_params = get_bl_mem_params_node(image_id);
+#if defined(AARCH32_SP_OPTEE)
 	bl_mem_params_node_t *bl32_mem_params;
 	bl_mem_params_node_t *pager_mem_params;
 	bl_mem_params_node_t *paged_mem_params;
+#endif
 
 	assert(bl_mem_params != NULL);
 
 	switch (image_id) {
 	case BL32_IMAGE_ID:
+#if defined(AARCH32_SP_OPTEE)
 		bl_mem_params->ep_info.pc =
 					bl_mem_params->image_info.image_base;
 
 		pager_mem_params = get_bl_mem_params_node(BL32_EXTRA1_IMAGE_ID);
 		assert(pager_mem_params != NULL);
-		pager_mem_params->image_info.image_base = STM32MP_OPTEE_BASE;
-		pager_mem_params->image_info.image_max_size =
-			STM32MP_OPTEE_SIZE;
 
 		paged_mem_params = get_bl_mem_params_node(BL32_EXTRA2_IMAGE_ID);
 		assert(paged_mem_params != NULL);
-		paged_mem_params->image_info.image_base = STM32MP_DDR_BASE +
-			stm32mp_get_ddr_ns_size();
-		paged_mem_params->image_info.image_max_size =
-			STM32MP_DDR_S_SIZE;
+
+		set_mem_params_info(&bl_mem_params->ep_info,
+				    &pager_mem_params->image_info,
+				    &paged_mem_params->image_info);
 
 		err = parse_optee_header(&bl_mem_params->ep_info,
 					 &pager_mem_params->image_info,
@@ -485,12 +511,18 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 				paged_mem_params->image_info.image_base;
 		bl_mem_params->ep_info.args.arg1 = 0; /* Unused */
 		bl_mem_params->ep_info.args.arg2 = 0; /* No DT supported */
+#endif
 		break;
 
 	case BL33_IMAGE_ID:
+#ifdef AARCH32_SP_OPTEE
 		bl32_mem_params = get_bl_mem_params_node(BL32_IMAGE_ID);
 		assert(bl32_mem_params != NULL);
 		bl32_mem_params->ep_info.lr_svc = bl_mem_params->ep_info.pc;
+#endif
+
+		flush_dcache_range(bl_mem_params->image_info.image_base,
+				   bl_mem_params->image_info.image_max_size);
 		break;
 
 	default:
@@ -500,4 +532,3 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 	return err;
 }
-#endif
