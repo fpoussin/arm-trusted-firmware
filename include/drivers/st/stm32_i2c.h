@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016-2019, STMicroelectronics - All Rights Reserved
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
 
 #ifndef STM32_I2C_H
@@ -73,6 +73,21 @@
 #define I2C_TIMINGR_SDADEL		GENMASK(19, 16)
 #define I2C_TIMINGR_SCLDEL		GENMASK(23, 20)
 #define I2C_TIMINGR_PRESC		GENMASK(31, 28)
+#define I2C_TIMINGR_SCLL_MAX		(I2C_TIMINGR_SCLL + 1)
+#define I2C_TIMINGR_SCLH_MAX		((I2C_TIMINGR_SCLH >> 8) + 1)
+#define I2C_TIMINGR_SDADEL_MAX		((I2C_TIMINGR_SDADEL >> 16) + 1)
+#define I2C_TIMINGR_SCLDEL_MAX		((I2C_TIMINGR_SCLDEL >> 20) + 1)
+#define I2C_TIMINGR_PRESC_MAX		((I2C_TIMINGR_PRESC >> 28) + 1)
+#define I2C_SET_TIMINGR_SCLL(n)		((n) & \
+					 (I2C_TIMINGR_SCLL_MAX - 1))
+#define I2C_SET_TIMINGR_SCLH(n)		(((n) & \
+					  (I2C_TIMINGR_SCLH_MAX - 1)) << 8)
+#define I2C_SET_TIMINGR_SDADEL(n)	(((n) & \
+					  (I2C_TIMINGR_SDADEL_MAX - 1)) << 16)
+#define I2C_SET_TIMINGR_SCLDEL(n)	(((n) & \
+					  (I2C_TIMINGR_SCLDEL_MAX - 1)) << 20)
+#define I2C_SET_TIMINGR_PRESC(n)	(((n) & \
+					  (I2C_TIMINGR_PRESC_MAX - 1)) << 28)
 
 /* Bit definition for I2C_TIMEOUTR register */
 #define I2C_TIMEOUTR_TIMEOUTA		GENMASK(11, 0)
@@ -117,9 +132,9 @@ enum i2c_speed_e {
 	I2C_SPEED_FAST_PLUS,	/* 1 MHz   */
 };
 
-#define STANDARD_RATE				100000
-#define FAST_RATE				400000
-#define FAST_PLUS_RATE				1000000
+#define STANDARD_RATE			100000
+#define FAST_RATE			400000
+#define FAST_PLUS_RATE			1000000
 
 struct stm32_i2c_init_s {
 	uint32_t own_address1;		/*
