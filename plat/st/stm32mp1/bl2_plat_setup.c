@@ -177,6 +177,36 @@ void bl2_platform_setup(void)
 #endif
 }
 
+static void update_monotonic_counter(void)
+{
+	uint32_t version;
+
+	CASSERT(STM32_TF_VERSION <= MAX_MONOTONIC_VALUE,
+		assert_stm32mp1_monotonic_counter_reach_max);
+
+	/* Check if monotonic counter needs to be incremented. */
+	if (bsec_shadow_read_otp(&version, MONOTONIC_OTP) != BSEC_OK) {
+		ERROR("BSEC: MONOTONIC_OTP Error\n");
+		panic();
+	}
+
+	if ((version + 1U) < BIT(STM32_TF_VERSION)) {
+		uint32_t result;
+
+		/* Need to increment the monotonic counter. */
+		version = BIT(STM32_TF_VERSION) - 1U;
+
+		result = bsec_program_otp(version, MONOTONIC_OTP);
+		if (result != BSEC_OK) {
+			ERROR("BSEC: MONOTONIC_OTP program Error %i\n",
+			      result);
+			panic();
+		}
+		INFO("Monotonic counter has been incremented (value 0x%x)\n",
+		     version);
+	}
+}
+
 void bl2_el3_plat_arch_setup(void)
 {
 	int32_t result;
@@ -356,6 +386,8 @@ skip_console_init:
 	stm32mp1_arch_security_setup();
 
 	print_reset_reason();
+
+	update_monotonic_counter();
 
 	stm32mp_io_setup();
 }

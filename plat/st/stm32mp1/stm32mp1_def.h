@@ -394,6 +394,7 @@ enum ddr_type {
 /* OTP offsets */
 #define DATA0_OTP			U(0)
 #define PART_NUMBER_OTP			U(1)
+#define MONOTONIC_OTP			U(4)
 #define NAND_OTP			U(9)
 #define UID0_OTP			U(13)
 #define UID1_OTP			U(14)
@@ -420,6 +421,8 @@ enum ddr_type {
 
 /* HW2 OTP */
 #define HW2_OTP_PRODUCT_BELOW_2V5	BIT(13)
+
+#define MAX_MONOTONIC_VALUE		32
 
 /* NAND OTP */
 /* NAND parameter storage flag */
