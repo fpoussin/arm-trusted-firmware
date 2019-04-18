@@ -113,6 +113,40 @@ static int fdt_get_node_parent_address_cells(int node)
 #endif
 
 /*******************************************************************************
+ * This function return interrupts from node.
+ ******************************************************************************/
+int fdt_get_interrupt(int node, const fdt32_t **array, int *len, bool *extended)
+{
+	uint8_t status = fdt_get_status(node);
+
+	*extended = false;
+
+	switch (status) {
+	case DT_SECURE:
+		*array = fdt_getprop(fdt, node, "interrupts-extended", len);
+		if (*array == NULL) {
+			*array = fdt_getprop(fdt, node, "interrupts", len);
+		} else {
+			*extended = true;
+		}
+		break;
+
+	case DT_SHARED:
+		*array = fdt_getprop(fdt, node, "secure-interrupts", len);
+		break;
+
+	default:
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	if (*array == NULL) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	return 0;
+}
+
+/*******************************************************************************
  * This function gets the stdout pin configuration information from the DT.
  * And then calls the sub-function to treat it and set GPIO registers.
  * Returns 0 on success and a negative FDT error code on failure.

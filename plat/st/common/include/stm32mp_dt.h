@@ -10,6 +10,8 @@
 
 #include <stdbool.h>
 
+#include <libfdt.h>
+
 #define DT_DISABLED		U(0)
 #define DT_NON_SECURE		U(1)
 #define DT_SECURE		U(2)
@@ -29,6 +31,8 @@ int dt_open_and_check(void);
 int fdt_get_address(void **fdt_addr);
 bool fdt_check_node(int node);
 uint8_t fdt_get_status(int node);
+int fdt_get_interrupt(int node, const fdt32_t **array, int *len,
+		      bool *extended);
 int dt_set_stdout_pinctrl(void);
 void dt_fill_device_info(struct dt_node_info *info, int node);
 int dt_get_node(struct dt_node_info *info, int offset, const char *compat);

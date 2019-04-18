@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <assert.h>
+
 #include <libfdt.h>
 
 #include <platform_def.h>
@@ -40,6 +42,65 @@ static gicv2_driver_data_t platform_gic_data = {
 };
 
 static struct stm32_gic_instance stm32_gic;
+
+static uint32_t enable_gic_interrupt(const fdt32_t *array)
+{
+	unsigned int id, cfg;
+
+	switch (fdt32_to_cpu(*array)) {
+	case GIC_SPI:
+		id = MIN_SPI_ID;
+		break;
+
+	case GIC_PPI:
+		id = MIN_PPI_ID;
+		break;
+
+	default:
+		id = MIN_SGI_ID;
+		break;
+	}
+
+	id += fdt32_to_cpu(*(array + 1));
+	cfg = (fdt32_to_cpu(*(array + 2)) < IRQ_TYPE_LEVEL_HIGH) ?
+		GIC_INTR_CFG_EDGE : GIC_INTR_CFG_LEVEL;
+
+	if ((id >= MIN_SPI_ID) && (id <= MAX_SPI_ID)) {
+		VERBOSE("Enable IT %i\n", id);
+		gicv2_set_interrupt_type(id, GICV2_INTR_GROUP0);
+		gicv2_set_interrupt_priority(id, STM32MP1_IRQ_SEC_SPI_PRIO);
+		gicv2_set_spi_routing(id, STM32MP_PRIMARY_CPU);
+		gicv2_interrupt_set_cfg(id, cfg);
+		gicv2_enable_interrupt(id);
+	}
+
+	return id;
+}
+
+static void find_next_interrupt(const fdt32_t **array)
+{
+	int node;
+	const fdt32_t *cuint;
+	void *fdt;
+
+	assert(fdt32_to_cpu(**array) != stm32_gic.phandle_node);
+
+	if (fdt_get_address(&fdt) == 0) {
+		panic();
+	}
+
+	node = fdt_node_offset_by_phandle(fdt, fdt32_to_cpu(**array));
+	if (node < 0) {
+		panic();
+	}
+
+	cuint = fdt_getprop(fdt, node, "#interrupt-cells", NULL);
+	if (cuint == NULL) {
+		panic();
+	}
+
+	*array += fdt32_to_cpu(*cuint) + 1;
+}
 
 void stm32mp1_gic_init(void)
 {
@@ -89,4 +150,64 @@ void stm32mp1_gic_pcpu_init(void)
 	gicv2_pcpu_distif_init();
 	gicv2_set_pe_target_mask(plat_my_core_pos());
 	gicv2_cpuif_enable();
+}
+
+int stm32_gic_enable_spi(int node, const char *name)
+{
+	const fdt32_t *cuint;
+	void *fdt;
+	int res, len;
+	int index = -1;
+	int i = 0;
+	int id = -1;
+	bool extended;
+	const fdt32_t *t_array, *max;
+
+	if (fdt_get_address(&fdt) == 0) {
+		panic();
+	}
+
+	cuint = fdt_getprop(fdt, node, "interrupt-parent", NULL);
+	if (cuint != NULL) {
+		if (stm32_gic.phandle_node != fdt32_to_cpu(*cuint)) {
+			return -FDT_ERR_NOTFOUND;
+		}
+	}
+
+	if (name != NULL) {
+		index = fdt_stringlist_search(fdt, node, "interrupt-names",
+					      name);
+		if (index < 0) {
+			return index;
+		}
+	}
+
+	res = fdt_get_interrupt(node, &t_array, &len, &extended);
+	if (res < 0) {
+		return res;
+	}
+
+	max = t_array + (len / sizeof(uint32_t));
+
+	while ((t_array < max) && ((i <= index) || (index == -1))) {
+		if (!extended) {
+			if ((index == -1) || (i == index)) {
+				id = enable_gic_interrupt(t_array);
+			}
+			t_array += stm32_gic.cells;
+		} else {
+			if (fdt32_to_cpu(*t_array) == stm32_gic.phandle_node) {
+				t_array++;
+				if ((index == -1) || (i == index)) {
+					id = enable_gic_interrupt(t_array);
+				}
+				t_array += stm32_gic.cells;
+			} else {
+				find_next_interrupt(&t_array);
+			}
+		}
+		i++;
+	}
+
+	return id;
 }
