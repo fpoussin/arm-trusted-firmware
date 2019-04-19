@@ -154,6 +154,27 @@ bool plat_sdmmc2_use_dma(unsigned int instance, unsigned int memory)
 	return false;
 }
 
+static void dump_registers(void)
+{
+	uintptr_t base = sdmmc2_params.reg_base;
+
+	INFO("SDMMC_POWER    = 0x%x\n", mmio_read_32(base + SDMMC_POWER));
+	INFO("SDMMC_CLKCR    = 0x%x\n", mmio_read_32(base + SDMMC_CLKCR));
+	INFO("SDMMC_ARGR     = 0x%x\n", mmio_read_32(base + SDMMC_ARGR));
+	INFO("SDMMC_CMDR     = 0x%x\n", mmio_read_32(base + SDMMC_CMDR));
+	INFO("SDMMC_RESPCMDR = 0x%x\n", mmio_read_32(base + SDMMC_RESPCMDR));
+	INFO("SDMMC_RESP1R   = 0x%x\n", mmio_read_32(base + SDMMC_RESP1R));
+	INFO("SDMMC_RESP2R   = 0x%x\n", mmio_read_32(base + SDMMC_RESP2R));
+	INFO("SDMMC_RESP3R   = 0x%x\n", mmio_read_32(base + SDMMC_RESP3R));
+	INFO("SDMMC_RESP4R   = 0x%x\n", mmio_read_32(base + SDMMC_RESP4R));
+	INFO("SDMMC_DTIMER   = 0x%x\n", mmio_read_32(base + SDMMC_DTIMER));
+	INFO("SDMMC_DLENR    = 0x%x\n", mmio_read_32(base + SDMMC_DLENR));
+	INFO("SDMMC_DCTRLR   = 0x%x\n", mmio_read_32(base + SDMMC_DCTRLR));
+	INFO("SDMMC_DCNTR    = 0x%x\n", mmio_read_32(base + SDMMC_DCNTR));
+	INFO("SDMMC_MASKR    = 0x%x\n", mmio_read_32(base + SDMMC_MASKR));
+	INFO("SDMMC_ACKTIMER = 0x%x\n", mmio_read_32(base + SDMMC_ACKTIMER));
+}
+
 static void stm32_sdmmc2_init(void)
 {
 	uint32_t clock_div;
@@ -608,6 +629,7 @@ static int stm32_sdmmc2_read(int lba, uintptr_t buf, size_t size)
 		if ((status & error_flags) != 0U) {
 			ERROR("%s: Read error (status = %x)\n", __func__,
 			      status);
+			dump_registers();
 			mmio_write_32(base + SDMMC_DCTRLR,
 				      SDMMC_DCTRLR_FIFORST);
 
@@ -625,6 +647,7 @@ static int stm32_sdmmc2_read(int lba, uintptr_t buf, size_t size)
 		if (timeout_elapsed(timeout)) {
 			ERROR("%s: timeout 1s (status = %x)\n",
 			      __func__, status);
+			dump_registers();
 			mmio_write_32(base + SDMMC_ICR,
 				      SDMMC_STATIC_FLAGS);
 
