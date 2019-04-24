@@ -351,6 +351,14 @@ void bl2_el3_plat_arch_setup(void)
 		goto skip_console_init;
 	}
 
+	if (dt_uart_info.status == DT_DISABLED) {
+		panic();
+	} else if (dt_uart_info.status == DT_SECURE) {
+		stm32mp_register_secure_periph_iomem(dt_uart_info.base);
+	} else {
+		stm32mp_register_non_secure_periph_iomem(dt_uart_info.base);
+	}
+
 	stm32mp_clk_enable((unsigned long)dt_uart_info.clock);
 
 	if (stm32mp_reset_assert((uint32_t)dt_uart_info.reset,
