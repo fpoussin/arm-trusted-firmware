@@ -8,9 +8,6 @@
 #define STM32MP1_DDR_H
 
 #include <stdbool.h>
-#include <stdint.h>
-
-#define DT_DDR_COMPAT	"st,stm32mp1-ddr"
 
 struct stm32mp1_ddr_size {
 	uint64_t base;
@@ -166,9 +163,12 @@ struct stm32mp1_ddr_config {
 	struct stm32mp1_ddrphy_reg p_reg;
 	struct stm32mp1_ddrphy_timing p_timing;
 	struct stm32mp1_ddrphy_cal p_cal;
+	bool self_refresh;
+	uint32_t zdata;
 };
 
 int stm32mp1_ddr_clk_enable(struct ddr_info *priv, uint32_t mem_speed);
 void stm32mp1_ddr_init(struct ddr_info *priv,
 		       struct stm32mp1_ddr_config *config);
+
 #endif /* STM32MP1_DDR_H */

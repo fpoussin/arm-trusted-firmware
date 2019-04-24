@@ -14,8 +14,6 @@
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
 #include <drivers/st/stm32_gpio.h>
-#include <drivers/st/stm32mp1_ddr.h>
-#include <drivers/st/stm32mp1_ram.h>
 
 #include <stm32mp_dt.h>
 
