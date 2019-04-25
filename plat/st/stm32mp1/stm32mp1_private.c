@@ -100,10 +100,16 @@ static const mmap_region_t stm32mp1_mmap[] = {
 
 void configure_mmu(void)
 {
+#ifndef MMU_OFF
+	unsigned int flags = 0;
+
 	mmap_add(stm32mp1_mmap);
 	init_xlat_tables();
-
-	enable_mmu_svc_mon(0);
+#ifdef DCACHE_OFF
+	flags |= DISABLE_DCACHE;
+#endif
+	enable_mmu_svc_mon(flags);
+#endif
 }
 
 #define ARM_CNTXCTL_IMASK	BIT(1)
