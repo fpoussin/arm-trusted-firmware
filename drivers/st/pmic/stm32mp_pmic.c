@@ -245,6 +245,62 @@ static void register_pmic_shared_peripherals(void)
 	}
 }
 
+static int pmic_regulator_enable(struct stm32mp_regulator *regu)
+{
+	void *fdt;
+	const char *node_name;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	node_name = fdt_get_name(fdt, fdt_node_offset_by_phandle(fdt, regu->id),
+				 NULL);
+
+	return stpmic1_regulator_enable(node_name);
+}
+
+static int pmic_regulator_disable(struct stm32mp_regulator *regu)
+{
+	void *fdt;
+	const char *node_name;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	node_name = fdt_get_name(fdt, fdt_node_offset_by_phandle(fdt, regu->id),
+				 NULL);
+
+	return stpmic1_regulator_disable(node_name);
+}
+
+static const struct stm32mp_regulator_ops pmic_regu_ops = {
+	.enable = pmic_regulator_enable,
+	.disable = pmic_regulator_disable,
+};
+
+bool is_pmic_regulator(struct stm32mp_regulator *regu)
+{
+	void *fdt;
+	int parent_node;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return false;
+	}
+
+	parent_node = fdt_parent_offset(fdt,
+					fdt_node_offset_by_phandle(fdt,
+								   regu->id));
+	return (fdt_node_check_compatible(fdt, parent_node,
+					  "st,stpmic1-regulators") == 0);
+}
+
+void bind_pmic_regulator(struct stm32mp_regulator *regu)
+{
+	regu->ops = &pmic_regu_ops;
+}
+
 void initialize_pmic(void)
 {
 	unsigned long pmic_version;

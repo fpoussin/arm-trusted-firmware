@@ -11,6 +11,8 @@
 #include <platform_def.h>
 
 #include <drivers/st/stm32_iwdg.h>
+#include <drivers/st/stm32mp_pmic.h>
+#include <drivers/st/stm32mp_regulator.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 
 /* Internal layout of the 32bit OTP word board_id */
@@ -504,6 +506,15 @@ uint32_t stm32_iwdg_shadow_update(uint32_t iwdg_inst, uint32_t flags)
 	return BSEC_OK;
 }
 #endif
+
+int plat_bind_regulator(struct stm32mp_regulator *regu)
+{
+	if ((dt_pmic_status() > 0) && is_pmic_regulator(regu)) {
+		bind_pmic_regulator(regu);
+	}
+
+	return 0;
+}
 
 /* Get the non-secure DDR size */
 uint32_t stm32mp_get_ddr_ns_size(void)

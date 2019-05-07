@@ -11,6 +11,8 @@
 
 #include <platform_def.h>
 
+#include <drivers/st/stm32mp_regulator.h>
+
 /*
  * dt_pmic_status - Check PMIC status from device tree
  *
@@ -40,6 +42,9 @@ bool initialize_pmic_i2c(void);
  * Panics on errors
  */
 void initialize_pmic(void);
+
+bool is_pmic_regulator(struct stm32mp_regulator *regu);
+void bind_pmic_regulator(struct stm32mp_regulator *regu);
 
 /*
  * pmic_ddr_power_init - Initialize regulators required for DDR
