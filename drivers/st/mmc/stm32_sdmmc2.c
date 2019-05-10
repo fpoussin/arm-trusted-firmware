@@ -50,6 +50,7 @@
 
 /* SDMMC power control register */
 #define SDMMC_POWER_PWRCTRL		GENMASK(1, 0)
+#define SDMMC_POWER_PWRCTRL_PWR_CYCLE	BIT(1)
 #define SDMMC_POWER_DIRPOL		BIT(4)
 
 /* SDMMC clock control register */
@@ -117,6 +118,13 @@
 #define TIMEOUT_US_10_MS		10000U
 #define TIMEOUT_US_1_S			1000000U
 
+/* Power cycle delays in ms */
+#define VCC_POWER_OFF_DELAY		2
+#define VCC_POWER_ON_DELAY		2
+#define POWER_CYCLE_DELAY		2
+#define POWER_OFF_DELAY			2
+#define POWER_ON_DELAY			1
+
 #define DT_SDMMC2_COMPAT		"st,stm32-sdmmc2"
 
 static void stm32_sdmmc2_init(void);
@@ -156,6 +164,26 @@ static void stm32_sdmmc2_init(void)
 		freq = MIN(sdmmc2_params.max_freq, freq);
 	}
 
+	if (sdmmc2_params.vmmc_regu.id != -1) {
+		stm32mp_regulator_register(&sdmmc2_params.vmmc_regu);
+		stm32mp_regulator_disable(&sdmmc2_params.vmmc_regu);
+	}
+
+	mdelay(VCC_POWER_OFF_DELAY);
+
+	mmio_write_32(base + SDMMC_POWER,
+		      SDMMC_POWER_PWRCTRL_PWR_CYCLE | sdmmc2_params.dirpol);
+	mdelay(POWER_CYCLE_DELAY);
+
+	if (sdmmc2_params.vmmc_regu.id != -1) {
+		stm32mp_regulator_enable(&sdmmc2_params.vmmc_regu);
+	}
+
+	mdelay(VCC_POWER_ON_DELAY);
+
+	mmio_write_32(base + SDMMC_POWER, sdmmc2_params.dirpol);
+	mdelay(POWER_OFF_DELAY);
+
 	clock_div = div_round_up(sdmmc2_params.clk_rate, freq * 2U);
 
 	mmio_write_32(base + SDMMC_CLKCR, SDMMC_CLKCR_HWFC_EN | clock_div |
@@ -165,7 +193,7 @@ static void stm32_sdmmc2_init(void)
 	mmio_write_32(base + SDMMC_POWER,
 		      SDMMC_POWER_PWRCTRL | sdmmc2_params.dirpol);
 
-	mdelay(1);
+	mdelay(POWER_ON_DELAY);
 }
 
 static int stm32_sdmmc2_stop_transfer(void)
@@ -731,6 +759,11 @@ static int stm32_sdmmc2_dt_get_config(void)
 		sdmmc2_params.max_freq = fdt32_to_cpu(*cuint);
 	}
 
+	cuint = fdt_getprop(fdt, sdmmc_node, "vmmc-supply", NULL);
+	if (cuint != NULL) {
+		sdmmc2_params.vmmc_regu.id = fdt32_to_cpu(*cuint);
+	}
+
 	return 0;
 }
 
@@ -750,6 +783,8 @@ int stm32_sdmmc2_mmc_init(struct stm32_sdmmc2_params *params)
 		(params->bus_width == MMC_BUS_WIDTH_8)));
 
 	memcpy(&sdmmc2_params, params, sizeof(struct stm32_sdmmc2_params));
+
+	sdmmc2_params.vmmc_regu.id = -1;
 
 	if (stm32_sdmmc2_dt_get_config() != 0) {
 		ERROR("%s: DT error\n", __func__);
