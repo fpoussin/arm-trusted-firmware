@@ -1706,6 +1706,43 @@ void stm32mp1_stgen_increment(unsigned long long offset_in_ms)
 	mmio_setbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
 }
 
+/*******************************************************************************
+ * This function determines the number of needed RTC calendar read operations
+ * to get consistent values (1 or 2 depending on clock frequencies).
+ * If APB1 frequency is lower than 7 times the RTC one, the software has to
+ * read the calendar time and date registers twice.
+ * Returns true if read twice is needed, false else.
+ ******************************************************************************/
+bool stm32mp1_rtc_get_read_twice(void)
+{
+	unsigned long apb1_freq;
+	uint32_t rtc_freq;
+	uint32_t apb1_div;
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	switch ((mmio_read_32(rcc_base + RCC_BDCR) &
+		 RCC_BDCR_RTCSRC_MASK) >> RCC_BDCR_RTCSRC_SHIFT) {
+	case 1:
+		rtc_freq = stm32mp_clk_get_rate(CK_LSE);
+		break;
+	case 2:
+		rtc_freq = stm32mp_clk_get_rate(CK_LSI);
+		break;
+	case 3:
+		rtc_freq = stm32mp_clk_get_rate(CK_HSE);
+		rtc_freq /= (mmio_read_32(rcc_base + RCC_RTCDIVR) &
+			     RCC_DIVR_DIV_MASK) + 1U;
+		break;
+	default:
+		panic();
+	}
+
+	apb1_div = mmio_read_32(rcc_base + RCC_APB1DIVR) & RCC_APBXDIV_MASK;
+	apb1_freq = stm32mp_clk_get_rate(CK_MCU) >> apb1_div;
+
+	return apb1_freq < (rtc_freq * 7U);
+}
+
 static void stm32mp1_pkcs_config(uint32_t pkcs)
 {
 	uintptr_t address = stm32mp_rcc_base() + ((pkcs >> 4) & 0xFFFU);

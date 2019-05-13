@@ -21,6 +21,7 @@
 #include <drivers/st/stm32_console.h>
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32_iwdg.h>
+#include <drivers/st/stm32_rtc.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/el3_runtime/context_mgmt.h>
@@ -202,6 +203,17 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	stm32mp1_etzpc_early_setup();
 }
 
+static void init_sec_peripherals(void)
+{
+	int ret;
+
+	/* Init rtc driver */
+	ret = stm32_rtc_init();
+	if (ret < 0) {
+		WARN("RTC driver init error %i\n", ret);
+	}
+}
+
 /*******************************************************************************
  * Initialize the MMU, security and the GIC.
  ******************************************************************************/
@@ -213,6 +225,8 @@ void sp_min_platform_setup(void)
 	generic_delay_timer_init();
 
 	stm32mp1_gic_init();
+
+	init_sec_peripherals();
 
 	if (stm32_iwdg_init() < 0) {
 		panic();
