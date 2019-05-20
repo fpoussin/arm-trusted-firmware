@@ -11,6 +11,7 @@
 
 #include <common/debug.h>
 #include <drivers/st/bsec.h>
+#include <drivers/st/bsec2_reg.h>
 #include <drivers/st/stm32mp1_rcc.h>
 #include <lib/mmio.h>
 #include <lib/utils_def.h>
