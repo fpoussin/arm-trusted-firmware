@@ -412,7 +412,12 @@ enum ddr_type {
 #define PLAT_MAX_TAMP_INT		U(5)
 #define PLAT_MAX_TAMP_EXT		U(3)
 #define TAMP_BASE			U(0x5C00A000)
+#define TAMP_SMCR			(TAMP_BASE + U(0x20))
 #define TAMP_BKP_REGISTER_BASE		(TAMP_BASE + U(0x100))
+#define TAMP_BKP_SEC_NUMBER		U(10)
+#define TAMP_BKP_SEC_WDPROT_SHIFT	U(16)
+#define TAMP_BKP_SEC_RWDPROT_SHIFT	U(0)
+
 
 #if !(defined(__LINKER__) || defined(__ASSEMBLER__))
 static inline uint32_t tamp_bkpr(uint32_t idx)
