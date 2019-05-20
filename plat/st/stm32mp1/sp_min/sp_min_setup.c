@@ -22,6 +22,7 @@
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32_rtc.h>
+#include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/el3_runtime/context_mgmt.h>
@@ -31,6 +32,7 @@
 
 #include <platform_sp_min.h>
 #include <stm32mp1_context.h>
+#include <stm32mp1_power_config.h>
 
 /******************************************************************************
  * Placeholder variables for copying the arguments that have been passed to
@@ -39,6 +41,27 @@
 static entry_point_info_t bl33_image_ep_info;
 
 static console_t console;
+
+static void stm32_sgi1_it_handler(void)
+{
+	uint32_t id;
+
+	stm32mp_mask_timer();
+
+	gicv2_end_of_interrupt(ARM_IRQ_SEC_SGI_1);
+
+	do {
+		id = plat_ic_get_pending_interrupt_id();
+
+		if (id <= MAX_SPI_ID) {
+			gicv2_end_of_interrupt(id);
+
+			plat_ic_disable_interrupt(id);
+		}
+	} while (id <= MAX_SPI_ID);
+
+	stm32mp_wait_cpu_reset();
+}
 
 /*******************************************************************************
  * Interrupt handler for FIQ (secure IRQ)
@@ -50,12 +73,15 @@ void sp_min_plat_fiq_handler(uint32_t id)
 		(void)tzc400_it_handler();
 		panic();
 		break;
+	case ARM_IRQ_SEC_SGI_1:
+		stm32_sgi1_it_handler();
+		break;
 	case STM32MP1_IRQ_AXIERRIRQ:
 		ERROR("STM32MP1_IRQ_AXIERRIRQ generated\n");
 		panic();
 		break;
 	default:
-		ERROR("SECURE IT handler not define for it : %u", id);
+		ERROR("SECURE IT handler not define for it : %u\n", id);
 		break;
 	}
 }
@@ -69,11 +95,54 @@ void sp_min_plat_fiq_handler(uint32_t id)
 entry_point_info_t *sp_min_plat_get_bl33_ep_info(void)
 {
 	entry_point_info_t *next_image_info;
+	uint32_t bkpr_core1_addr =
+		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+	uint32_t bkpr_core1_magic =
+		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
 
 	next_image_info = &bl33_image_ep_info;
 
+	/*
+	 * PC is set to 0 when resetting after STANDBY
+	 * The context should be restored, and the image information
+	 * should be filled with what was saved
+	 */
 	if (next_image_info->pc == 0U) {
-		return NULL;
+		void *cpu_context;
+		uint32_t magic_nb, saved_pc;
+
+		stm32mp_clk_enable(RTCAPB);
+
+		magic_nb = mmio_read_32(bkpr_core1_magic);
+		saved_pc = mmio_read_32(bkpr_core1_addr);
+
+		stm32mp_clk_disable(RTCAPB);
+
+		if (stm32_restore_context() != 0) {
+			panic();
+		}
+
+		cpu_context = cm_get_context(NON_SECURE);
+
+		next_image_info->spsr = read_ctx_reg(get_regs_ctx(cpu_context),
+						     CTX_SPSR);
+
+		/* PC should be retrieved in backup register if OK, else it can
+		 * be retrieved from non-secure context
+		 */
+		if (magic_nb == BOOT_API_A7_CORE0_MAGIC_NUMBER) {
+			/* BL33 return address should be in DDR */
+			if ((saved_pc < STM32MP_DDR_BASE) ||
+			    (saved_pc > (STM32MP_DDR_BASE +
+					 (dt_get_ddr_size() - 1U)))) {
+				panic();
+			}
+
+			next_image_info->pc = saved_pc;
+		} else {
+			next_image_info->pc =
+				read_ctx_reg(get_regs_ctx(cpu_context), CTX_LR);
+		}
 	}
 
 	return next_image_info;
@@ -201,6 +270,12 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	setup_uart_console();
 
 	stm32mp1_etzpc_early_setup();
+
+	if (dt_pmic_status() > 0) {
+		initialize_pmic();
+	}
+
+	stm32mp1_init_lp_states();
 }
 
 static void init_sec_peripherals(void)

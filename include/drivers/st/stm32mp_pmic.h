@@ -29,6 +29,8 @@ int dt_pmic_status(void);
  */
 int dt_pmic_configure_boot_on_regulators(void);
 
+int dt_pmic_set_lp_config(const char *node_name);
+
 /*
  * initialize_pmic_i2c - Initialize I2C for the PMIC control
  *

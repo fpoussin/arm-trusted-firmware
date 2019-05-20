@@ -27,6 +27,8 @@
 #define STPMIC1_BUCK_OUTPUT_SHIFT	2
 #define STPMIC1_BUCK3_1V8		(39U << STPMIC1_BUCK_OUTPUT_SHIFT)
 
+#define REGULATOR_MODE_STANDBY		8U
+
 #define STPMIC1_DEFAULT_START_UP_DELAY_MS	1
 
 static struct i2c_handle_s i2c_handle;
@@ -176,6 +178,99 @@ int dt_pmic_configure_boot_on_regulators(void)
 			status = stpmic1_regulator_enable(node_name);
 			if (status != 0) {
 				return status;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int dt_pmic_set_lp_config(const char *node_name)
+{
+	int pmic_node, regulators_node, regulator_node;
+	int status;
+	void *fdt;
+
+	if (node_name == NULL) {
+		return 0;
+	}
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	pmic_node = dt_get_pmic_node(fdt);
+	if (pmic_node < 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	status = stpmic1_powerctrl_on();
+	if (status != 0) {
+		return status;
+	};
+
+	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
+
+	fdt_for_each_subnode(regulator_node, fdt, regulators_node) {
+		const fdt32_t *cuint;
+		const char *reg_name;
+		int regulator_state_node;
+
+		/*
+		 * First, copy active configuration (Control register) to
+		 * PWRCTRL Control register, even if regulator_state_node
+		 * does not exist.
+		 */
+		reg_name = fdt_get_name(fdt, regulator_node, NULL);
+		status = stpmic1_lp_copy_reg(reg_name);
+		if (status != 0) {
+			return status;
+		}
+
+		/* Then apply configs from regulator_state_node */
+		regulator_state_node = fdt_subnode_offset(fdt,
+							  regulator_node,
+							  node_name);
+		if (regulator_state_node <= 0) {
+			continue;
+		}
+
+		if (fdt_getprop(fdt, regulator_state_node,
+				"regulator-on-in-suspend", NULL) != NULL) {
+			status = stpmic1_lp_reg_on_off(reg_name, 1);
+			if (status != 0) {
+				return status;
+			}
+		}
+
+		if (fdt_getprop(fdt, regulator_state_node,
+				"regulator-off-in-suspend", NULL) != NULL) {
+			status = stpmic1_lp_reg_on_off(reg_name, 0);
+			if (status != 0) {
+				return status;
+			}
+		}
+
+		cuint = fdt_getprop(fdt, regulator_state_node,
+				    "regulator-suspend-microvolt", NULL);
+		if (cuint != NULL) {
+			uint16_t voltage = (uint16_t)(fdt32_to_cpu(*cuint) /
+						      1000U);
+
+			status = stpmic1_lp_set_voltage(reg_name, voltage);
+			if (status != 0) {
+				return status;
+			}
+		}
+
+		cuint = fdt_getprop(fdt, regulator_state_node,
+				    "regulator-mode", NULL);
+		if (cuint != NULL) {
+			if (fdt32_to_cpu(*cuint) == REGULATOR_MODE_STANDBY) {
+				status = stpmic1_lp_set_mode(reg_name, 1);
+				if (status != 0) {
+					return status;
+				}
 			}
 		}
 	}

@@ -26,6 +26,7 @@
 #include <stm32mp_common.h>
 #include <stm32mp_dt.h>
 #include <stm32mp_shres_helpers.h>
+#include <stm32mp1_context.h>
 #include <stm32mp1_dbgmcu.h>
 #include <stm32mp1_private.h>
 #include <stm32mp1_shared_resources.h>
@@ -68,6 +69,9 @@
 
 #define STM32MP_SYSRAM_BASE		U(0x2FFC0000)
 #define STM32MP_SYSRAM_SIZE		U(0x00040000)
+
+#define STM32MP_BACKUP_RAM_BASE		U(0x54000000)
+#define STM32MP_BACKUP_RAM_SIZE		U(0x00001000)
 
 #define STM32MP_NS_SYSRAM_SIZE		PAGE_SIZE
 #define STM32MP_NS_SYSRAM_BASE		(STM32MP_SYSRAM_BASE + \

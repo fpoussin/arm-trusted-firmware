@@ -648,6 +648,58 @@ int stpmic1_regulator_mask_reset_set(const char *name)
 				       regul->mask_reset);
 }
 
+/* Low-power functions */
+int stpmic1_lp_copy_reg(const char *name)
+{
+	uint8_t val;
+	int status;
+	const struct regul_struct *regul = get_regulator_data(name);
+
+	status = stpmic1_register_read(regul->control_reg, &val);
+	if (status != 0) {
+		return status;
+	}
+
+	return stpmic1_register_write(regul->low_power_reg, val);
+}
+
+int stpmic1_lp_reg_on_off(const char *name, uint8_t enable)
+{
+	const struct regul_struct *regul = get_regulator_data(name);
+
+	return stpmic1_register_update(regul->low_power_reg, enable,
+				       LDO_BUCK_ENABLE_MASK);
+}
+
+int stpmic1_lp_set_mode(const char *name, uint8_t hplp)
+{
+	const struct regul_struct *regul = get_regulator_data(name);
+
+	return stpmic1_register_update(regul->low_power_reg,
+				       hplp << LDO_BUCK_HPLP_SHIFT,
+				       LDO_BUCK_HPLP_ENABLE_MASK);
+}
+
+int stpmic1_lp_set_voltage(const char *name, uint16_t millivolts)
+{
+	uint8_t voltage_index = voltage_to_index(name, millivolts);
+	const struct regul_struct *regul = get_regulator_data(name);
+	uint8_t mask;
+
+	/* Voltage can be set for buck<N> or ldo<N> (except ldo4) regulators */
+	if (strncmp(name, "buck", 4) == 0) {
+		mask = BUCK_VOLTAGE_MASK;
+	} else if ((strncmp(name, "ldo", 3) == 0) &&
+		   (strncmp(name, "ldo4", 4) != 0)) {
+		mask = LDO_VOLTAGE_MASK;
+	} else {
+		return 0;
+	}
+
+	return stpmic1_register_update(regul->low_power_reg, voltage_index << 2,
+				       mask);
+}
+
 int stpmic1_regulator_voltage_get(const char *name)
 {
 	const struct regul_struct *regul = get_regulator_data(name);

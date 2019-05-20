@@ -33,6 +33,8 @@
 #include <stm32mp1_context.h>
 #include <stm32mp1_dbgmcu.h>
 
+#define PWRLP_TEMPO_5_HSI	5
+
 #define RESET_TIMEOUT_US_1MS		1000U
 
 static console_t console;
@@ -221,6 +223,10 @@ void bl2_el3_plat_arch_setup(void)
 				(boot_context->boot_interface_selected ==
 				 BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART);
 	uintptr_t uart_prog_addr __unused;
+	uint32_t bkpr_core1_magic =
+		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
+	uint32_t bkpr_core1_addr =
+		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
 
 	mmap_add_region(BL_CODE_BASE, BL_CODE_BASE,
 			BL_CODE_END - BL_CODE_BASE,
@@ -245,6 +251,11 @@ void bl2_el3_plat_arch_setup(void)
 	pwr_base = stm32mp_pwr_base();
 	rcc_base = stm32mp_rcc_base();
 
+	/* Clear Stop Request bits to correctly manage low-power exit */
+	mmio_write_32(rcc_base + RCC_MP_SREQCLRR,
+		      (uint32_t)(RCC_MP_SREQCLRR_STPREQ_P0 |
+				 RCC_MP_SREQCLRR_STPREQ_P1));
+
 	/*
 	 * Disable the backup domain write protection.
 	 * The protection is enable at each reset by hardware
@@ -255,6 +266,12 @@ void bl2_el3_plat_arch_setup(void)
 	while ((mmio_read_32(pwr_base + PWR_CR1) & PWR_CR1_DBP) == 0U) {
 		;
 	}
+
+	/*
+	 * Configure Standby mode available for MCU by default
+	 * and allow to switch in standby SoC in all case
+	 */
+	mmio_setbits_32(pwr_base + PWR_MCUCR, PWR_MCUCR_PDDS);
 
 	if (bsec_probe() != 0) {
 		panic();
@@ -272,8 +289,24 @@ void bl2_el3_plat_arch_setup(void)
 		mmio_clrbits_32(rcc_base + RCC_BDCR, RCC_BDCR_VSWRST);
 	}
 
+	/* Wait 5 HSI periods before re-enabling PLLs after STOP modes */
+	mmio_clrsetbits_32(rcc_base + RCC_PWRLPDLYCR,
+			   RCC_PWRLPDLYCR_PWRLP_DLY_MASK,
+			   PWRLP_TEMPO_5_HSI);
+
+	/* Disable retention and backup RAM content after standby */
+	mmio_clrbits_32(pwr_base + PWR_CR2, PWR_CR2_BREN | PWR_CR2_RREN);
+
 	/* Disable MCKPROT */
 	mmio_clrbits_32(rcc_base + RCC_TZCR, RCC_TZCR_MCKPROT);
+
+	if ((boot_context->boot_action !=
+	     BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY) &&
+	    (boot_context->boot_action !=
+	     BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY)) {
+		mmio_write_32(bkpr_core1_addr, 0);
+		mmio_write_32(bkpr_core1_magic, 0);
+	}
 
 	generic_delay_timer_init();
 

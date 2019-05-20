@@ -10,11 +10,14 @@
 
 #include <platform_def.h>
 
+#include <arch_helpers.h>
+#include <drivers/arm/gicv2.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32mp_dummy_regulator.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp_regulator.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
+#include <plat/common/platform.h>
 
 /* Internal layout of the 32bit OTP word board_id */
 #define BOARD_ID_BOARD_NB_MASK		GENMASK(31, 16)
@@ -99,6 +102,42 @@ void configure_mmu(void)
 	init_xlat_tables();
 
 	enable_mmu_svc_mon(0);
+}
+
+#define ARM_CNTXCTL_IMASK	BIT(1)
+
+void stm32mp_mask_timer(void)
+{
+	/* Mask timer interrupts */
+	write_cntp_ctl(read_cntp_ctl() | ARM_CNTXCTL_IMASK);
+	write_cntv_ctl(read_cntv_ctl() | ARM_CNTXCTL_IMASK);
+}
+
+void __dead2 stm32mp_wait_cpu_reset(void)
+{
+	uint32_t id;
+
+	dcsw_op_all(DC_OP_CISW);
+	write_sctlr(read_sctlr() & ~SCTLR_C_BIT);
+	dcsw_op_all(DC_OP_CISW);
+	__asm__("clrex");
+
+	dsb();
+	isb();
+
+	for ( ; ; ) {
+		do {
+			id = plat_ic_get_pending_interrupt_id();
+
+			if (id <= MAX_SPI_ID) {
+				gicv2_end_of_interrupt(id);
+
+				plat_ic_disable_interrupt(id);
+			}
+		} while (id <= MAX_SPI_ID);
+
+		wfi();
+	}
 }
 
 uintptr_t stm32_get_gpio_bank_base(unsigned int bank)

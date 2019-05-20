@@ -12,7 +12,9 @@ BL32_SOURCES		+=	drivers/st/etzpc/etzpc.c			\
 				drivers/st/rtc/stm32_rtc.c			\
 				plat/common/aarch32/platform_mp_stack.S		\
 				plat/st/stm32mp1/sp_min/sp_min_setup.c		\
+				plat/st/stm32mp1/stm32mp1_low_power.c		\
 				plat/st/stm32mp1/stm32mp1_pm.c			\
+				plat/st/stm32mp1/stm32mp1_power_config.c	\
 				plat/st/stm32mp1/stm32mp1_shared_resources.c	\
 				plat/st/stm32mp1/stm32mp1_topology.c
 

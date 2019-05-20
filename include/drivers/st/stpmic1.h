@@ -161,6 +161,10 @@ int stpmic1_regulator_voltage_set(const char *name, uint16_t millivolts);
 int stpmic1_regulator_voltage_get(const char *name);
 int stpmic1_regulator_pull_down_set(const char *name);
 int stpmic1_regulator_mask_reset_set(const char *name);
+int stpmic1_lp_copy_reg(const char *name);
+int stpmic1_lp_reg_on_off(const char *name, uint8_t enable);
+int stpmic1_lp_set_mode(const char *name, uint8_t hplp);
+int stpmic1_lp_set_voltage(const char *name, uint16_t millivolts);
 void stpmic1_bind_i2c(struct i2c_handle_s *i2c_handle, uint16_t i2c_addr);
 
 int stpmic1_get_version(unsigned long *version);

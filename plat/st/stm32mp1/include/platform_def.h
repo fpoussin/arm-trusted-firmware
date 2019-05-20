@@ -124,6 +124,8 @@
  */
 #define ARM_IRQ_SEC_PHY_TIMER		U(29)
 
+#define ARM_IRQ_NON_SEC_SGI_0		U(0)
+
 #define ARM_IRQ_SEC_SGI_0		U(8)
 #define ARM_IRQ_SEC_SGI_1		U(9)
 #define ARM_IRQ_SEC_SGI_2		U(10)

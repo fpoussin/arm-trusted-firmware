@@ -5,6 +5,7 @@
  */
 
 #include <dt-bindings/clock/stm32mp1-clksrc.h>
+#include <dt-bindings/power/stm32mp1-power.h>
 #include "stm32mp15-ddr3-1x4Gb-1066-binG.dtsi"
 
 / {
@@ -206,6 +207,16 @@
 			   "board_id";
 };
 
+&pwr {
+	system_suspend_supported_soc_modes = <
+		STM32_PM_CSLEEP_RUN
+		STM32_PM_CSTOP_ALLOW_LP_STOP
+		STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
+	>;
+
+	system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
+};
+
 &pwr_regulators {
 	vdd-supply = <&vdd>;
 	vdd_3v3_usbfs-supply = <&vdd_usb>;
@@ -367,4 +378,129 @@
 
 &usbphyc_port1 {
 	phy-supply = <&vdd_usb>;
+};
+
+/* Low-power states of regulators */
+&vddcore {
+	lp-stop {
+		regulator-on-in-suspend;
+		regulator-suspend-microvolt = <1200000>;
+	};
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&vdd_ddr {
+	lp-stop {
+		regulator-suspend-microvolt = <1350000>;
+		regulator-on-in-suspend;
+	};
+	standby-ddr-sr {
+		regulator-suspend-microvolt = <1350000>;
+		regulator-on-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&vdd {
+	lp-stop {
+		regulator-suspend-microvolt = <3300000>;
+		regulator-on-in-suspend;
+	};
+	standby-ddr-sr {
+		regulator-suspend-microvolt = <3300000>;
+		regulator-on-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-suspend-microvolt = <3300000>;
+		regulator-on-in-suspend;
+	};
+};
+
+&v3v3 {
+	lp-stop {
+		regulator-suspend-microvolt = <3300000>;
+		regulator-on-in-suspend;
+	};
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&v1v8_audio {
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&v3v3_hdmi {
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&vtt_ddr {
+	lp-stop {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&vdd_usb {
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&vdda {
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&v1v2_hdmi {
+	standby-ddr-sr {
+		regulator-off-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
+};
+
+&vref_ddr {
+	lp-stop {
+		regulator-on-in-suspend;
+	};
+	standby-ddr-sr {
+		regulator-on-in-suspend;
+	};
+	standby-ddr-off {
+		regulator-off-in-suspend;
+	};
 };

@@ -51,6 +51,26 @@ int stm32mp1_ddr_clk_enable(struct ddr_info *priv, uint32_t mem_speed)
 }
 
 /*******************************************************************************
+ * This function tests a simple read/write access to the DDR.
+ * Note that the previous content is restored after test.
+ * Returns 0 if success, and address value else.
+ ******************************************************************************/
+static uint32_t ddr_test_rw_access(void)
+{
+	uint32_t saved_value = mmio_read_32(STM32MP_DDR_BASE);
+
+	mmio_write_32(STM32MP_DDR_BASE, DDR_PATTERN);
+
+	if (mmio_read_32(STM32MP_DDR_BASE) != DDR_PATTERN) {
+		return (uint32_t)STM32MP_DDR_BASE;
+	}
+
+	mmio_write_32(STM32MP_DDR_BASE, saved_value);
+
+	return 0;
+}
+
+/*******************************************************************************
  * This function tests the DDR data bus wiring.
  * This is inspired from the Data Bus Test algorithm written by Michael Barr
  * in "Programming Embedded Systems in C and C++" book.
@@ -169,8 +189,12 @@ static int stm32mp1_ddr_setup(void)
 	int ret;
 	struct stm32mp1_ddr_config config;
 	int node, len;
-	uint32_t uret, idx;
+	uint32_t magic, uret, idx;
 	void *fdt;
+	uint32_t bkpr_core1_addr =
+		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+	uint32_t bkpr_core1_magic =
+		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
 
 #define PARAM(x, y)							\
 	{								\
@@ -238,6 +262,18 @@ static int stm32mp1_ddr_setup(void)
 		}
 	}
 
+	config.self_refresh = false;
+
+	stm32mp_clk_enable(RTCAPB);
+
+	magic =	mmio_read_32(bkpr_core1_magic);
+	if (magic == BOOT_API_A7_CORE0_MAGIC_NUMBER) {
+		config.self_refresh = true;
+		config.zdata = stm32_get_zdata_from_context();
+	}
+
+	stm32mp_clk_disable(RTCAPB);
+
 	/* Disable axidcg clock gating during init */
 	mmio_clrbits_32(priv->rcc + RCC_DDRITFCR, RCC_DDRITFCR_AXIDCGEN);
 
@@ -245,6 +281,14 @@ static int stm32mp1_ddr_setup(void)
 
 	/* Enable axidcg clock gating */
 	mmio_setbits_32(priv->rcc + RCC_DDRITFCR, RCC_DDRITFCR_AXIDCGEN);
+
+	/* check if DDR content is lost (self-refresh aborted) */
+	if ((magic == BOOT_API_A7_CORE0_MAGIC_NUMBER) && !config.self_refresh) {
+		/* clear Backup register */
+		mmio_write_32(bkpr_core1_addr, 0);
+		/* clear magic number */
+		mmio_write_32(bkpr_core1_magic, 0);
+	}
 
 	priv->info.size = config.info.size;
 
@@ -255,25 +299,37 @@ static int stm32mp1_ddr_setup(void)
 		panic();
 	}
 
-	uret = ddr_test_data_bus();
-	if (uret != 0U) {
-		ERROR("DDR data bus test: can't access memory @ 0x%x\n",
-		      uret);
-		panic();
-	}
+	if (config.self_refresh) {
+		uret = ddr_test_rw_access();
+		if (uret != 0U) {
+			ERROR("DDR rw test: Can't access memory @ 0x%x\n",
+			      uret);
+			panic();
+		}
 
-	uret = ddr_test_addr_bus();
-	if (uret != 0U) {
-		ERROR("DDR addr bus test: can't access memory @ 0x%x\n",
-		      uret);
-		panic();
-	}
+		/* Restore area overwritten by training */
+		stm32_restore_ddr_training_area();
+	} else {
+		uret = ddr_test_data_bus();
+		if (uret != 0U) {
+			ERROR("DDR data bus test: can't access memory @ 0x%x\n",
+			      uret);
+			panic();
+		}
 
-	uret = ddr_check_size();
-	if (uret < config.info.size) {
-		ERROR("DDR size: 0x%x does not match DT config: 0x%x\n",
-		      uret, config.info.size);
-		panic();
+		uret = ddr_test_addr_bus();
+		if (uret != 0U) {
+			ERROR("DDR addr bus test: can't access memory @ 0x%x\n",
+			      uret);
+			panic();
+		}
+
+		uret = ddr_check_size();
+		if (uret < config.info.size) {
+			ERROR("DDR size: 0x%x does not match DT config: 0x%x\n",
+			      uret, config.info.size);
+			panic();
+		}
 	}
 
 	if (stm32mp_unmap_ddr() != 0) {
