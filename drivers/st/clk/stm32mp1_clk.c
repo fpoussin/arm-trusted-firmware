@@ -19,9 +19,7 @@
 #include <common/fdt_wrappers.h>
 #include <drivers/delay_timer.h>
 #include <drivers/generic_delay_timer.h>
-#if defined(IMAGE_BL32)
 #include <drivers/st/stm32_timer.h>
-#endif
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp1_rcc.h>
@@ -1791,6 +1789,30 @@ static void stm32mp1_pkcs_config(uint32_t pkcs)
 	}
 
 	mmio_clrsetbits_32(address, mask, value);
+}
+
+void stm32mp1_clk_mpu_suspend(void)
+{
+	uintptr_t mpckselr = stm32mp_rcc_base() + RCC_MPCKSELR;
+
+	if (((mmio_read_32(mpckselr) & RCC_SELR_SRC_MASK)) ==
+	    RCC_MPCKSELR_PLL) {
+		if (stm32mp1_set_clksrc(CLK_MPU_PLL1P_DIV) != 0) {
+			panic();
+		}
+	}
+}
+
+void stm32mp1_clk_mpu_resume(void)
+{
+	uintptr_t mpckselr = stm32mp_rcc_base() + RCC_MPCKSELR;
+
+	if (((mmio_read_32(mpckselr) & RCC_SELR_SRC_MASK)) ==
+	    RCC_MPCKSELR_PLL_MPUDIV) {
+		if (stm32mp1_set_clksrc(CLK_MPU_PLL1P) != 0) {
+			panic();
+		}
+	}
 }
 
 int stm32mp1_clk_init(void)

@@ -63,6 +63,9 @@ void stm32mp1_clk_rcc_regs_unlock(void);
 
 void stm32mp1_stgen_increment(unsigned long long offset_in_ms);
 
+void stm32mp1_clk_mpu_suspend(void);
+void stm32mp1_clk_mpu_resume(void);
+
 #ifdef STM32MP_SHARED_RESOURCES
 void stm32mp1_register_clock_parents_secure(unsigned long id);
 #endif
