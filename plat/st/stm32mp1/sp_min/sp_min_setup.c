@@ -23,6 +23,7 @@
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32_rng.h>
 #include <drivers/st/stm32_rtc.h>
+#include <drivers/st/stm32_tamp.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
@@ -42,6 +43,20 @@
 static entry_point_info_t bl33_image_ep_info;
 
 static console_t console;
+
+static struct stm32_tamp_int int_tamp[PLAT_MAX_TAMP_INT] = {
+	TAMP_UNUSED,
+	TAMP_UNUSED,
+	TAMP_UNUSED,
+	TAMP_UNUSED,
+	TAMP_UNUSED,
+};
+
+static struct stm32_tamp_ext ext_tamp[PLAT_MAX_TAMP_EXT] = {
+	TAMP_UNUSED,
+	TAMP_UNUSED,
+	TAMP_UNUSED,
+};
 
 static void stm32_sgi1_it_handler(void)
 {
@@ -73,6 +88,9 @@ void sp_min_plat_fiq_handler(uint32_t id)
 	case STM32MP1_IRQ_TZC400:
 		(void)tzc400_it_handler();
 		panic();
+		break;
+	case STM32MP1_IRQ_TAMPSERRS:
+		stm32_tamp_it_handler();
 		break;
 	case ARM_IRQ_SEC_SGI_1:
 		stm32_sgi1_it_handler();
@@ -281,6 +299,8 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 
 static void init_sec_peripherals(void)
 {
+	uint32_t filter_conf = 0;
+	uint32_t active_conf = 0;
 	int ret;
 
 	/* Init rtc driver */
@@ -293,6 +313,16 @@ static void init_sec_peripherals(void)
 	ret = stm32_rng_init();
 	if (ret < 0) {
 		WARN("RNG driver init error %i\n", ret);
+	}
+
+	/* Init tamper */
+	if (stm32_tamp_init() > 0) {
+		stm32_tamp_configure_internal(int_tamp, PLAT_MAX_TAMP_INT);
+		stm32_tamp_configure_external(ext_tamp, PLAT_MAX_TAMP_EXT,
+					      filter_conf, active_conf);
+
+		/* Enable timestamp for tamper */
+		stm32_rtc_set_tamper_timestamp();
 	}
 }
 

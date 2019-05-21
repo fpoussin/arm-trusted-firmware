@@ -200,6 +200,22 @@ enum ddr_type {
 #define PWR_BASE			U(0x50001000)
 
 /*******************************************************************************
+ * STM32MP1 EXTI
+ ******************************************************************************/
+#define EXTI_BASE			U(0x5000D000)
+#define EXTI_TZENR1			U(0x14)
+#define EXTI_RPR3			U(0x4C)
+#define EXTI_FPR3			U(0x50)
+#define EXTI_C1IMR1			U(0x80)
+#define EXTI_C2IMR1			U(0xC0)
+#define EXTI_C2IMR2			U(0xD0)
+#define EXTI_C2IMR3			U(0xE0)
+#define EXTI_TZENR1_TZEN18		BIT(18)
+#define EXTI_IMR1_IM18			BIT(18)
+#define EXTI_RPR3_RPIF65		BIT(1)
+#define EXTI_FPR3_FPIF65		BIT(1)
+
+/*******************************************************************************
  * STM32MP1 GPIO
  ******************************************************************************/
 #define GPIOA_BASE			U(0x50002000)
@@ -389,6 +405,8 @@ enum ddr_type {
 /*******************************************************************************
  * STM32MP1 TAMP
  ******************************************************************************/
+#define PLAT_MAX_TAMP_INT		U(5)
+#define PLAT_MAX_TAMP_EXT		U(3)
 #define TAMP_BASE			U(0x5C00A000)
 #define TAMP_BKP_REGISTER_BASE		(TAMP_BASE + U(0x100))
 
