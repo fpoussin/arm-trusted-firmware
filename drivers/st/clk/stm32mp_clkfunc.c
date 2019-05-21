@@ -15,6 +15,7 @@
 #include <drivers/st/stm32mp_clkfunc.h>
 
 #define DT_UART_COMPAT		"st,stm32h7-uart"
+
 /*
  * Get the frequency of an oscillator from its name in device tree.
  * @param name: oscillator name
@@ -330,6 +331,39 @@ int fdt_get_clock_id(int node)
 	}
 
 	cuint++;
+	return (int)fdt32_to_cpu(*cuint);
+}
+
+/*******************************************************************************
+ * This function gets the clock ID of the given node using clock-names.
+ * It reads the value indicated inside the device tree.
+ * Returns ID on success, and a negative FDT/ERRNO error code on failure.
+ ******************************************************************************/
+int fdt_get_clock_id_by_name(int node, const char *name)
+{
+	const fdt32_t *cuint;
+	void *fdt;
+	int index, len;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	index = fdt_stringlist_search(fdt, node, "clock-names", name);
+	if (index < 0) {
+		return index;
+	}
+
+	cuint = fdt_getprop(fdt, node, "clocks", &len);
+	if (cuint == NULL) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	if ((index * (int)sizeof(uint32_t)) > len) {
+		return -FDT_ERR_BADVALUE;
+	}
+
+	cuint += (index << 1) + 1;
 	return (int)fdt32_to_cpu(*cuint);
 }
 

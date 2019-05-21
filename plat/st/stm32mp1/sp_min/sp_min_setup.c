@@ -101,6 +101,10 @@ void sp_min_plat_fiq_handler(uint32_t id)
 	case ARM_IRQ_SEC_SGI_1:
 		stm32_sgi1_it_handler();
 		break;
+	case STM32MP1_IRQ_IWDG1:
+	case STM32MP1_IRQ_IWDG2:
+		stm32_iwdg_it_handler(id);
+		break;
 	case STM32MP1_IRQ_AXIERRIRQ:
 		ERROR("STM32MP1_IRQ_AXIERRIRQ generated\n");
 		panic();

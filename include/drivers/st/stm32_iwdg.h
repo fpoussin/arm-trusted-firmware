@@ -15,5 +15,6 @@
 
 int stm32_iwdg_init(void);
 void stm32_iwdg_refresh(void);
+void __dead2 stm32_iwdg_it_handler(int id);
 
 #endif /* STM32_IWDG_H */
