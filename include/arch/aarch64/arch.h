@@ -814,13 +814,13 @@
  * system level implementation of the Generic Timer.
  ******************************************************************************/
 /* Physical Count register. */
-#define CNTPCT_LO		U(0x0)
+#define CNTBASEN_CNTPCT_LO		U(0x0)
 /* Counter Frequency register. */
 #define CNTBASEN_CNTFRQ		U(0x10)
 /* Physical Timer CompareValue register. */
-#define CNTP_CVAL_LO		U(0x20)
+#define CNTBASEN_CNTP_CVAL_LO	U(0x20)
 /* Physical Timer Control register. */
-#define CNTP_CTL		U(0x2c)
+#define CNTBASEN_CNTP_CTL	U(0x2c)
 
 /* PMCR_EL0 definitions */
 #define PMCR_EL0_RESET_VAL	U(0x0)
