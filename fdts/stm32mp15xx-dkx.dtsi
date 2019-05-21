@@ -224,6 +224,9 @@
 
 &rcc {
 	secure-status = "disabled";
+	st,hsi-cal;
+	st,csi-cal;
+	st,cal-sec = <60>;
 	st,clksrc = <
 		CLK_MPU_PLL1P
 		CLK_AXI_PLL2P
@@ -340,6 +343,8 @@
 
 &timers15 {
 	secure-status = "okay";
+	st,hsi-cal-input = <7>;
+	st,csi_cal-input = <8>;
 };
 
 &uart4 {

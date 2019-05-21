@@ -53,6 +53,8 @@ static inline void stm32mp1_clk_disable_secure(unsigned long id)
 
 unsigned int stm32mp1_clk_get_refcount(unsigned long id);
 
+unsigned long stm32mp_clk_timer_get_rate(unsigned long id);
+
 bool stm32mp1_rtc_get_read_twice(void);
 
 /* SMP protection on RCC registers access */

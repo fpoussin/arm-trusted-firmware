@@ -16,6 +16,7 @@
  */
 
 /* Secure Service access from Non-secure */
+#define STM32_SMC_RCC_CAL		0x82001002
 
 /*
  * STM32_SMC_BSEC call API
@@ -50,12 +51,18 @@
 #define STM32_SIP_SVC_VERSION_MINOR	0x1
 
 /* Number of STM32 SiP Calls implemented */
-#define STM32_COMMON_SIP_NUM_CALLS	3
+#define STM32_COMMON_SIP_NUM_CALLS	4
 
 /* Service for BSEC */
 #define STM32_SMC_READ_SHADOW		0x01
 #define STM32_SMC_PROG_OTP		0x02
 #define STM32_SMC_WRITE_SHADOW		0x03
 #define STM32_SMC_READ_OTP		0x04
+
+/* SMC error codes */
+#define STM32_SMC_OK			0x00000000U
+#define STM32_SMC_NOT_SUPPORTED		0xFFFFFFFFU
+#define STM32_SMC_FAILED		0xFFFFFFFEU
+#define STM32_SMC_INVALID_PARAMS	0xFFFFFFFDU
 
 #endif /* STM32MP1_SMC_H */

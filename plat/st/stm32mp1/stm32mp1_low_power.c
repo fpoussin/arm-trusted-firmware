@@ -37,6 +37,9 @@ static unsigned int gicc_pmr;
 static struct stm32_rtc_calendar sleep_time, current_calendar;
 static unsigned long long stdby_time_in_ms;
 static bool enter_cstop_done;
+static uint32_t int_stack[STM32MP_INT_STACK_SIZE];
+
+extern void wfi_svc_int_enable(uintptr_t stack_addr);
 
 struct pwr_lp_config {
 	uint32_t pwr_cr1;
@@ -313,8 +316,11 @@ void stm32_pwr_down_wfi(void)
 {
 	uint32_t interrupt = GIC_SPURIOUS_INTERRUPT;
 
-	while (interrupt == GIC_SPURIOUS_INTERRUPT) {
-		wfi();
+	stm32mp1_calib_set_wakeup(false);
+
+	while (interrupt == GIC_SPURIOUS_INTERRUPT &&
+	       !stm32mp1_calib_get_wakeup()) {
+		wfi_svc_int_enable((uintptr_t)&int_stack[0]);
 
 		interrupt = gicv2_acknowledge_interrupt();
 

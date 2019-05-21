@@ -193,6 +193,29 @@ int fdt_rcc_read_uint32_array(const char *prop_name, uint32_t count,
 	return fdt_read_uint32_array(fdt, node, prop_name, count, array);
 }
 
+/*******************************************************************************
+ * This function reads a property rcc-clk section.
+ * It reads the values indicated inside the device tree, from property name.
+ * Returns dflt_value if property is not found, and a property value on
+ * success.
+ ******************************************************************************/
+uint32_t fdt_rcc_read_uint32_default(const char *prop_name, uint32_t dflt_value)
+{
+	int node;
+	void *fdt;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return dflt_value;
+	}
+
+	node = fdt_get_rcc_node(fdt);
+	if (node < 0) {
+		return dflt_value;
+	}
+
+	return fdt_read_uint32_default(fdt, node, prop_name, dflt_value);
+}
+
 /*
  * Get the subnode offset in rcc-clk section from its name in device tree
  * @param name: name of the RCC property
@@ -269,6 +292,22 @@ bool fdt_get_rcc_secure_status(void)
 	}
 
 	return !!(fdt_get_status(node) & DT_SECURE);
+}
+
+/*
+ * This function gets interrupt name.
+ * It reads the values indicated the enabling status.
+ * Returns 0 if success, and a negative value else.
+ */
+int fdt_rcc_enable_it(const char *name)
+{
+	void *fdt;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	return stm32_gic_enable_spi(fdt_get_rcc_node(fdt), name);
 }
 
 /*

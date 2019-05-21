@@ -21,9 +21,12 @@ uint32_t fdt_osc_read_uint32_default(enum stm32mp_osc_id osc_id,
 
 int fdt_rcc_read_uint32_array(const char *prop_name, uint32_t count,
 			      uint32_t *array);
+uint32_t fdt_rcc_read_uint32_default(const char *prop_name,
+				     uint32_t dflt_value);
 int fdt_rcc_subnode_offset(const char *name);
 const fdt32_t *fdt_rcc_read_prop(const char *prop_name, int *lenp);
 bool fdt_get_rcc_secure_status(void);
+int fdt_rcc_enable_it(const char *name);
 
 int fdt_get_clock_id(int node);
 unsigned long fdt_get_uart_clock_freq(uintptr_t instance);

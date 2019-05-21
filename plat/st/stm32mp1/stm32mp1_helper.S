@@ -10,6 +10,7 @@
 #include <asm_macros.S>
 #include <common/bl_common.h>
 #include <drivers/st/stm32_gpio.h>
+#include <smccc_helpers.h>
 
 #define GPIO_TX_SHIFT		(DEBUG_UART_TX_GPIO_PORT << 1)
 
@@ -29,6 +30,7 @@
 	.globl	plat_crash_console_flush
 	.globl	plat_crash_console_putc
 	.globl	plat_panic_handler
+	.globl	wfi_svc_int_enable
 
 func platform_mem_init
 	/* Nothing to do, don't need to init SYSRAM */
@@ -365,3 +367,23 @@ ifar_str:
 end_error_str:
 	.asciz "\n\r"
 #endif
+
+func wfi_svc_int_enable
+	push	{r4,r8,lr}
+	ldcopr	r4, SCR
+	mov	r8, sp
+	mov	sp, r0
+	add	r0, r0, #STM32MP_INT_STACK_SIZE
+	str	r0, [sp, #SMC_CTX_SP_MON]
+	str	r4, [sp, #SMC_CTX_SCR]
+	cps	#MODE32_svc
+	cpsie	af
+	dsb
+	isb
+	wfi
+	cpsid	af
+	cps	#MODE32_mon
+	mov	sp, r8
+	pop	{r4,r8,lr}
+	bx	lr
+endfunc wfi_svc_int_enable

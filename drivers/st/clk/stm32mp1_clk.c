@@ -19,6 +19,9 @@
 #include <common/fdt_wrappers.h>
 #include <drivers/delay_timer.h>
 #include <drivers/generic_delay_timer.h>
+#if defined(IMAGE_BL32)
+#include <drivers/st/stm32_timer.h>
+#endif
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp1_rcc.h>
@@ -1689,6 +1692,33 @@ static void stm32mp1_stgen_config(void)
 
 	/* Need to update timer with new frequency */
 	generic_delay_timer_init();
+}
+
+unsigned long stm32mp_clk_timer_get_rate(unsigned long id)
+{
+	unsigned long parent_rate;
+	uint32_t prescaler, timpre;
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	parent_rate = stm32mp_clk_get_rate(id);
+
+	if (id < TIM1_K) {
+		prescaler = mmio_read_32(rcc_base + RCC_APB1DIVR) &
+			    RCC_APBXDIV_MASK;
+		timpre = mmio_read_32(rcc_base + RCC_TIMG1PRER) &
+			 RCC_TIMGXPRER_TIMGXPRE;
+	} else {
+		prescaler = mmio_read_32(rcc_base + RCC_APB2DIVR) &
+			    RCC_APBXDIV_MASK;
+		timpre = mmio_read_32(rcc_base + RCC_TIMG2PRER) &
+			 RCC_TIMGXPRER_TIMGXPRE;
+	}
+
+	if (!prescaler) {
+		return parent_rate;
+	}
+
+	return parent_rate * (timpre + 1) * 2;
 }
 
 void stm32mp1_stgen_increment(unsigned long long offset_in_ms)
