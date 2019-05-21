@@ -552,6 +552,7 @@
 #define HTCR		p15, 4, c2, c0, 2
 #define HMAIR0		p15, 4, c10, c2, 0
 #define ATS1CPR		p15, 0, c7, c8, 0
+#define ATS1CPW		p15, 0, c7, c8, 1
 #define ATS1HR		p15, 4, c7, c8, 0
 #define DBGOSDLR	p14, 0, c1, c3, 4
 
@@ -661,6 +662,8 @@
 /* PAR fields */
 #define PAR_F_SHIFT	U(0)
 #define PAR_F_MASK	ULL(0x1)
+#define PAR_NS_SHIFT	U(9)
+#define PAR_NS_MASK	U(0x1)
 #define PAR_ADDR_SHIFT	U(12)
 #define PAR_ADDR_MASK	(BIT_64(40) - ULL(1)) /* 40-bits-wide page address */
 
