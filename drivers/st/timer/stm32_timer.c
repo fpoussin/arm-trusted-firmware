@@ -61,6 +61,7 @@
 #define TIM_TIMEOUT_STEP_US	10
 #define TIM_PRESCAL_HSI		10U
 #define TIM_PRESCAL_CSI		7U
+#define TIM_MIN_FREQ_CALIB	50000000U
 
 struct stm32_timer_instance {
 	uintptr_t base;
@@ -86,11 +87,17 @@ static int stm32_timer_get_dt_node(struct dt_node_info *info, int offset)
 	return node;
 }
 
-static void stm32_timer_config(struct stm32_timer_instance *timer)
+static int stm32_timer_config(struct stm32_timer_instance *timer)
 {
 	stm32mp_clk_enable(timer->clk);
 
 	timer->freq = stm32mp_clk_timer_get_rate(timer->clk);
+
+	if (timer->freq < TIM_MIN_FREQ_CALIB) {
+		WARN("Timer is not accurate enough for calibration\n");
+		stm32mp_clk_disable(timer->clk);
+		return -EINVAL;
+	}
 
 	if ((mmio_read_32(timer->base + TIM_TISEL) & TIM_TISEL_TI1SEL_MASK) !=
 	    timer->cal_input) {
@@ -112,6 +119,8 @@ static void stm32_timer_config(struct stm32_timer_instance *timer)
 	}
 
 	stm32mp_clk_disable(timer->clk);
+
+	return 0;
 }
 
 static uint32_t stm32_timer_start_capture(struct stm32_timer_instance *timer)
@@ -121,7 +130,9 @@ static uint32_t stm32_timer_start_capture(struct stm32_timer_instance *timer)
 	uint32_t old_counter = 0U;
 	int twice = 0;
 
-	stm32_timer_config(timer);
+	if (stm32_timer_config(timer) < 0) {
+		return 0U;
+	}
 
 	stm32mp_clk_enable(timer->clk);
 
@@ -270,7 +281,10 @@ int stm32_timer_init(void)
 					stm32mp_clk_timer_get_rate(timer->clk);
 				timer->cal_input =
 					(uint8_t)fdt32_to_cpu(*cuint);
-				stm32_timer_config(timer);
+				if (stm32_timer_config(timer) < 0) {
+					timer->base = 0;
+					continue;
+				}
 			}
 
 			cuint = fdt_getprop(fdt, node, "st,csi_cal-input",
@@ -283,7 +297,10 @@ int stm32_timer_init(void)
 					stm32mp_clk_timer_get_rate(timer->clk);
 				timer->cal_input =
 					(uint8_t)fdt32_to_cpu(*cuint);
-				stm32_timer_config(timer);
+				if (stm32_timer_config(timer) < 0) {
+					timer->base = 0;
+					continue;
+				}
 			}
 		}
 	}

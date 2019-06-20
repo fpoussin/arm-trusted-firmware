@@ -259,6 +259,11 @@ static void rcc_calibration(struct stm32mp1_clk_cal *clk_cal)
 
 		clk_cal->set_trim(new_trim);
 		freq = clk_cal->get_freq();
+		if (freq == 0U) {
+			/* Calibration will be stopped */
+			clk_cal->ref_freq = 0U;
+			return;
+		}
 		conv = (clk_cal->ref_freq < freq) ?
 			freq - clk_cal->ref_freq : clk_cal->ref_freq - freq;
 		if (conv < min_conv) {
@@ -459,7 +464,9 @@ static void init_hsi_cal(void)
 	}
 
 	stm32_timer_freq_func(&stm32mp1_clk_cal_hsi.get_freq, HSI_CAL);
-	assert(stm32mp1_clk_cal_hsi.get_freq);
+	if (stm32mp1_clk_cal_hsi.get_freq == NULL) {
+		return;
+	}
 
 	stm32mp1_clk_cal_hsi.ref_freq = stm32mp_clk_get_rate(CK_HSI);
 
@@ -484,7 +491,9 @@ static void init_csi_cal(void)
 	}
 
 	stm32_timer_freq_func(&stm32mp1_clk_cal_csi.get_freq, CSI_CAL);
-	assert(stm32mp1_clk_cal_csi.get_freq);
+	if (stm32mp1_clk_cal_csi.get_freq == NULL) {
+		return;
+	}
 
 	stm32mp1_clk_cal_csi.ref_freq = stm32mp_clk_get_rate(CK_CSI);
 
