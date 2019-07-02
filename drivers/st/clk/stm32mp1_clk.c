@@ -1306,6 +1306,13 @@ static void stm32mp1_hse_enable(bool bypass, bool digbyp, bool css)
 	if (css) {
 		mmio_write_32(rcc_base + RCC_OCENSETR, RCC_OCENR_HSECSSON);
 	}
+
+#if defined(STM32MP_USB) || defined(STM32MP_UART)
+	if ((mmio_read_32(rcc_base + RCC_OCENSETR) & RCC_OCENR_HSEBYP) &&
+	    (!(digbyp || bypass))) {
+		panic();
+	}
+#endif
 }
 
 static void stm32mp1_csi_set(bool enable)
