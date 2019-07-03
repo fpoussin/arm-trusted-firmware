@@ -127,6 +127,9 @@ static const struct i2c_spec_s i2c_specs[] = {
 	},
 };
 
+static uint32_t saved_timing;
+static unsigned long saved_frequency;
+
 static void notif_i2c_timeout(struct i2c_handle_s *hi2c)
 {
 	hi2c->i2c_err |= I2C_ERROR_TIMEOUT;
@@ -351,12 +354,21 @@ static int i2c_setup_timing(struct i2c_handle_s *hi2c,
 			    uint32_t *timing)
 {
 	int rc = 0;
-	uint32_t clock_src;
+	unsigned long clock_src;
 
 	clock_src = stm32mp_clk_get_rate(hi2c->clock);
 	if (clock_src == 0U) {
 		ERROR("I2C clock rate is 0\n");
 		return -EINVAL;
+	}
+
+	/*
+	 * If the timing has already been computed, and the frequency is the
+	 * same as when it was computed, then use the saved timing.
+	 */
+	if (clock_src == saved_frequency) {
+		*timing = saved_timing;
+		return 0;
 	}
 
 	do {
@@ -378,13 +390,16 @@ static int i2c_setup_timing(struct i2c_handle_s *hi2c,
 		return rc;
 	}
 
-	VERBOSE("I2C Speed Mode(%i), Freq(%i), Clk Source(%i)\n",
+	VERBOSE("I2C Speed Mode(%i), Freq(%i), Clk Source(%li)\n",
 		init->speed_mode, i2c_specs[init->speed_mode].rate, clock_src);
 	VERBOSE("I2C Rise(%i) and Fall(%i) Time\n",
 		init->rise_time, init->fall_time);
 	VERBOSE("I2C Analog Filter(%s), DNF(%i)\n",
 		(init->analog_filter ? "On" : "Off"),
 		init->digital_filter_coef);
+
+	saved_timing = *timing;
+	saved_frequency = clock_src;
 
 	return 0;
 }
