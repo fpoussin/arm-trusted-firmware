@@ -11,6 +11,7 @@
 #include <platform_def.h>
 
 #include <drivers/st/stm32_iwdg.h>
+#include <drivers/st/stm32mp_dummy_regulator.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp_regulator.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
@@ -511,6 +512,8 @@ int plat_bind_regulator(struct stm32mp_regulator *regu)
 {
 	if ((dt_pmic_status() > 0) && is_pmic_regulator(regu)) {
 		bind_pmic_regulator(regu);
+	} else {
+		bind_dummy_regulator(regu);
 	}
 
 	return 0;
