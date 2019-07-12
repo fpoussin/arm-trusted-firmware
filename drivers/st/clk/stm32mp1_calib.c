@@ -509,22 +509,6 @@ static void init_csi_cal(void)
 	rcc_calibration(&stm32mp1_clk_cal_csi);
 }
 
-void stm32mp1_calib_init_late(void)
-{
-	int irq_num;
-
-	if (!stm32mp1_rcc_is_secure()) {
-		return;
-	}
-
-	irq_num = fdt_rcc_enable_it("wakeup");
-	if (irq_num < 0) {
-		panic();
-	}
-
-	plat_ic_set_interrupt_priority(irq_num, STM32MP1_IRQ_RCC_SEC_PRIO);
-}
-
 void stm32mp1_calib_init(void)
 {
 	init_hsi_cal();

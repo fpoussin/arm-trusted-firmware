@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2018-2019, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -16,6 +16,5 @@ void stm32mp1_calib_it_handler(uint32_t id);
 int stm32mp1_calib_start_hsi_cal(void);
 int stm32mp1_calib_start_csi_cal(void);
 void stm32mp1_calib_init(void);
-void stm32mp1_calib_init_late(void);
 
 #endif /* STM32MP1_CLK_H */

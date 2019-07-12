@@ -131,12 +131,9 @@ int fdt_get_interrupt(int node, const fdt32_t **array, int *len, bool *extended)
 		}
 		break;
 
-	case DT_SHARED:
+	default:
 		*array = fdt_getprop(fdt, node, "secure-interrupts", len);
 		break;
-
-	default:
-		return -FDT_ERR_NOTFOUND;
 	}
 
 	if (*array == NULL) {
