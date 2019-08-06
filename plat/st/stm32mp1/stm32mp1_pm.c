@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -140,7 +140,7 @@ static void stm32_pwr_domain_suspend(const psci_power_state_t *target_state)
  ******************************************************************************/
 static void stm32_pwr_domain_on_finish(const psci_power_state_t *target_state)
 {
-	stm32mp1_gic_pcpu_init();
+	stm32_gic_pcpu_init();
 
 	write_cntfrq_el0(cntfrq_core0);
 }

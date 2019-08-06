@@ -137,7 +137,7 @@
 
 /* Platform IRQ Priority */
 #define STM32MP1_IRQ_RCC_SEC_PRIO	U(0x6)
-#define STM32MP1_IRQ_SEC_SPI_PRIO	U(0x10)
+#define STM32MP_IRQ_SEC_SPI_PRIO	U(0x10)
 
 #define STM32MP1_IRQ_TZC400		U(36)
 #define STM32MP1_IRQ_MCU_SEV		U(176)

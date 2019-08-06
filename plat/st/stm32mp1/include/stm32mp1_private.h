@@ -29,9 +29,6 @@ uintptr_t get_uart_address(uint32_t instance_nb);
 
 enum boot_device_e get_boot_device(void);
 
-void stm32mp1_gic_pcpu_init(void);
-void stm32mp1_gic_init(void);
-
 enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode);
 
 void stm32mp1_syscfg_init(void);

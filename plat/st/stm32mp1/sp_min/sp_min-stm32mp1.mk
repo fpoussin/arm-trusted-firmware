@@ -27,7 +27,7 @@ include drivers/arm/gic/v2/gicv2.mk
 
 BL32_SOURCES		+=	${GICV2_SOURCES}			\
 				plat/common/plat_gicv2.c		\
-				plat/st/stm32mp1/stm32mp1_gic.c
+				plat/st/common/stm32_gic.c
 
 # Generic PSCI
 BL32_SOURCES		+=	plat/common/plat_psci_common.c

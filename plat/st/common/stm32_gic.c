@@ -26,7 +26,7 @@ struct stm32_gic_instance {
  * On a GICv2 system, the Group 1 secure interrupts are treated as Group 0
  * interrupts.
  *****************************************************************************/
-static const interrupt_prop_t stm32mp1_interrupt_props[] = {
+static const interrupt_prop_t stm32_interrupt_props[] = {
 	PLATFORM_G1S_PROPS(GICV2_INTR_GROUP0),
 	PLATFORM_G0_PROPS(GICV2_INTR_GROUP0)
 };
@@ -35,8 +35,8 @@ static const interrupt_prop_t stm32mp1_interrupt_props[] = {
 static unsigned int target_mask_array[PLATFORM_CORE_COUNT] = {1, 2};
 
 static gicv2_driver_data_t platform_gic_data = {
-	.interrupt_props = stm32mp1_interrupt_props,
-	.interrupt_props_num = ARRAY_SIZE(stm32mp1_interrupt_props),
+	.interrupt_props = stm32_interrupt_props,
+	.interrupt_props_num = ARRAY_SIZE(stm32_interrupt_props),
 	.target_masks = target_mask_array,
 	.target_masks_num = ARRAY_SIZE(target_mask_array),
 };
@@ -68,7 +68,7 @@ static uint32_t enable_gic_interrupt(const fdt32_t *array)
 	if ((id >= MIN_SPI_ID) && (id <= MAX_SPI_ID)) {
 		VERBOSE("Enable IT %i\n", id);
 		gicv2_set_interrupt_type(id, GICV2_INTR_GROUP0);
-		gicv2_set_interrupt_priority(id, STM32MP1_IRQ_SEC_SPI_PRIO);
+		gicv2_set_interrupt_priority(id, STM32MP_IRQ_SEC_SPI_PRIO);
 		gicv2_set_spi_routing(id, STM32MP_PRIMARY_CPU);
 		gicv2_interrupt_set_cfg(id, cfg);
 		gicv2_enable_interrupt(id);
@@ -102,7 +102,7 @@ static void find_next_interrupt(const fdt32_t **array)
 	*array += fdt32_to_cpu(*cuint) + 1;
 }
 
-void stm32mp1_gic_init(void)
+void stm32_gic_init(void)
 {
 	int node;
 	void *fdt;
@@ -142,10 +142,10 @@ void stm32mp1_gic_init(void)
 	gicv2_driver_init(&platform_gic_data);
 	gicv2_distif_init();
 
-	stm32mp1_gic_pcpu_init();
+	stm32_gic_pcpu_init();
 }
 
-void stm32mp1_gic_pcpu_init(void)
+void stm32_gic_pcpu_init(void)
 {
 	gicv2_pcpu_distif_init();
 	gicv2_set_pe_target_mask(plat_my_core_pos());

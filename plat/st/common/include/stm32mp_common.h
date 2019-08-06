@@ -33,6 +33,8 @@ uintptr_t stm32mp_pwr_base(void);
 /* Return the base address of the RCC peripheral */
 uintptr_t stm32mp_rcc_base(void);
 
+void stm32_gic_pcpu_init(void);
+void stm32_gic_init(void);
 int stm32_gic_enable_spi(int node, const char *name);
 
 /* Check MMU status to allow spinlock use */
