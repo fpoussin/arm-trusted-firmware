@@ -331,7 +331,11 @@ static void boot_mmc(enum mmc_device_type mmc_dev_type,
 		break;
 	}
 
-	params.device_info = &mmc_info;
+	if (mmc_dev_type == MMC_IS_SD) {
+		params.flags = MMC_FLAG_SD_CMD6;
+	}
+
+	params.device_info = &device_info;
 	if (stm32_sdmmc2_mmc_init(&params) != 0) {
 		ERROR("SDMMC%u init failed\n", boot_interface_instance);
 		panic();
