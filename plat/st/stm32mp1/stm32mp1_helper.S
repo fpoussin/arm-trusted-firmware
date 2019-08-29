@@ -15,6 +15,11 @@
 
 	.globl	platform_mem_init
 	.globl	plat_report_exception
+#if AARCH32_EXCEPTION_DEBUG
+	.globl	plat_report_undef_inst
+	.globl	plat_report_prefetch_abort
+	.globl	plat_report_data_abort
+#endif
 	.globl	plat_get_my_entrypoint
 	.globl	plat_secondary_cold_boot_setup
 	.globl	plat_reset_handler
@@ -74,6 +79,96 @@ print_exception_info:
 	bx	lr
 #endif
 endfunc plat_report_exception
+
+#if AARCH32_EXCEPTION_DEBUG
+func plat_report_undef_inst
+#if DEBUG
+	mov	r8, lr
+
+	mov	r9, r0
+
+	ldr	r4, =undefined_str
+	bl	asm_print_str
+
+	mov	r4, r9
+	sub	r4, r4, #4
+	bl	asm_print_hex
+
+	ldr	r4, =end_error_str
+	bl	asm_print_str
+
+	bx	r8
+#else
+	bx	lr
+#endif
+endfunc plat_report_undef_inst
+
+func plat_report_prefetch_abort
+#if DEBUG
+	mov	r8, lr
+	mov	r9, r0
+
+	ldr	r4, =prefetch_abort_str
+	bl	asm_print_str
+
+	mov	r4, r9
+	sub	r4, r4, #4
+	bl	asm_print_hex
+
+	ldr	r4, =ifsr_str
+	bl	asm_print_str
+
+	ldcopr	r4, IFSR
+	bl	asm_print_hex
+
+	ldr	r4, =ifar_str
+	bl	asm_print_str
+
+	ldcopr	r4, IFAR
+	bl	asm_print_hex
+
+	ldr	r4, =end_error_str
+	bl	asm_print_str
+
+	bx	r8
+#else
+	bx	lr
+#endif
+endfunc plat_report_prefetch_abort
+
+func plat_report_data_abort
+#if DEBUG
+	mov	r8, lr
+	mov	r9, r0
+
+	ldr	r4, =data_abort_str
+	bl	asm_print_str
+
+	mov	r4, r9
+	sub	r4, r4, #8
+	bl	asm_print_hex
+
+	ldr	r4, =dfsr_str
+	bl	asm_print_str
+
+	ldcopr	r4, DFSR
+	bl	asm_print_hex
+
+	ldr	r4, =dfar_str
+	bl	asm_print_str
+
+	ldcopr	r4, DFAR
+	bl	asm_print_hex
+
+	ldr	r4, =end_error_str
+	bl	asm_print_str
+
+	bx	r8
+#else
+	bx	lr
+#endif
+endfunc plat_report_data_abort
+#endif
 
 func plat_reset_handler
 	bx	lr
@@ -245,12 +340,28 @@ endfunc plat_panic_handler
 .section .rodata.rev_err_str, "aS"
 abort_str:
 	.asciz "\nAbort at: 0x"
+#if AARCH32_EXCEPTION_DEBUG
+prefetch_abort_str:
+	.asciz "\nPrefetch Abort at: 0x"
+data_abort_str:
+	.asciz "\nData Abort at: 0x"
+#endif
 undefined_str:
 	.asciz "\nUndefined instruction at: 0x"
 exception_start_str:
 	.asciz "\nException mode=0x"
 exception_end_str:
 	.asciz " at: 0x"
+#if AARCH32_EXCEPTION_DEBUG
+dfsr_str:
+	.asciz " DFSR = 0x"
+dfar_str:
+	.asciz " DFAR = 0x"
+ifsr_str:
+	.asciz " IFSR = 0x"
+ifar_str:
+	.asciz " IFAR = 0x"
+#endif
 end_error_str:
 	.asciz "\n\r"
 #endif

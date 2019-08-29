@@ -24,6 +24,8 @@ endif
 # Not needed for Cortex-A7
 WORKAROUND_CVE_2017_5715:=	0
 
+AARCH32_EXCEPTION_DEBUG	:=	1
+
 # Number of TF-A copies in the device
 STM32_TF_A_COPIES		:=	2
 STM32_BL33_PARTS_NUM		:=	1
