@@ -24,6 +24,8 @@
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <dt-bindings/power/stm32mp1-power.h>
 #include <lib/mmio.h>
+#include <lib/psci/psci.h>
+#include <lib/spinlock.h>
 #include <plat/common/platform.h>
 
 #include <boot_api.h>
@@ -92,6 +94,16 @@ static const struct pwr_lp_config config_pwr[STM32_PM_MAX_SOC_MODE] = {
 };
 
 #define GICC_PMR_PRIORITY_8	U(0x8)
+
+enum {
+	STATE_NONE = 0,
+	STATE_AUTOSTOP_ENTRY,
+	STATE_AUTOSTOP_EXIT,
+};
+
+static struct spinlock lp_lock;
+static volatile int cpu0_state = STATE_NONE;
+static volatile int cpu1_state = STATE_NONE;
 
 void stm32_apply_pmic_suspend_config(uint32_t mode)
 {
@@ -284,6 +296,94 @@ void stm32_exit_cstop(void)
 
 	if (stm32mp1_clock_stopmode_resume() != 0) {
 		panic();
+	}
+}
+
+static int get_locked(volatile int *state)
+{
+	volatile int val;
+
+	spin_lock(&lp_lock);
+	val = *state;
+	spin_unlock(&lp_lock);
+
+	return val;
+}
+
+static void set_locked(volatile int *state, int val)
+{
+	spin_lock(&lp_lock);
+	*state = val;
+	spin_unlock(&lp_lock);
+}
+
+static void smp_synchro(int state, bool wake_up)
+{
+	/* if the other CPU is stopped, no need to synchronize */
+	if (psci_is_last_on_cpu() == 1U) {
+		return;
+	}
+
+	if (plat_my_core_pos() == STM32MP_PRIMARY_CPU) {
+		set_locked(&cpu0_state, state);
+
+		while (get_locked(&cpu1_state) != state) {
+			if (wake_up) {
+				/* wakeup secondary CPU */
+				gicv2_raise_sgi(ARM_IRQ_SEC_SGI_6,
+						STM32MP_SECONDARY_CPU);
+				udelay(10);
+			}
+		};
+	} else {
+		while (get_locked(&cpu0_state) != state) {
+			if (wake_up) {
+				/* wakeup primary CPU */
+				gicv2_raise_sgi(ARM_IRQ_SEC_SGI_6,
+						STM32MP_PRIMARY_CPU);
+				udelay(10);
+			}
+		};
+
+		set_locked(&cpu1_state, state);
+	}
+}
+
+static void stm32_auto_stop_cpu0(void)
+{
+	smp_synchro(STATE_AUTOSTOP_ENTRY, false);
+
+	enter_cstop(STM32_PM_CSTOP_ALLOW_LP_STOP, 0);
+
+	stm32_pwr_down_wfi();
+
+	stm32_exit_cstop();
+
+	smp_synchro(STATE_AUTOSTOP_EXIT, true);
+}
+
+static void stm32_auto_stop_cpu1(void)
+{
+	unsigned int gicc_pmr_cpu1;
+
+	/* clear cache before the DDR is being disabled by cpu0 */
+	dcsw_op_all(DC_OP_CISW);
+
+	smp_synchro(STATE_AUTOSTOP_ENTRY, false);
+
+	gicc_pmr_cpu1 = plat_ic_set_priority_mask(GICC_PMR_PRIORITY_8);
+	wfi();
+	plat_ic_set_priority_mask(gicc_pmr_cpu1);
+
+	smp_synchro(STATE_AUTOSTOP_EXIT, true);
+}
+
+void stm32_auto_stop(void)
+{
+	if (plat_my_core_pos() == STM32MP_PRIMARY_CPU) {
+		stm32_auto_stop_cpu0();
+	} else {
+		stm32_auto_stop_cpu1();
 	}
 }
 

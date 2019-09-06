@@ -42,6 +42,14 @@
 #define STM32_SMC_RCC_OPP		0x82001009
 
 /*
+ * SIP function STM32_SMC_AUTO_STOP - CPU auto stop for OS driver suspend
+ *
+ * Argument a0: (input) This SMCC ID: STM32_SMC_AUTO_STOP
+ *		(output) Status return code.
+ */
+#define STM32_SMC_AUTO_STOP		0x8200100a
+
+/*
  * STM32_SIP_SMC_SCMI_AGENT0
  * STM32_SIP_SMC_SCMI_AGENT1
  * Process SCMI message pending in SCMI shared memory buffer.

@@ -15,5 +15,6 @@ void stm32_apply_pmic_suspend_config(uint32_t mode);
 void stm32_exit_cstop(void);
 void stm32_pwr_down_wfi(void);
 void stm32_enter_low_power(uint32_t mode, uint32_t nsec_addr);
+void stm32_auto_stop(void);
 
 #endif /* STM32MP1_LOW_POWER_H */
