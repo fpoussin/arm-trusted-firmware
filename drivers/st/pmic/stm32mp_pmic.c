@@ -123,7 +123,7 @@ static int pmic_config_boot_on(void *fdt, int node, const char *regu_name)
 		return status;
 	}
 
-	if (stpmic1_is_regulator_enabled(regu_name) == 0U) {
+	if (!stpmic1_is_regulator_enabled(regu_name)) {
 		status = stpmic1_regulator_enable(regu_name);
 		if (status < 0) {
 			return status;
