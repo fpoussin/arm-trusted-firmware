@@ -31,6 +31,10 @@
 
 #define STPMIC1_DEFAULT_START_UP_DELAY_MS	1
 
+#define CMD_GET_VOLTAGE			0U
+#define CMD_CONFIG_BOOT_ON		1U
+#define CMD_CONFIG_LP			2U
+
 static struct i2c_handle_s i2c_handle;
 static uint32_t pmic_i2c_addr;
 
@@ -65,48 +69,208 @@ static bool dt_pmic_is_secure(void)
 	       (i2c_handle.dt_status == DT_SECURE);
 }
 
-static int dt_pmic_get_regulator_voltage(const char *node_name,
+static int dt_pmic_get_regulator_voltage(void *fdt, int node,
 					 uint16_t *voltage_mv)
 {
-	int pmic_node, regulators_node, subnode;
-	void *fdt;
+	const fdt32_t *cuint;
 
-	assert(node_name != NULL);
+	cuint = fdt_getprop(fdt, node, "regulator-min-microvolt", NULL);
+	if (cuint != NULL) {
+		*voltage_mv = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
 
-	if (fdt_get_address(&fdt) == 0) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	pmic_node = dt_get_pmic_node();
-	if (pmic_node < 0) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
-
-	fdt_for_each_subnode(subnode, fdt, regulators_node) {
-		const fdt32_t *cuint;
-		const char *name = fdt_get_name(fdt, subnode, NULL);
-
-		if (strcmp(name, node_name) != 0) {
-			continue;
-		}
-
-		cuint = fdt_getprop(fdt, subnode,
-				    "regulator-min-microvolt", NULL);
-		if (cuint != NULL) {
-			*voltage_mv = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
-
-			return 0;
-		}
+		return 0;
 	}
 
 	return -FDT_ERR_NOTFOUND;
 }
 
+static int pmic_config_boot_on(void *fdt, int node, const char *regu_name)
+{
+	uint16_t voltage;
+	int status;
+
+#if defined(IMAGE_BL2)
+	if ((fdt_getprop(fdt, node, "regulator-boot-on", NULL) == NULL) &&
+	    (fdt_getprop(fdt, node, "regulator-always-on", NULL) == NULL)) {
+#else
+	if (fdt_getprop(fdt, node, "regulator-boot-on",	NULL) == NULL) {
+#endif
+		return 0;
+	}
+
+	if (fdt_getprop(fdt, node, "regulator-pull-down", NULL) != NULL) {
+
+		status = stpmic1_regulator_pull_down_set(regu_name);
+		if (status < 0) {
+			return status;
+		}
+	}
+
+	if (fdt_getprop(fdt, node, "st,mask-reset", NULL) != NULL) {
+
+		status = stpmic1_regulator_mask_reset_set(regu_name);
+		if (status < 0) {
+			return status;
+		}
+	}
+
+	if (dt_pmic_get_regulator_voltage(fdt, node, &voltage) < 0) {
+		return 0;
+	}
+
+	status = stpmic1_regulator_voltage_set(regu_name, voltage);
+	if (status < 0) {
+		return status;
+	}
+
+	if (stpmic1_is_regulator_enabled(regu_name) == 0U) {
+		status = stpmic1_regulator_enable(regu_name);
+		if (status < 0) {
+			return status;
+		}
+	}
+
+	return 0;
+}
+
+#if defined(IMAGE_BL32)
+static int pmic_config_lp(void *fdt, int node, const char *node_name,
+			  const char *regu_name)
+{
+	int status;
+	const fdt32_t *cuint;
+	int regulator_state_node;
+
+	status = stpmic1_powerctrl_on();
+	if (status < 0) {
+		return status;
+	};
+
+	/*
+	 * First, copy active configuration (Control register) to
+	 * PWRCTRL Control register, even if regulator_state_node
+	 * does not exist.
+	 */
+	status = stpmic1_lp_copy_reg(regu_name);
+	if (status < 0) {
+		return status;
+	}
+
+	/* Then apply configs from regulator_state_node */
+	regulator_state_node = fdt_subnode_offset(fdt, node, node_name);
+	if (regulator_state_node <= 0) {
+		return 0;
+	}
+
+	if (fdt_getprop(fdt, regulator_state_node, "regulator-on-in-suspend",
+			NULL) != NULL) {
+		status = stpmic1_lp_reg_on_off(regu_name, 1);
+		if (status < 0) {
+			return status;
+		}
+	}
+
+	if (fdt_getprop(fdt, regulator_state_node, "regulator-off-in-suspend",
+			NULL) != NULL) {
+		status = stpmic1_lp_reg_on_off(regu_name, 0);
+		if (status < 0) {
+			return status;
+		}
+	}
+
+	cuint = fdt_getprop(fdt, regulator_state_node,
+			    "regulator-suspend-microvolt", NULL);
+	if (cuint != NULL) {
+		uint16_t voltage = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
+
+		status = stpmic1_lp_set_voltage(regu_name, voltage);
+		if (status < 0) {
+			return status;
+		}
+	}
+
+	cuint = fdt_getprop(fdt, regulator_state_node, "regulator-mode", NULL);
+	if (cuint != NULL) {
+		if (fdt32_to_cpu(*cuint) == REGULATOR_MODE_STANDBY) {
+			status = stpmic1_lp_set_mode(regu_name, 1);
+			if (status < 0) {
+				return status;
+			}
+		}
+	}
+
+	return 0;
+}
+#endif
+
+static int pmic_operate(uint8_t command, const char *node_name,
+			uint16_t *voltage_mv)
+{
+	int pmic_node, regulators_node, subnode;
+	void *fdt;
+	int ret = -EIO;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	pmic_node = dt_get_pmic_node(fdt);
+	if (pmic_node < 0) {
+		return -ENOENT;
+	}
+
+	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
+
+	fdt_for_each_subnode(subnode, fdt, regulators_node) {
+		const char *regu_name = fdt_get_name(fdt, subnode, NULL);
+
+		switch (command) {
+		case CMD_GET_VOLTAGE:
+			assert(node_name != NULL);
+			assert(voltage_mv != NULL);
+
+			if (strcmp(regu_name, node_name) != 0) {
+				continue;
+			}
+
+			ret = dt_pmic_get_regulator_voltage(fdt, subnode,
+							    voltage_mv);
+			if (ret < 0) {
+				return -ENXIO;
+			}
+
+			return ret;
+
+		case CMD_CONFIG_BOOT_ON:
+			ret = pmic_config_boot_on(fdt, subnode, regu_name);
+			if (ret < 0) {
+				return ret;
+			}
+			break;
+
+#if defined(IMAGE_BL32)
+		case CMD_CONFIG_LP:
+			assert(node_name != NULL);
+
+			ret = pmic_config_lp(fdt, subnode, node_name,
+					     regu_name);
+			if (ret < 0) {
+				return ret;
+			}
+			break;
+#endif
+
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return ret;
+}
+
 /*
  * Get PMIC and its I2C bus configuration from the device tree.
- * Return 0 on success, negative on error, 1 if no PMIC node is found.
+ * Return 0 on success, negative on error, 1 if no PMIC node is defined.
  */
 static int dt_pmic_i2c_config(struct dt_node_info *i2c_info,
 			      struct stm32_i2c_init_s *init)
@@ -147,171 +311,14 @@ static int dt_pmic_i2c_config(struct dt_node_info *i2c_info,
 	return stm32_i2c_get_setup_from_fdt(fdt, i2c_node, init);
 }
 
-int dt_pmic_configure_boot_on_regulators(void)
+int pmic_configure_boot_on_regulators(void)
 {
-	int pmic_node, regulators_node, subnode;
-	void *fdt;
-
-	if (fdt_get_address(&fdt) == 0) {
-		return -ENOENT;
-	}
-
-	pmic_node = dt_get_pmic_node(fdt);
-	if (pmic_node < 0) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
-
-	fdt_for_each_subnode(subnode, fdt, regulators_node) {
-		const fdt32_t *cuint;
-		const char *node_name = fdt_get_name(fdt, subnode, NULL);
-		uint16_t voltage;
-		int status;
-
-#if defined(IMAGE_BL2)
-		if ((fdt_getprop(fdt, subnode, "regulator-boot-on",
-				 NULL) == NULL) &&
-		    (fdt_getprop(fdt, subnode, "regulator-always-on",
-				 NULL) == NULL)) {
-#else
-		if (fdt_getprop(fdt, subnode, "regulator-boot-on",
-				NULL) == NULL) {
-#endif
-			continue;
-		}
-
-		if (fdt_getprop(fdt, subnode, "regulator-pull-down",
-				NULL) != NULL) {
-
-			status = stpmic1_regulator_pull_down_set(node_name);
-			if (status != 0) {
-				return status;
-			}
-		}
-
-		if (fdt_getprop(fdt, subnode, "st,mask-reset",
-				NULL) != NULL) {
-
-			status = stpmic1_regulator_mask_reset_set(node_name);
-			if (status != 0) {
-				return status;
-			}
-		}
-
-		cuint = fdt_getprop(fdt, subnode,
-				    "regulator-min-microvolt", NULL);
-		if (cuint == NULL) {
-			continue;
-		}
-
-		/* DT uses microvolts, whereas driver awaits millivolts */
-		voltage = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
-
-		status = stpmic1_regulator_voltage_set(node_name, voltage);
-		if (status != 0) {
-			return status;
-		}
-
-		if (stpmic1_is_regulator_enabled(node_name) == 0U) {
-			status = stpmic1_regulator_enable(node_name);
-			if (status != 0) {
-				return status;
-			}
-		}
-	}
-
-	return 0;
+	return pmic_operate(CMD_CONFIG_BOOT_ON, NULL, NULL);
 }
 
-int dt_pmic_set_lp_config(const char *node_name)
+int pmic_set_lp_config(const char *node_name)
 {
-	int pmic_node, regulators_node, subnode;
-	int status;
-	void *fdt;
-
-	assert(node_name != NULL);
-
-	if (fdt_get_address(&fdt) == 0) {
-		return -ENOENT;
-	}
-
-	pmic_node = dt_get_pmic_node(fdt);
-	if (pmic_node < 0) {
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	status = stpmic1_powerctrl_on();
-	if (status != 0) {
-		return status;
-	};
-
-	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
-
-	fdt_for_each_subnode(subnode, fdt, regulators_node) {
-		const fdt32_t *cuint;
-		const char *reg_name;
-		int regulator_state_node;
-
-		/*
-		 * First, copy active configuration (Control register) to
-		 * PWRCTRL Control register, even if regulator_state_node
-		 * does not exist.
-		 */
-		reg_name = fdt_get_name(fdt, subnode, NULL);
-		status = stpmic1_lp_copy_reg(reg_name);
-		if (status != 0) {
-			return status;
-		}
-
-		/* Then apply configs from regulator_state_node */
-		regulator_state_node = fdt_subnode_offset(fdt, subnode,
-							  node_name);
-		if (regulator_state_node <= 0) {
-			continue;
-		}
-
-		if (fdt_getprop(fdt, regulator_state_node,
-				"regulator-on-in-suspend", NULL) != NULL) {
-			status = stpmic1_lp_reg_on_off(reg_name, 1);
-			if (status != 0) {
-				return status;
-			}
-		}
-
-		if (fdt_getprop(fdt, regulator_state_node,
-				"regulator-off-in-suspend", NULL) != NULL) {
-			status = stpmic1_lp_reg_on_off(reg_name, 0);
-			if (status != 0) {
-				return status;
-			}
-		}
-
-		cuint = fdt_getprop(fdt, regulator_state_node,
-				    "regulator-suspend-microvolt", NULL);
-		if (cuint != NULL) {
-			uint16_t voltage = (uint16_t)(fdt32_to_cpu(*cuint) /
-						      1000U);
-
-			status = stpmic1_lp_set_voltage(reg_name, voltage);
-			if (status != 0) {
-				return status;
-			}
-		}
-
-		cuint = fdt_getprop(fdt, regulator_state_node,
-				    "regulator-mode", NULL);
-		if (cuint != NULL) {
-			if (fdt32_to_cpu(*cuint) == REGULATOR_MODE_STANDBY) {
-				status = stpmic1_lp_set_mode(reg_name, 1);
-				if (status != 0) {
-					return status;
-				}
-			}
-		}
-	}
-
-	return 0;
+	return pmic_operate(CMD_CONFIG_LP, node_name, NULL);
 }
 
 bool initialize_pmic_i2c(void)
@@ -452,7 +459,7 @@ void initialize_pmic(void)
 	stpmic1_dump_regulators();
 
 #if defined(IMAGE_BL2)
-	if (dt_pmic_configure_boot_on_regulators() != 0) {
+	if (pmic_configure_boot_on_regulators() < 0) {
 		panic();
 	};
 #endif
@@ -466,7 +473,7 @@ int pmic_ddr_power_init(enum ddr_type ddr_type)
 	uint16_t buck2_mv;
 	uint16_t ldo3_mv;
 
-	if (dt_pmic_get_regulator_voltage("buck2", &buck2_mv) != 0) {
+	if (pmic_operate(CMD_GET_VOLTAGE, "buck2", &buck2_mv) != 0) {
 		return -EPERM;
 	}
 
@@ -547,7 +554,7 @@ int pmic_ddr_power_init(enum ddr_type ddr_type)
 			return status;
 		}
 
-		if (dt_pmic_get_regulator_voltage("ldo3", &ldo3_mv) != 0) {
+		if (pmic_operate(CMD_GET_VOLTAGE, "ldo3", &ldo3_mv) != 0) {
 			return -EPERM;
 		}
 

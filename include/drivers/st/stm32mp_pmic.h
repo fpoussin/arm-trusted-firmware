@@ -27,9 +27,9 @@ int dt_pmic_status(void);
  *
  * Returns 0 on success, and negative values on errors
  */
-int dt_pmic_configure_boot_on_regulators(void);
+int pmic_configure_boot_on_regulators(void);
 
-int dt_pmic_set_lp_config(const char *node_name);
+int pmic_set_lp_config(const char *node_name);
 
 /*
  * initialize_pmic_i2c - Initialize I2C for the PMIC control

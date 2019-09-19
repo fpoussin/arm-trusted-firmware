@@ -103,11 +103,11 @@ void stm32_apply_pmic_suspend_config(uint32_t mode)
 			panic();
 		}
 
-		if (dt_pmic_set_lp_config(node_name) != 0) {
+		if (pmic_set_lp_config(node_name) < 0) {
 			panic();
 		}
 
-		if (dt_pmic_configure_boot_on_regulators() != 0) {
+		if (pmic_configure_boot_on_regulators() < 0) {
 			panic();
 		}
 	}
