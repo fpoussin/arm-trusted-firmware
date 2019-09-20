@@ -126,12 +126,6 @@
 #define I2C_ICR_TIMOUTCF		BIT(12)
 #define I2C_ICR_ALERTCF			BIT(13)
 
-enum i2c_speed_e {
-	I2C_SPEED_STANDARD,	/* 100 kHz */
-	I2C_SPEED_FAST,		/* 400 kHz */
-	I2C_SPEED_FAST_PLUS,	/* 1 MHz   */
-};
-
 #define STANDARD_RATE			100000
 #define FAST_RATE			400000
 #define FAST_PLUS_RATE			1000000
@@ -196,12 +190,7 @@ struct stm32_i2c_init_s {
 					 * time in nanoseconds.
 					 */
 
-	enum i2c_speed_e speed_mode;	/*
-					 * Specifies the I2C clock source
-					 * frequency mode.
-					 * This parameter can be a value of @ref
-					 * i2c_speed_mode_e.
-					 */
+	uint32_t bus_rate;		/* Specifies the I2C clock frequency */
 
 	int analog_filter;		/*
 					 * Specifies if the I2C analog noise
