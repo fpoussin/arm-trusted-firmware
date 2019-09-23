@@ -142,10 +142,6 @@ void bl2_platform_setup(void)
 	int ret;
 	uint32_t ddr_ns_size;
 
-	if (dt_pmic_status() > 0) {
-		initialize_pmic();
-	}
-
 	ret = stm32mp1_ddr_probe();
 	if (ret < 0) {
 		ERROR("Invalid DDR init: error %d\n", ret);
@@ -392,6 +388,10 @@ skip_console_init:
 	print_reset_reason();
 
 	update_monotonic_counter();
+
+	if (dt_pmic_status() > 0) {
+		initialize_pmic();
+	}
 
 	stm32mp_io_setup();
 }
