@@ -314,8 +314,7 @@ struct i2c_handle_s {
 #define STM32_I2C_ANALOG_FILTER_DELAY_MAX	260	/* ns */
 #define STM32_I2C_DIGITAL_FILTER_MAX		16
 
-int stm32_i2c_get_setup_from_fdt(void *fdt, int node,
-				 struct stm32_i2c_init_s *init);
+int stm32_i2c_get_setup_from_fdt(int node, struct stm32_i2c_init_s *init);
 int stm32_i2c_init(struct i2c_handle_s *hi2c,
 		   struct stm32_i2c_init_s *init_data);
 int stm32_i2c_mem_write(struct i2c_handle_s *hi2c, uint16_t dev_addr,

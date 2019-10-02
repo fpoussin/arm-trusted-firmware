@@ -308,7 +308,7 @@ static int dt_pmic_i2c_config(struct dt_node_info *i2c_info,
 		return -FDT_ERR_NOTFOUND;
 	}
 
-	return stm32_i2c_get_setup_from_fdt(fdt, i2c_node, init);
+	return stm32_i2c_get_setup_from_fdt(i2c_node, init);
 }
 
 int pmic_configure_boot_on_regulators(void)
