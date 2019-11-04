@@ -7,10 +7,10 @@
 #include <platform_def.h>
 
 #include <common/debug.h>
-#include <drivers/st/bsec.h>
 #include <drivers/st/stpmic1.h>
 #include <lib/mmio.h>
 
+#include <stm32mp_common.h>
 #include <stm32mp_dt.h>
 #include <stm32mp1_private.h>
 
@@ -61,8 +61,9 @@
 void stm32mp1_syscfg_init(void)
 {
 	uint32_t bootr;
-	uint32_t otp = 0;
+	uint32_t otp_value;
 	uint32_t vdd_voltage;
+	bool product_below_2v5;
 
 	/*
 	 * Interconnect update : select master using the port 1.
@@ -91,11 +92,11 @@ void stm32mp1_syscfg_init(void)
 	 *   => TF-A enables the low power mode only if VDD < 2.7V (in DT)
 	 *      but this value needs to be consistent with board design.
 	 */
-	if (bsec_read_otp(&otp, HW2_OTP) != BSEC_OK) {
+	if (stm32_get_otp_value(HW2_OTP, &otp_value) != 0) {
 		panic();
 	}
 
-	otp = otp & HW2_OTP_PRODUCT_BELOW_2V5;
+	product_below_2v5 = (otp_value & HW2_OTP_PRODUCT_BELOW_2V5) != 0U;
 
 	/* Get VDD supply */
 	vdd_voltage = dt_get_pwr_vdd_voltage();
@@ -111,11 +112,11 @@ void stm32mp1_syscfg_init(void)
 			      SYSCFG_IOCTRLSETR_HSLVEN_SDMMC |
 			      SYSCFG_IOCTRLSETR_HSLVEN_SPI);
 
-		if (otp == 0U) {
+		if (!product_below_2v5) {
 			INFO("Product_below_2v5=0: HSLVEN protected by HW\n");
 		}
 	} else {
-		if (otp != 0U) {
+		if (product_below_2v5) {
 			ERROR("Product_below_2v5=1:\n");
 			ERROR("\tHSLVEN update is destructive,\n");
 			ERROR("\tno update as VDD > 2.7V\n");

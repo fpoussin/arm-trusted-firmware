@@ -180,13 +180,17 @@ void bl2_platform_setup(void)
 static void update_monotonic_counter(void)
 {
 	uint32_t version;
+	uint32_t otp;
 
 	CASSERT(STM32_TF_VERSION <= MAX_MONOTONIC_VALUE,
 		assert_stm32mp1_monotonic_counter_reach_max);
 
-	/* Check if monotonic counter needs to be incremented. */
-	if (bsec_shadow_read_otp(&version, MONOTONIC_OTP) != BSEC_OK) {
-		ERROR("BSEC: MONOTONIC_OTP Error\n");
+	/* Check if monotonic counter needs to be incremented */
+	if (stm32_get_otp_index(MONOTONIC_OTP, &otp, NULL) != 0) {
+		panic();
+	}
+
+	if (stm32_get_otp_value(MONOTONIC_OTP, &version) != 0) {
 		panic();
 	}
 
@@ -196,7 +200,7 @@ static void update_monotonic_counter(void)
 		/* Need to increment the monotonic counter. */
 		version = BIT(STM32_TF_VERSION) - 1U;
 
-		result = bsec_program_otp(version, MONOTONIC_OTP);
+		result = bsec_program_otp(version, otp);
 		if (result != BSEC_OK) {
 			ERROR("BSEC: MONOTONIC_OTP program Error %i\n",
 			      result);

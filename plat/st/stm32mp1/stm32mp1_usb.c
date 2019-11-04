@@ -187,19 +187,25 @@ static void int_to_str(uint32_t value, uint8_t *pstr, uint8_t len)
 static void update_serial_num_string(void)
 {
 	uint8_t i;
-	uint32_t result;
 	/* serial number is set to 0 */
 	uint32_t deviceserial[UID_WORD_NB] = {0U, 0U, 0U};
+	uint32_t otp;
+	uint32_t len;
+
+	if (stm32_get_otp_index(UID_OTP, &otp, &len) != 0) {
+		ERROR("BSEC: Get UID_OTP number Error\n");
+		return;
+	}
+
+	if ((len / __WORD_BIT) != UID_WORD_NB) {
+		ERROR("BSEC: Get UID_OTP length Error\n");
+		return;
+	}
 
 	for (i = 0; i < UID_WORD_NB; i++) {
-		result = bsec_shadow_register(i + UID0_OTP);
-		if (result != BSEC_OK) {
-			ERROR("BSEC: UID%d Shadowing Error\n", i);
-			return;
-		}
-		result = bsec_read_otp(&deviceserial[i], i + UID0_OTP);
-		if (result != BSEC_OK) {
-			ERROR("BSEC: UID%d Read Error\n", i);
+		if (bsec_shadow_read_otp(&deviceserial[i], i + otp) !=
+		    BSEC_OK) {
+			ERROR("BSEC: UID%d Error\n", i);
 			return;
 		}
 	}
