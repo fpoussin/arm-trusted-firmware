@@ -374,39 +374,24 @@ int fdt_get_clock_id_by_name(int node, const char *name)
  */
 unsigned long fdt_get_uart_clock_freq(uintptr_t instance)
 {
-	int node;
 	void *fdt;
+	int node;
+	int clk_id;
 
 	if (fdt_get_address(&fdt) == 0) {
 		return 0UL;
 	}
 
 	/* Check for UART nodes */
-	for (node = fdt_node_offset_by_compatible(fdt, -1, DT_UART_COMPAT);
-	     node != -FDT_ERR_NOTFOUND;
-	     node = fdt_node_offset_by_compatible(fdt, node, DT_UART_COMPAT)) {
-		const fdt32_t *cuint;
-		unsigned long clk_id;
-
-		cuint = fdt_getprop(fdt, node, "reg", NULL);
-		if (cuint == NULL) {
-			continue;
-		}
-
-		if ((uintptr_t)fdt32_to_cpu(*cuint) != instance) {
-			continue;
-		}
-
-		cuint = fdt_getprop(fdt, node, "clocks", NULL);
-		if (cuint == NULL) {
-			continue;
-		}
-
-		cuint++;
-		clk_id = (unsigned long)(fdt32_to_cpu(*cuint));
-
-		return stm32mp_clk_get_rate(clk_id);
+	node = dt_match_instance_by_compatible(DT_UART_COMPAT, instance);
+	if (node < 0) {
+		return 0UL;
 	}
 
-	return 0UL;
+	clk_id = fdt_get_clock_id(node);
+	if (clk_id < 0) {
+		return 0UL;
+	}
+
+	return stm32mp_clk_get_rate((unsigned long)clk_id);
 }
