@@ -104,12 +104,8 @@ static int pmic_config_boot_on(void *fdt, int node, const char *regu_name)
 	uint16_t voltage;
 	int status;
 
-#if defined(IMAGE_BL2)
 	if ((fdt_getprop(fdt, node, "regulator-boot-on", NULL) == NULL) &&
 	    (fdt_getprop(fdt, node, "regulator-always-on", NULL) == NULL)) {
-#else
-	if (fdt_getprop(fdt, node, "regulator-boot-on",	NULL) == NULL) {
-#endif
 		return 0;
 	}
 
