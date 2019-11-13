@@ -71,6 +71,7 @@ void stm32mp1_clk_rcc_regs_unlock(void);
 
 void stm32mp1_stgen_increment(unsigned long long offset_in_ms);
 
+int stm32mp1_round_opp_khz(uint32_t *freq_khz);
 int stm32mp1_set_opp_khz(uint32_t freq_khz);
 
 void stm32mp1_clk_mpu_suspend(void);

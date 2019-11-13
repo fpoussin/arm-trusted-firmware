@@ -1852,14 +1852,14 @@ static bool clk_pll1_settings_are_valid(void)
 	return pll1_settings.valid_id == PLL1_SETTINGS_VALID_ID;
 }
 
-int stm32mp1_round_opp_khz(unsigned int *freq_khz)
+int stm32mp1_round_opp_khz(uint32_t *freq_khz)
 {
 	int i;
-	unsigned int round_opp = 0U;
+	uint32_t round_opp = 0U;
 
-	if (pll1_settings.valid_id != PLL1_SETTINGS_VALID_ID) {
+	if (!clk_pll1_settings_are_valid()) {
 		/*
-		 * No OPP table in DT, or an error occurred during pll1
+		 * No OPP table in DT, or an error occurred during PLL1
 		 * settings computation, system can only work on current
 		 * operating point, so return current CPU frequency.
 		 */
