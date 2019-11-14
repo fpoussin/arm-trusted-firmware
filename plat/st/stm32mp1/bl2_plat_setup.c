@@ -19,11 +19,13 @@
 #include <drivers/st/stm32_console.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32_uart.h>
+#include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp1_pwr.h>
 #include <drivers/st/stm32mp1_ram.h>
+#include <drivers/st/stpmic1.h>
 #include <lib/mmio.h>
 #include <lib/optee_utils.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
@@ -209,6 +211,58 @@ static void update_monotonic_counter(void)
 	}
 }
 
+static void initialize_clock(bool wakeup_standby)
+{
+	uint32_t voltage_mv = 0U;
+	uint32_t freq_khz = 0U;
+	int ret;
+
+	if (wakeup_standby) {
+		stm32_get_pll1_settings_from_context();
+	}
+
+	/*
+	 * If no pre-defined PLL1 settings in DT, find the highest frequency
+	 * in the OPP table (in DT, compatible with plaform capabilities, or
+	 * in structure restored in RAM), and set related VDDCORE voltage.
+	 * If PLL1 settings found in DT, we consider VDDCORE voltage in DT is
+	 * consistent with it.
+	 */
+	if (!fdt_is_pll1_predefined()) {
+		if (wakeup_standby) {
+			ret = stm32mp1_clk_get_maxfreq_opp(&freq_khz,
+							   &voltage_mv);
+		} else {
+			ret = dt_get_max_opp_freqvolt(&freq_khz, &voltage_mv);
+		}
+
+		if (ret != 0) {
+			panic();
+		}
+
+		if (dt_pmic_status() > 0) {
+			int read_voltage;
+			const char *name = "buck1";
+
+			read_voltage = stpmic1_regulator_voltage_get(name);
+			if (read_voltage < 0) {
+				panic();
+			}
+
+			if (voltage_mv != (uint32_t)read_voltage) {
+				if (stpmic1_regulator_voltage_set(name,
+						(uint16_t)voltage_mv) != 0) {
+					panic();
+				}
+			}
+		}
+	}
+
+	if (stm32mp1_clk_init(freq_khz) < 0) {
+		panic();
+	}
+}
+
 void bl2_el3_plat_arch_setup(void)
 {
 	int32_t result;
@@ -227,6 +281,7 @@ void bl2_el3_plat_arch_setup(void)
 		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
 	uint32_t bkpr_core1_addr =
 		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+	bool wakeup_standby = false;
 
 	mmap_add_region(BL_CODE_BASE, BL_CODE_BASE,
 			BL_CODE_END - BL_CODE_BASE,
@@ -311,6 +366,8 @@ void bl2_el3_plat_arch_setup(void)
 	     BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY)) {
 		mmio_write_32(bkpr_core1_addr, 0);
 		mmio_write_32(bkpr_core1_magic, 0);
+	} else {
+		wakeup_standby = true;
 	}
 
 	generic_delay_timer_init();
@@ -335,12 +392,13 @@ void bl2_el3_plat_arch_setup(void)
 
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();
-		configure_pmic();
+
+		if (!wakeup_standby) {
+			configure_pmic();
+		}
 	}
 
-	if (stm32mp1_clk_init(0U) < 0) {
-		panic();
-	}
+	initialize_clock(wakeup_standby);
 
 	stm32mp1_syscfg_init();
 
