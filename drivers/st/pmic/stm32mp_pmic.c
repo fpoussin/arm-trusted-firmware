@@ -40,13 +40,24 @@ static uint32_t pmic_i2c_addr;
 
 static int dt_get_pmic_node(void *fdt)
 {
-	return fdt_node_offset_by_compatible(fdt, -1, "st,stpmic1");
+	static int node = -FDT_ERR_BADOFFSET;
+
+	if (node == -FDT_ERR_BADOFFSET) {
+		node = fdt_node_offset_by_compatible(fdt, -1, "st,stpmic1");
+	}
+
+	return node;
 }
 
 int dt_pmic_status(void)
 {
+	static int status = -FDT_ERR_BADVALUE;
 	int node;
 	void *fdt;
+
+	if (status != -FDT_ERR_BADVALUE) {
+		return status;
+	}
 
 	if (fdt_get_address(&fdt) == 0) {
 		return -ENOENT;
@@ -54,10 +65,14 @@ int dt_pmic_status(void)
 
 	node = dt_get_pmic_node(fdt);
 	if (node <= 0) {
-		return -FDT_ERR_NOTFOUND;
+		status = -FDT_ERR_NOTFOUND;
+
+		return status;
 	}
 
-	return fdt_get_status(node);
+	status = (int)fdt_get_status(node);
+
+	return status;
 }
 
 static bool dt_pmic_is_secure(void)
@@ -275,32 +290,36 @@ static int pmic_operate(uint8_t command, const char *node_name,
 static int dt_pmic_i2c_config(struct dt_node_info *i2c_info,
 			      struct stm32_i2c_init_s *init)
 {
-	int pmic_node, i2c_node;
-	void *fdt;
-	const fdt32_t *cuint;
+	static int i2c_node = -FDT_ERR_NOTFOUND;
 
-	if (fdt_get_address(&fdt) == 0) {
-		return -ENOENT;
-	}
+	if (i2c_node == -FDT_ERR_NOTFOUND) {
+		void *fdt;
+		int pmic_node;
+		const fdt32_t *cuint;
 
-	pmic_node = dt_get_pmic_node(fdt);
-	if (pmic_node < 0) {
-		return 1;
-	}
+		if (fdt_get_address(&fdt) == 0) {
+			return -FDT_ERR_NOTFOUND;
+		}
 
-	cuint = fdt_getprop(fdt, pmic_node, "reg", NULL);
-	if (cuint == NULL) {
-		return -FDT_ERR_NOTFOUND;
-	}
+		pmic_node = dt_get_pmic_node(fdt);
+		if (pmic_node < 0) {
+			return 1;
+		}
 
-	pmic_i2c_addr = fdt32_to_cpu(*cuint) << 1;
-	if (pmic_i2c_addr > UINT16_MAX) {
-		return -EINVAL;
-	}
+		cuint = fdt_getprop(fdt, pmic_node, "reg", NULL);
+		if (cuint == NULL) {
+			return -FDT_ERR_NOTFOUND;
+		}
 
-	i2c_node = fdt_parent_offset(fdt, pmic_node);
-	if (i2c_node < 0) {
-		return -FDT_ERR_NOTFOUND;
+		pmic_i2c_addr = fdt32_to_cpu(*cuint) << 1;
+		if (pmic_i2c_addr > UINT16_MAX) {
+			return -FDT_ERR_BADVALUE;
+		}
+
+		i2c_node = fdt_parent_offset(fdt, pmic_node);
+		if (i2c_node < 0) {
+			return -FDT_ERR_NOTFOUND;
+		}
 	}
 
 	dt_fill_device_info(i2c_info, i2c_node);
