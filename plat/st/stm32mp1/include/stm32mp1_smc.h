@@ -31,6 +31,17 @@
 #define STM32_SMC_BSEC			0x82001003
 
 /*
+ * SIP function STM32_SMC_RCC_OPP.
+ *
+ * Argument a0: (input) SMCC ID.
+ *		(output) Status return code.
+ * Argument a1: (input) Service ID (STM32_SMC_RCC_OPP_xxx).
+ *		(output) Rounded frequency, if applicable.
+ * Argument a2: (input) Requested frequency.
+ */
+#define STM32_SMC_RCC_OPP		0x82001009
+
+/*
  * STM32_SIP_SMC_SCMI_AGENT0
  * STM32_SIP_SMC_SCMI_AGENT1
  * Process SCMI message pending in SCMI shared memory buffer.
@@ -64,5 +75,9 @@
 #define STM32_SMC_NOT_SUPPORTED		0xFFFFFFFFU
 #define STM32_SMC_FAILED		0xFFFFFFFEU
 #define STM32_SMC_INVALID_PARAMS	0xFFFFFFFDU
+
+/* Service ID for STM32_SMC_RCC_OPP */
+#define STM32_SMC_RCC_OPP_SET		0x0
+#define STM32_SMC_RCC_OPP_ROUND		0x1
 
 #endif /* STM32MP1_SMC_H */
