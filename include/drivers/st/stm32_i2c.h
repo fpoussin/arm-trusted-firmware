@@ -242,6 +242,8 @@ struct i2c_handle_s {
 	enum i2c_state_e i2c_state;		/* Communication state    */
 	enum i2c_mode_e i2c_mode;		/* Communication mode     */
 	uint32_t i2c_err;			/* Error code             */
+	uint32_t saved_timing;			/* Saved timing value     */
+	uint32_t saved_frequency;		/* Saved frequency value  */
 };
 
 #define I2C_ADDRESSINGMODE_7BIT		0x00000001U
