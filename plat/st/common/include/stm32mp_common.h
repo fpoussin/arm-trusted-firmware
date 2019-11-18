@@ -92,6 +92,9 @@ void stm32mp_print_cpuinfo(void);
 /* Print board information */
 void stm32mp_print_boardinfo(void);
 
+/* Check HW CPU OPP support */
+bool stm32mp_supports_cpu_opp(uint32_t opp_id);
+
 /*
  * Util for clock gating and to get clock rate for stm32 and platform drivers
  * @id: Target clock ID, ID used in clock DT bindings
