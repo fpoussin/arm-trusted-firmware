@@ -338,7 +338,7 @@ void bl2_el3_plat_arch_setup(void)
 		configure_pmic();
 	}
 
-	if (stm32mp1_clk_init() < 0) {
+	if (stm32mp1_clk_init(0U) < 0) {
 		panic();
 	}
 

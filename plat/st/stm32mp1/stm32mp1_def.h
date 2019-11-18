@@ -481,6 +481,8 @@ static inline uint32_t tamp_bkpr(uint32_t idx)
  ******************************************************************************/
 #define PLAT_OPP_ID1			U(1)
 #define PLAT_OPP_ID2			U(2)
+#define PLAT_MAX_OPP_NB			U(2)
+#define PLAT_MAX_PLLCFG_NB		U(6)
 
 /*******************************************************************************
  * DEBUG
