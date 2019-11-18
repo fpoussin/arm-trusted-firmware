@@ -45,6 +45,21 @@ bool initialize_pmic_i2c(void);
  */
 void initialize_pmic(void);
 
+/*
+ * configure_pmic - PMIC configuration function, called at platform init
+ *
+ * Panics on errors
+ */
+void configure_pmic(void);
+
+#if DEBUG
+void print_pmic_info_and_debug(void);
+#else
+static inline void print_pmic_info_and_debug(void)
+{
+}
+#endif
+
 bool is_pmic_regulator(struct stm32mp_regulator *regu);
 void bind_pmic_regulator(struct stm32mp_regulator *regu);
 
