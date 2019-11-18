@@ -32,4 +32,6 @@ int fdt_get_clock_id(int node);
 int fdt_get_clock_id_by_name(int node, const char *name);
 unsigned long fdt_get_uart_clock_freq(uintptr_t instance);
 
+bool fdt_is_pll1_predefined(void);
+
 #endif /* STM32MP_CLKFUNC_H */

@@ -395,3 +395,12 @@ unsigned long fdt_get_uart_clock_freq(uintptr_t instance)
 
 	return stm32mp_clk_get_rate((unsigned long)clk_id);
 }
+
+/*******************************************************************************
+ * This function checks if PLL1 hard-coded settings have been defined in DT.
+ * Returns true if PLL1 node is found and enabled, false if not.
+ ******************************************************************************/
+bool fdt_is_pll1_predefined(void)
+{
+	return fdt_check_node(fdt_rcc_subnode_offset(DT_PLL1_NODE_NAME));
+}
