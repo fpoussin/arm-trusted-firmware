@@ -274,7 +274,8 @@ static void print_boot_device(boot_api_context_t *boot_context)
 		INFO("Using USB\n");
 		break;
 	default:
-		ERROR("Boot interface not found\n");
+		ERROR("Boot interface %u not found\n",
+		      boot_context->boot_interface_selected);
 		panic();
 		break;
 	}
@@ -653,6 +654,7 @@ void stm32mp_io_setup(void)
 	default:
 		ERROR("Boot interface %d not supported\n",
 		      boot_context->boot_interface_selected);
+		panic();
 		break;
 	}
 }
