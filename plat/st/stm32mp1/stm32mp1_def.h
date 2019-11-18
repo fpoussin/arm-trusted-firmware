@@ -496,6 +496,7 @@ static inline uint32_t tamp_bkpr(uint32_t idx)
 #define DT_DDR_COMPAT			"st,stm32mp1-ddr"
 #define DT_IWDG_COMPAT			"st,stm32mp1-iwdg"
 #define DT_NVMEM_LAYOUT_COMPAT		"st,stm32-nvmem-layout"
+#define DT_OPP_COMPAT			"operating-points-v2"
 #define DT_PWR_COMPAT			"st,stm32mp1,pwr-reg"
 #define DT_RCC_CLK_COMPAT		"st,stm32mp1-rcc"
 
