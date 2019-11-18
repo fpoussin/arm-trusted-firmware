@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -175,8 +175,18 @@ int stm32_gic_enable_spi(int node, const char *name)
 	}
 
 	if (name != NULL) {
-		index = fdt_stringlist_search(fdt, node, "interrupt-names",
-					      name);
+		switch (fdt_get_status(node)) {
+		case DT_SECURE:
+			index = fdt_stringlist_search(fdt, node,
+						      "interrupt-names", name);
+			break;
+		default:
+			index = fdt_stringlist_search(fdt, node,
+						      "secure-interrupt-names",
+						      name);
+			break;
+		}
+
 		if (index < 0) {
 			return index;
 		}
