@@ -79,6 +79,9 @@ STM32MP_SPI_NOR		?=	0
 STM32MP_USB_PROGRAMMER	?=	0
 STM32MP_UART_PROGRAMMER	?=	0
 
+# Hypervisor mode
+BL33_HYP			?= 0
+
 # Device tree
 DTB_FILE_NAME		?=	stm32mp157c-ev1.dtb
 ifeq ($(STM32MP_USE_STM32IMAGE),1)
@@ -162,6 +165,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_USE_STM32IMAGE \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_SSP \
+		BL33_HYP \
 )))
 
 $(eval $(call assert_numerics,\
@@ -187,6 +191,7 @@ $(eval $(call add_defines,\
 		STM32MP_USE_STM32IMAGE \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_SSP \
+		BL33_HYP \
 )))
 
 # Include paths and source files
