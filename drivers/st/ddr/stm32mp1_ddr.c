@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2018-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
  */
@@ -759,7 +759,6 @@ void stm32mp1_ddr_init(struct ddr_info *priv,
 {
 	uint32_t pir, ddr_reten;
 	int ret = -EINVAL;
-	uint64_t time;
 
 	if ((config->c_reg.mstr & DDRCTRL_MSTR_DDR3) != 0U) {
 		ret = board_ddr_power_init(STM32MP_DDR3);
@@ -886,7 +885,9 @@ void stm32mp1_ddr_init(struct ddr_info *priv,
 	 */
 	set_reg(priv, REGPHY_REG, &config->p_reg);
 	set_reg(priv, REGPHY_TIMING, &config->p_timing);
-	set_reg(priv, REGPHY_CAL, &config->p_cal);
+	if (config->p_cal_present) {
+		set_reg(priv, REGPHY_CAL, &config->p_cal);
+	}
 
 	/* DDR3 = don't set DLLOFF for init mode */
 	if ((config->c_reg.mstr &
@@ -966,44 +967,53 @@ void stm32mp1_ddr_init(struct ddr_info *priv,
 		stm32mp1_ddr3_dll_off(priv);
 	}
 
-	VERBOSE("DDR DQS training : ");
+	if (config->p_cal_present) {
+		VERBOSE("DDR DQS training skipped.\n");
+	} else {
+		uint64_t time;
 
-	time = timeout_init_us(0);
+		VERBOSE("DDR DQS training.\n");
 
-	/*
-	 *  8. Disable Auto refresh and power down by setting
-	 *    - RFSHCTL3.dis_au_refresh = 1
-	 *    - PWRCTL.powerdown_en = 0
-	 *    - DFIMISC.dfiinit_complete_en = 0
-	 */
-	stm32mp1_refresh_disable(priv->ctl);
+		time = timeout_init_us(0);
 
-	/*
-	 *  9. Program PUBL PGCR to enable refresh during training
-	 *     and rank to train
-	 *     not done => keep the programed value in PGCR
-	 */
+		/*
+		 *  8. Disable Auto refresh and power down by setting
+		 *    - RFSHCTL3.dis_au_refresh = 1
+		 *    - PWRCTL.powerdown_en = 0
+		 *    - DFIMISC.dfiinit_complete_en = 0
+		 */
+		stm32mp1_refresh_disable(priv->ctl);
 
-	/*
-	 * 10. configure PUBL PIR register to specify which training step
-	 * to run
-	 * Warning : RVTRN  is not supported by this PUBL
-	 */
-	stm32mp1_ddrphy_init(priv->phy, DDRPHYC_PIR_QSTRN);
+		/*
+		 *  9. Program PUBL PGCR to enable refresh during training
+		 *     and rank to train
+		 *     not done => keep the programed value in PGCR
+		 */
 
-	/* 11. monitor PUB PGSR.IDONE to poll cpmpletion of training sequence */
-	stm32mp1_ddrphy_idone_wait(priv->phy);
+		/*
+		 * 10. configure PUBL PIR register to specify which training
+		 *     step to run
+		 * Warning : RVTRN  is not supported by this PUBL
+		 */
+		stm32mp1_ddrphy_init(priv->phy, DDRPHYC_PIR_QSTRN);
 
-	/* Refresh compensation: forcing refresh command */
-	if (config->self_refresh) {
-		stm32mp1_refresh_compensation(config, priv->ctl, time);
+		/* 11. monitor PUB PGSR.IDONE to poll cpmpletion of training
+		 *     sequence
+		 */
+		stm32mp1_ddrphy_idone_wait(priv->phy);
+
+		/* Refresh compensation: forcing refresh command */
+		if (config->self_refresh) {
+			stm32mp1_refresh_compensation(config, priv->ctl, time);
+		}
+
+		/*
+		 * 12. set back registers in step 8 to the orginal values
+		 *     if desidered
+		 */
+		stm32mp1_refresh_restore(priv->ctl, config->c_reg.rfshctl3,
+					 config->c_reg.pwrctl);
 	}
-
-	/*
-	 * 12. set back registers in step 8 to the orginal values if desidered
-	 */
-	stm32mp1_refresh_restore(priv->ctl, config->c_reg.rfshctl3,
-				 config->c_reg.pwrctl);
 
 	/* Enable uMCTL2 AXI port 0 */
 	mmio_setbits_32((uintptr_t)&priv->ctl->pctrl_0,

@@ -196,20 +196,23 @@ static int stm32mp1_ddr_setup(void)
 	uint32_t bkpr_core1_magic =
 		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
 
-#define PARAM(x, y)							\
+#define PARAM(x, y, z)							\
 	{								\
 		.name = x,						\
 		.offset = offsetof(struct stm32mp1_ddr_config, y),	\
-		.size = sizeof(config.y) / sizeof(uint32_t)		\
+		.size = sizeof(config.y) / sizeof(uint32_t),		\
+		.present = z						\
 	}
 
-#define CTL_PARAM(x) PARAM("st,ctl-"#x, c_##x)
-#define PHY_PARAM(x) PARAM("st,phy-"#x, p_##x)
+#define CTL_PARAM(x) PARAM("st,ctl-"#x, c_##x, NULL)
+#define PHY_PARAM(x) PARAM("st,phy-"#x, p_##x, NULL)
+#define PHY_PARAM_OPT(x) PARAM("st,phy-"#x, p_##x, &config.p_##x##_present)
 
 	const struct {
 		const char *name; /* Name in DT */
 		const uint32_t offset; /* Offset in config struct */
 		const uint32_t size;   /* Size of parameters */
+		bool * const present;  /* presence indication for opt */
 	} param[] = {
 		CTL_PARAM(reg),
 		CTL_PARAM(timing),
@@ -217,7 +220,7 @@ static int stm32mp1_ddr_setup(void)
 		CTL_PARAM(perf),
 		PHY_PARAM(reg),
 		PHY_PARAM(timing),
-		PHY_PARAM(cal)
+		PHY_PARAM_OPT(cal)
 	};
 
 	if (fdt_get_address(&fdt) == 0) {
@@ -255,10 +258,19 @@ static int stm32mp1_ddr_setup(void)
 
 		VERBOSE("%s: %s[0x%x] = %d\n", __func__,
 			param[idx].name, param[idx].size, ret);
-		if (ret != 0) {
+		if ((ret != 0) &&
+		    ((ret != -FDT_ERR_NOTFOUND) ||
+		     (param[idx].present == NULL))) {
 			ERROR("%s: Cannot read %s, error=%d\n",
 			      __func__, param[idx].name, ret);
 			return -EINVAL;
+		}
+		if (param[idx].present != NULL) {
+			/* save presence of optional parameters */
+			*(param[idx].present) = true;
+			if (ret == -FDT_ERR_NOTFOUND) {
+				*(param[idx].present) = false;
+			}
 		}
 	}
 

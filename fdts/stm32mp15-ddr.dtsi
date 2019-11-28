@@ -132,6 +132,7 @@
 				DDR_MR3
 			>;
 
+#ifdef DDR_PHY_CAL_SKIP
 			st,phy-cal = <
 				DDR_DX0DLLCR
 				DDR_DX0DQTR
@@ -146,6 +147,7 @@
 				DDR_DX3DQTR
 				DDR_DX3DQSTR
 			>;
+#endif
 
 			status = "okay";
 		};
