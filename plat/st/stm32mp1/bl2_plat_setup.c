@@ -366,7 +366,9 @@ void bl2_el3_plat_arch_setup(void)
 	     BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY)) {
 		mmio_write_32(bkpr_core1_addr, 0);
 		mmio_write_32(bkpr_core1_magic, 0);
-	} else {
+	}
+
+	if (mmio_read_32(bkpr_core1_addr) != 0U) {
 		wakeup_standby = true;
 	}
 
