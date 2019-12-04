@@ -7,6 +7,8 @@
 #ifndef STM32MP_REGULATOR_H
 #define STM32MP_REGULATOR_H
 
+#include <stdbool.h>
+
 struct stm32mp_regulator;
 
 struct stm32mp_regulator_ops {
@@ -17,6 +19,7 @@ struct stm32mp_regulator_ops {
 struct stm32mp_regulator {
 	const struct stm32mp_regulator_ops *ops;
 	int id;
+	bool always_on;
 };
 
 int stm32mp_regulator_enable(struct stm32mp_regulator *regu);

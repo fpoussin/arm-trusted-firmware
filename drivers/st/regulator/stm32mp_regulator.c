@@ -25,6 +25,10 @@ int stm32mp_regulator_disable(struct stm32mp_regulator *regu)
 {
 	assert((regu->ops != NULL) && (regu->ops->disable != NULL));
 
+	if (regu->always_on) {
+		return 0;
+	}
+
 	return regu->ops->disable(regu);
 }
 
