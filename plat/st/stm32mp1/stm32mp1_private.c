@@ -722,10 +722,22 @@ enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode)
 
 int plat_bind_regulator(struct stm32mp_regulator *regu)
 {
+	void *fdt;
+	int regu_node;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return false;
+	}
+
 	if ((dt_pmic_status() > 0) && is_pmic_regulator(regu)) {
 		bind_pmic_regulator(regu);
 	} else {
 		bind_dummy_regulator(regu);
+	}
+
+	regu_node = fdt_node_offset_by_phandle(fdt, regu->id);
+	if (fdt_getprop(fdt, regu_node, "regulator-always-on", NULL) != NULL) {
+		regu->always_on = true;
 	}
 
 	return 0;
