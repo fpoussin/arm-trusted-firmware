@@ -12,7 +12,7 @@
 #include <arch_helpers.h>
 #include <context.h>
 #include <drivers/st/stm32_rtc.h>
-#include <drivers/st/stm32mp1_clk.h>
+#include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp1_ddr_regs.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/el3_runtime/context_mgmt.h>
@@ -71,6 +71,7 @@ struct backup_data_s {
 	struct stm32_rtc_calendar rtc;
 	uint8_t ddr_training_backup[TRAINING_AREA_SIZE];
 	uint8_t pll1_settings[PLL1_SETTINGS_SIZE];
+	unsigned long long stgen;
 #endif
 };
 
@@ -131,6 +132,7 @@ int stm32_save_context(uint32_t zq0cr0_zdata)
 	backup_data->zq0cr0_zdata = zq0cr0_zdata;
 
 	stm32_rtc_get_calendar(&backup_data->rtc);
+	backup_data->stgen = stm32mp_stgen_get_counter();
 
 	stm32mp1_clk_lp_save_opp_pll1_settings(backup_data->pll1_settings,
 					sizeof(backup_data->pll1_settings));
@@ -165,11 +167,11 @@ int stm32_restore_context(void)
 	memcpy(cpu_context, backup_data->saved_cpu_context,
 	       sizeof(cpu_context_t) * PLATFORM_CORE_COUNT);
 
-	/* update STGEN counter with standby mode length */
+	/* Restore STGEN counter with standby mode length */
 	stm32_rtc_get_calendar(&current_calendar);
 	stdby_time_in_ms = stm32_rtc_diff_calendar(&current_calendar,
 						   &backup_data->rtc);
-	stm32mp1_stgen_increment(stdby_time_in_ms);
+	stm32mp_stgen_restore_counter(backup_data->stgen, stdby_time_in_ms);
 
 	stm32mp1_clk_lp_load_opp_pll1_settings(backup_data->pll1_settings,
 					sizeof(backup_data->pll1_settings));
@@ -177,6 +179,22 @@ int stm32_restore_context(void)
 	stm32mp_clk_disable(BKPSRAM);
 
 	return 0;
+}
+
+unsigned long long stm32_get_stgen_from_context(void)
+{
+	struct backup_data_s *backup_data;
+	unsigned long long stgen_cnt;
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	stgen_cnt = backup_data->stgen;
+
+	stm32mp_clk_disable(BKPSRAM);
+
+	return stgen_cnt;
 }
 #endif /*AARCH32_SP_OPTEE*/
 

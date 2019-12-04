@@ -15,8 +15,8 @@
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32_rtc.h>
+#include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp_pmic.h>
-#include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp1_ddr_helpers.h>
 #include <drivers/st/stm32mp1_pwr.h>
 #include <drivers/st/stm32mp1_rcc.h>
@@ -34,8 +34,7 @@
 #include <stm32mp1_private.h>
 
 static unsigned int gicc_pmr;
-static struct stm32_rtc_calendar sleep_time, current_calendar;
-static unsigned long long stdby_time_in_ms;
+static struct stm32_rtc_calendar sleep_time;
 static bool enter_cstop_done;
 static uint32_t int_stack[STM32MP_INT_STACK_SIZE];
 
@@ -227,6 +226,8 @@ void stm32_exit_cstop(void)
 {
 	uintptr_t pwr_base = stm32mp_pwr_base();
 	uintptr_t rcc_base = stm32mp_rcc_base();
+	unsigned long long stdby_time_in_ms;
+	struct stm32_rtc_calendar current_calendar;
 
 	if (!enter_cstop_done) {
 		return;
@@ -260,8 +261,8 @@ void stm32_exit_cstop(void)
 
 	stdby_time_in_ms = stm32_rtc_diff_calendar(&current_calendar,
 						   &sleep_time);
-
-	stm32mp1_stgen_increment(stdby_time_in_ms);
+	stm32mp_stgen_restore_counter(stm32_get_stgen_from_context(),
+				      stdby_time_in_ms);
 
 	stm32mp1_syscfg_enable_io_compensation();
 }

@@ -19,7 +19,6 @@
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
 #include <drivers/delay_timer.h>
-#include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_timer.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp1_clk.h>
@@ -1725,35 +1724,6 @@ static void stm32mp1_set_rtcsrc(unsigned int clksrc, bool lse_css)
 	}
 }
 
-static void stm32mp1_stgen_config(void)
-{
-	uint32_t cntfid0;
-	unsigned long rate;
-	unsigned long long counter;
-
-	cntfid0 = mmio_read_32(STGEN_BASE + CNTFID_OFF);
-	rate = get_clock_rate(stm32mp1_clk_get_parent(STGEN_K));
-
-	if (cntfid0 == rate) {
-		return;
-	}
-
-	mmio_clrbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
-	counter = (unsigned long long)mmio_read_32(STGEN_BASE + CNTCVL_OFF);
-	counter |= ((unsigned long long)mmio_read_32(STGEN_BASE + CNTCVU_OFF)) << 32;
-	counter = (counter * rate / cntfid0);
-
-	mmio_write_32(STGEN_BASE + CNTCVL_OFF, (uint32_t)counter);
-	mmio_write_32(STGEN_BASE + CNTCVU_OFF, (uint32_t)(counter >> 32));
-	mmio_write_32(STGEN_BASE + CNTFID_OFF, rate);
-	mmio_setbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
-
-	write_cntfrq((u_register_t)rate);
-
-	/* Need to update timer with new frequency */
-	generic_delay_timer_init();
-}
-
 unsigned long stm32mp_clk_timer_get_rate(unsigned long id)
 {
 	unsigned long parent_rate;
@@ -1779,21 +1749,6 @@ unsigned long stm32mp_clk_timer_get_rate(unsigned long id)
 	}
 
 	return parent_rate * (timpre + 1) * 2;
-}
-
-void stm32mp1_stgen_increment(unsigned long long offset_in_ms)
-{
-	unsigned long long cnt;
-
-	cnt = ((unsigned long long)mmio_read_32(STGEN_BASE + CNTCVU_OFF) << 32) |
-		mmio_read_32(STGEN_BASE + CNTCVL_OFF);
-
-	cnt += (offset_in_ms * mmio_read_32(STGEN_BASE + CNTFID_OFF)) / 1000U;
-
-	mmio_clrbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
-	mmio_write_32(STGEN_BASE + CNTCVL_OFF, (uint32_t)cnt);
-	mmio_write_32(STGEN_BASE + CNTCVU_OFF, (uint32_t)(cnt >> 32));
-	mmio_setbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
 }
 
 /*******************************************************************************
@@ -2549,7 +2504,8 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 		if (ret != 0) {
 			return ret;
 		}
-		stm32mp1_stgen_config();
+
+		stm32mp_stgen_config();
 	}
 
 	/* Select DIV */
@@ -2723,7 +2679,8 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 	if (stm32mp1_osc[_HSI] == 0U) {
 		stm32mp1_hsi_set(false);
 	}
-	stm32mp1_stgen_config();
+
+	stm32mp_stgen_config();
 
 	/* Software Self-Refresh mode (SSR) during DDR initilialization */
 	mmio_clrsetbits_32(rcc_base + RCC_DDRITFCR,

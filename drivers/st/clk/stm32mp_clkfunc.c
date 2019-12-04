@@ -11,6 +11,7 @@
 #include <platform_def.h>
 
 #include <common/fdt_wrappers.h>
+#include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 
@@ -403,4 +404,65 @@ unsigned long fdt_get_uart_clock_freq(uintptr_t instance)
 bool fdt_is_pll1_predefined(void)
 {
 	return fdt_check_node(fdt_rcc_subnode_offset(DT_PLL1_NODE_NAME));
+}
+
+/*******************************************************************************
+ * This function configures and restores the STGEN counter depending on the
+ * connected clock.
+ ******************************************************************************/
+void stm32mp_stgen_config(void)
+{
+	uint32_t cntfid0;
+	unsigned long rate;
+	unsigned long long counter;
+
+	cntfid0 = mmio_read_32(STGEN_BASE + CNTFID_OFF);
+	rate = stm32mp_clk_get_rate(STGEN_K);
+
+	if (cntfid0 == rate) {
+		return;
+	}
+
+	mmio_clrbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
+	counter = (unsigned long long)mmio_read_32(STGEN_BASE + CNTCVL_OFF);
+	counter |= ((unsigned long long)mmio_read_32(STGEN_BASE + CNTCVU_OFF)) << 32;
+	counter = (counter * rate / cntfid0);
+
+	mmio_write_32(STGEN_BASE + CNTCVL_OFF, (uint32_t)counter);
+	mmio_write_32(STGEN_BASE + CNTCVU_OFF, (uint32_t)(counter >> 32));
+	mmio_write_32(STGEN_BASE + CNTFID_OFF, rate);
+	mmio_setbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
+
+	write_cntfrq((u_register_t)rate);
+
+	/* Need to update timer with new frequency */
+	generic_delay_timer_init();
+}
+
+/*******************************************************************************
+ * This function returns the STGEN counter value.
+ ******************************************************************************/
+unsigned long long stm32mp_stgen_get_counter(void)
+{
+	return (((unsigned long long)mmio_read_32(STGEN_BASE + CNTCVU_OFF) << 32) |
+		mmio_read_32(STGEN_BASE + CNTCVL_OFF));
+}
+
+/*******************************************************************************
+ * This function restores the STGEN counter value.
+ * It takes a first input value as a counter backup value to be restored and a
+ * offset in ms to be added.
+ ******************************************************************************/
+void stm32mp_stgen_restore_counter(unsigned long long value,
+				   unsigned long long offset_in_ms)
+{
+	unsigned long long cnt;
+
+	cnt = value + ((offset_in_ms *
+			mmio_read_32(STGEN_BASE + CNTFID_OFF)) / 1000U);
+
+	mmio_clrbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
+	mmio_write_32(STGEN_BASE + CNTCVL_OFF, (uint32_t)cnt);
+	mmio_write_32(STGEN_BASE + CNTCVU_OFF, (uint32_t)(cnt >> 32));
+	mmio_setbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
 }
