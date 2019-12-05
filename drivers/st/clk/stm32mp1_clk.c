@@ -2505,7 +2505,7 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 			return ret;
 		}
 
-		stm32mp_stgen_config();
+		stm32mp_stgen_config(stm32mp_clk_get_rate(STGEN_K));
 	}
 
 	/* Select DIV */
@@ -2680,7 +2680,7 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 		stm32mp1_hsi_set(false);
 	}
 
-	stm32mp_stgen_config();
+	stm32mp_stgen_config(stm32mp_clk_get_rate(STGEN_K));
 
 	/* Software Self-Refresh mode (SSR) during DDR initilialization */
 	mmio_clrsetbits_32(rcc_base + RCC_DDRITFCR,

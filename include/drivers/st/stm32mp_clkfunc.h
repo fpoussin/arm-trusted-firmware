@@ -34,7 +34,7 @@ unsigned long fdt_get_uart_clock_freq(uintptr_t instance);
 
 bool fdt_is_pll1_predefined(void);
 
-void stm32mp_stgen_config(void);
+void stm32mp_stgen_config(unsigned long rate);
 void stm32mp_stgen_restore_counter(unsigned long long value,
 				   unsigned long long offset_in_ms);
 unsigned long long stm32mp_stgen_get_counter(void);
