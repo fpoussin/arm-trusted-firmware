@@ -645,7 +645,8 @@ static void stm32mp1_refresh_disable(struct stm32mp1_ddrctl *ctl)
 	/* Quasi-dynamic register update*/
 	mmio_setbits_32((uintptr_t)&ctl->rfshctl3,
 			DDRCTRL_RFSHCTL3_DIS_AUTO_REFRESH);
-	mmio_clrbits_32((uintptr_t)&ctl->pwrctl, DDRCTRL_PWRCTL_POWERDOWN_EN);
+	mmio_clrbits_32((uintptr_t)&ctl->pwrctl, DDRCTRL_PWRCTL_POWERDOWN_EN |
+						 DDRCTRL_PWRCTL_SELFREF_EN);
 	mmio_clrbits_32((uintptr_t)&ctl->dfimisc,
 			DDRCTRL_DFIMISC_DFI_INIT_COMPLETE_EN);
 	stm32mp1_wait_sw_done_ack(ctl);
@@ -662,6 +663,10 @@ static void stm32mp1_refresh_restore(struct stm32mp1_ddrctl *ctl,
 	if ((pwrctl & DDRCTRL_PWRCTL_POWERDOWN_EN) != 0U) {
 		mmio_setbits_32((uintptr_t)&ctl->pwrctl,
 				DDRCTRL_PWRCTL_POWERDOWN_EN);
+	}
+	if ((pwrctl & DDRCTRL_PWRCTL_SELFREF_EN) != 0U) {
+		mmio_setbits_32((uintptr_t)&ctl->pwrctl,
+				DDRCTRL_PWRCTL_SELFREF_EN);
 	}
 	mmio_setbits_32((uintptr_t)&ctl->dfimisc,
 			DDRCTRL_DFIMISC_DFI_INIT_COMPLETE_EN);
