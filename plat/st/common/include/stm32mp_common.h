@@ -27,6 +27,9 @@ uintptr_t stm32mp_ddrctrl_base(void);
 /* Return the base address of the DDR PHY */
 uintptr_t stm32mp_ddrphyc_base(void);
 
+/* Check DDR Software/Automatic Self-Refresh support */
+bool stm32mp_ddr_supports_ssr_asr(void);
+
 /* Return the base address of the PWR peripheral */
 uintptr_t stm32mp_pwr_base(void);
 
