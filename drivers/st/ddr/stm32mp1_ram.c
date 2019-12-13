@@ -344,6 +344,9 @@ static int stm32mp1_ddr_setup(void)
 		}
 	}
 
+	/* Switch to Automatic Self-Refresh */
+	ddr_sr_mode_asr();
+
 	if (stm32mp_unmap_ddr() != 0) {
 		panic();
 	}

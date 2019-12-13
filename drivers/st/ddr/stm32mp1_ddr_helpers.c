@@ -385,6 +385,10 @@ void ddr_sr_mode_ssr(void)
 	uintptr_t rcc_ddritfcr = stm32mp_rcc_base() + RCC_DDRITFCR;
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
 
+	if (!stm32mp_ddr_supports_ssr_asr()) {
+		return;
+	}
+
 	stm32mp1_clk_rcc_regs_lock();
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC1LPEN);
@@ -436,6 +440,10 @@ void ddr_sr_mode_asr(void)
 {
 	uintptr_t rcc_ddritfcr = stm32mp_rcc_base() + RCC_DDRITFCR;
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
+
+	if (!stm32mp_ddr_supports_ssr_asr()) {
+		return;
+	}
 
 	stm32mp1_clk_rcc_regs_lock();
 
