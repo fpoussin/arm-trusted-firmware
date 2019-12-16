@@ -384,24 +384,21 @@ int stm32mp_get_chip_version(uint32_t *chip_version)
 	return stm32mp1_dbgmcu_get_chip_version(chip_version);
 }
 
-static int get_part_number(uint32_t *part_nb)
+static uint32_t get_part_number(void)
 {
 	static uint32_t part_number;
 	uint32_t dev_id;
 
-	assert(part_nb != NULL);
-
 	if (part_number != 0U) {
-		*part_nb = part_number;
-		return 0;
+		return part_number;
 	}
 
 	if (stm32mp1_dbgmcu_get_chip_dev_id(&dev_id) < 0) {
-		return -1;
+		panic();
 	}
 
 	if (stm32_get_otp_value(PART_NUMBER_OTP, &part_number) != 0) {
-		return -1;
+		panic();
 	}
 
 	part_number = (part_number & PART_NUMBER_OTP_PART_MASK) >>
@@ -409,36 +406,26 @@ static int get_part_number(uint32_t *part_nb)
 
 	part_number |= dev_id << 16;
 
-	*part_nb = part_number;
-
-	return 0;
+	return part_number;
 }
 
-static int get_cpu_package(uint32_t *cpu_package)
+static uint32_t get_cpu_package(void)
 {
 	uint32_t package;
 
-	assert(cpu_package != NULL);
-
 	if (stm32_get_otp_value(PACKAGE_OTP, &package) != 0) {
-		return -1;
+		panic();
 	}
 
-	*cpu_package = (package & PACKAGE_OTP_PKG_MASK) >>
+	package = (package & PACKAGE_OTP_PKG_MASK) >>
 		PACKAGE_OTP_PKG_SHIFT;
 
-	return 0;
+	return package;
 }
 
 bool stm32mp_supports_cpu_opp(uint32_t opp_id)
 {
-	uint32_t part_number;
 	uint32_t id;
-
-	if (get_part_number(&part_number) != 0) {
-		ERROR("Cannot get part number\n");
-		panic();
-	}
 
 	switch (opp_id) {
 	case PLAT_OPP_ID1:
@@ -449,7 +436,7 @@ bool stm32mp_supports_cpu_opp(uint32_t opp_id)
 		return false;
 	}
 
-	switch (part_number) {
+	switch (get_part_number()) {
 	case STM32MP157F_PART_NB:
 	case STM32MP157D_PART_NB:
 	case STM32MP153F_PART_NB:
@@ -465,19 +452,11 @@ bool stm32mp_supports_cpu_opp(uint32_t opp_id)
 void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 {
 	char *cpu_s, *cpu_r, *pkg;
-	uint32_t part_number;
-	uint32_t cpu_package;
 	uint32_t chip_dev_id;
 	int ret;
 
 	/* MPUs Part Numbers */
-	ret = get_part_number(&part_number);
-	if (ret < 0) {
-		WARN("Cannot get part number\n");
-		return;
-	}
-
-	switch (part_number) {
+	switch (get_part_number()) {
 	case STM32MP157C_PART_NB:
 		cpu_s = "157C";
 		break;
@@ -520,13 +499,7 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 	}
 
 	/* Package */
-	ret = get_cpu_package(&cpu_package);
-	if (ret < 0) {
-		WARN("Cannot get CPU package\n");
-		return;
-	}
-
-	switch (cpu_package) {
+	switch (get_cpu_package()) {
 	case PKG_AA_LFBGA448:
 		pkg = "AA";
 		break;
@@ -600,20 +573,12 @@ void stm32mp_print_boardinfo(void)
 /* Return true when SoC provides a single Cortex-A7 core, and false otherwise */
 bool stm32mp_is_single_core(void)
 {
-	uint32_t part_number;
-
-	if (get_part_number(&part_number) < 0) {
-		ERROR("Invalid part number, assume single core chip");
-		return true;
-	}
-
-	switch (part_number) {
+	switch (get_part_number()) {
 	case STM32MP151A_PART_NB:
 	case STM32MP151C_PART_NB:
 	case STM32MP151D_PART_NB:
 	case STM32MP151F_PART_NB:
 		return true;
-
 	default:
 		return false;
 	}
@@ -643,14 +608,7 @@ bool stm32mp_is_closed_device(void)
 /* Return true when device supports secure boot */
 bool stm32mp_is_auth_supported(void)
 {
-	uint32_t part_number;
-
-	if (get_part_number(&part_number) < 0) {
-		ERROR("Cannot get part number\n");
-		panic();
-	}
-
-	switch (part_number) {
+	switch (get_part_number()) {
 	case STM32MP151C_PART_NB:
 	case STM32MP151F_PART_NB:
 	case STM32MP153C_PART_NB:
@@ -658,7 +616,6 @@ bool stm32mp_is_auth_supported(void)
 	case STM32MP157C_PART_NB:
 	case STM32MP157F_PART_NB:
 		return true;
-
 	default:
 		return false;
 	}
