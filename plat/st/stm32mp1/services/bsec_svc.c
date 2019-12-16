@@ -51,7 +51,9 @@ uint32_t bsec_main(uint32_t x1, uint32_t x2, uint32_t x3,
 
 		result = bsec_write_otp(tmp_data, x2);
 		break;
-
+	case STM32_SMC_WRLOCK_OTP:
+		result = bsec_permanent_lock_otp(x2);
+		break;
 	default:
 		result = BSEC_ERROR;
 		break;

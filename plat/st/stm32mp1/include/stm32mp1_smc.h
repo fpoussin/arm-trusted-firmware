@@ -69,6 +69,7 @@
 #define STM32_SMC_PROG_OTP		0x02
 #define STM32_SMC_WRITE_SHADOW		0x03
 #define STM32_SMC_READ_OTP		0x04
+#define STM32_SMC_WRLOCK_OTP		0x07
 
 /* SMC error codes */
 #define STM32_SMC_OK			0x00000000U
