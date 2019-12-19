@@ -75,6 +75,12 @@ int stm32mp1_set_opp_khz(uint32_t freq_khz);
 void stm32mp1_clk_mpu_suspend(void);
 void stm32mp1_clk_mpu_resume(void);
 
+void stm32mp1_clock_suspend(void);
+void stm32mp1_clock_resume(void);
+
+void restore_clock_pm_context(void);
+void save_clock_pm_context(void);
+
 #ifdef STM32MP_SHARED_RESOURCES
 void stm32mp1_register_clock_parents_secure(unsigned long id);
 #endif

@@ -26,4 +26,7 @@ void stm32_save_ddr_training_area(void);
 void stm32_restore_ddr_training_area(void);
 uint32_t stm32_pm_get_optee_ep(void);
 
+void stm32mp1_pm_save_clock_cfg(size_t offset, uint8_t *data, size_t size);
+void stm32mp1_pm_restore_clock_cfg(size_t offset, uint8_t *data, size_t size);
+
 #endif /* STM32MP1_CONTEXT_H */

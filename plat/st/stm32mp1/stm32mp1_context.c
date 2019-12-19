@@ -60,6 +60,9 @@
 					  (PLAT_MAX_PLLCFG_NB + 3)) + 1) * \
 					 sizeof(uint32_t))
 
+/* Set to 600 bytes to be a bit flexible but could be optimized if needed */
+#define CLOCK_CONTEXT_SIZE		600
+
 struct backup_data_s {
 #ifdef AARCH32_SP_OPTEE
 	uint32_t magic;
@@ -75,6 +78,7 @@ struct backup_data_s {
 	uint8_t ddr_training_backup[TRAINING_AREA_SIZE];
 	uint8_t pll1_settings[PLL1_SETTINGS_SIZE];
 	unsigned long long stgen;
+	uint8_t clock_cfg[CLOCK_CONTEXT_SIZE];
 #endif
 };
 
@@ -117,11 +121,46 @@ void stm32_clean_context(void)
 	stm32mp_clk_disable(BKPSRAM);
 }
 
+void stm32mp1_pm_save_clock_cfg(size_t offset, uint8_t *data, size_t size)
+{
+	struct backup_data_s *backup_data;
+
+	if (offset + size > sizeof(backup_data->clock_cfg)) {
+		panic();
+	}
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	memcpy(backup_data->clock_cfg + offset, data, size);
+
+	stm32mp_clk_disable(BKPSRAM);
+}
+
+void stm32mp1_pm_restore_clock_cfg(size_t offset, uint8_t *data, size_t size)
+{
+	struct backup_data_s *backup_data;
+
+	if (offset + size > sizeof(backup_data->clock_cfg))
+		panic();
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	memcpy(data, backup_data->clock_cfg + offset, size);
+
+	stm32mp_clk_disable(BKPSRAM);
+}
+
 int stm32_save_context(uint32_t zq0cr0_zdata)
 {
 	void *smc_context;
 	void *cpu_context;
 	struct backup_data_s *backup_data;
+
+	stm32mp1_clock_suspend();
 
 	stm32mp_clk_enable(BKPSRAM);
 
@@ -148,6 +187,8 @@ int stm32_save_context(uint32_t zq0cr0_zdata)
 	stm32mp1_clk_lp_save_opp_pll1_settings(backup_data->pll1_settings,
 					sizeof(backup_data->pll1_settings));
 
+	save_clock_pm_context();
+
 	stm32mp_clk_disable(BKPSRAM);
 
 	return 0;
@@ -161,8 +202,6 @@ int stm32_restore_context(void)
 	struct stm32_rtc_calendar current_calendar;
 	unsigned long long stdby_time_in_ms;
 
-	stm32mp_clk_enable(BKPSRAM);
-
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
@@ -171,6 +210,10 @@ int stm32_restore_context(void)
 
 	/* Retrieve smc context struct address */
 	cpu_context = cm_get_context(NON_SECURE);
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	restore_clock_pm_context();
 
 	/* Restore data from Backup SRAM */
 	memcpy(smc_context, backup_data->saved_smc_context,
@@ -188,6 +231,8 @@ int stm32_restore_context(void)
 					sizeof(backup_data->pll1_settings));
 
 	stm32mp_clk_disable(BKPSRAM);
+
+	stm32mp1_clock_resume();
 
 	return 0;
 }
