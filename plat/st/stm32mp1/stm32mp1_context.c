@@ -63,6 +63,9 @@
 /* Set to 600 bytes to be a bit flexible but could be optimized if needed */
 #define CLOCK_CONTEXT_SIZE		600
 
+/* SCMI needs only 24 bits to save the state of the 24 exposed clocks */
+#define SCMI_CONTEXT_SIZE		(sizeof(uint8_t) * 4)
+
 struct backup_data_s {
 #ifdef AARCH32_SP_OPTEE
 	uint32_t magic;
@@ -79,6 +82,7 @@ struct backup_data_s {
 	uint8_t pll1_settings[PLL1_SETTINGS_SIZE];
 	unsigned long long stgen;
 	uint8_t clock_cfg[CLOCK_CONTEXT_SIZE];
+	uint8_t scmi_context[SCMI_CONTEXT_SIZE];
 #endif
 };
 
@@ -187,6 +191,9 @@ int stm32_save_context(uint32_t zq0cr0_zdata)
 	stm32mp1_clk_lp_save_opp_pll1_settings(backup_data->pll1_settings,
 					sizeof(backup_data->pll1_settings));
 
+	stm32mp1_pm_save_scmi_state(backup_data->scmi_context,
+				    sizeof(backup_data->scmi_context));
+
 	save_clock_pm_context();
 
 	stm32mp_clk_disable(BKPSRAM);
@@ -214,6 +221,9 @@ int stm32_restore_context(void)
 	stm32mp_clk_enable(BKPSRAM);
 
 	restore_clock_pm_context();
+
+	stm32mp1_pm_restore_scmi_state(backup_data->scmi_context,
+				       sizeof(backup_data->scmi_context));
 
 	/* Restore data from Backup SRAM */
 	memcpy(smc_context, backup_data->saved_smc_context,

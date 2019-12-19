@@ -14,6 +14,7 @@
 #include <drivers/st/stm32mp_reset.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <dt-bindings/reset/stm32mp1-resets.h>
+#include <lib/utils.h>
 
 #define TIMEOUT_US_1MS		1000U
 
@@ -485,6 +486,54 @@ void stm32mp1_init_scmi_server(void)
 				ERROR("Invalid SCMI reset domain name\n");
 				panic();
 			}
+		}
+	}
+}
+
+/*
+ * Save and restore SCMI state since lost during suspend.
+ * Only clock enabled field needs to be updated.
+ */
+void stm32mp1_pm_save_scmi_state(uint8_t *state, size_t size)
+{
+	size_t i;
+	size_t j;
+	size_t cnt = 0U;
+
+	zeromem(state, size);
+
+	for (i = 0U; i < ARRAY_SIZE(agent_resources); i++) {
+		for (j = 0U; j < agent_resources[i].clock_count; j++) {
+			if ((cnt / 8) > size) {
+				VERBOSE("state table too small\n");
+				panic();
+			}
+
+			if (agent_resources[i].clock[j].enabled) {
+				*(state + (cnt / 8)) |= (uint8_t)BIT(cnt % 8);
+			}
+
+			cnt++;
+		}
+	}
+}
+
+void stm32mp1_pm_restore_scmi_state(uint8_t *state, size_t size)
+{
+	size_t i;
+	size_t j;
+	size_t cnt = 0U;
+
+	for (i = 0U; i < ARRAY_SIZE(agent_resources); i++) {
+		for (j = 0U; j < agent_resources[i].clock_count; j++) {
+			if ((*(state + (cnt / 8)) & BIT(cnt % 8)) == 0U) {
+				agent_resources[i].clock[j].enabled = 0;
+			} else {
+				agent_resources[i].clock[j].enabled = 1;
+			}
+
+			assert((cnt / 8) <= size);
+			cnt++;
 		}
 	}
 }
