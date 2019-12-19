@@ -47,6 +47,9 @@
 #define OPTEE_MAILBOX_MAGIC		(OPTEE_MAILBOX_MAGIC_V2 | \
 					 TRAINING_AREA_SIZE)
 
+#define MAGIC_ID(magic)			((magic) & GENMASK_32(31, 16))
+#define MAGIC_AREA_SIZE(magic)		((magic) & GENMASK_32(15, 0))
+
 #if (PLAT_MAX_OPP_NB != 2) || (PLAT_MAX_PLLCFG_NB != 6)
 #error OPTEE_MAILBOX_MAGIC_V1 does not support expected PLL1 settings
 #endif
@@ -86,7 +89,15 @@ uint32_t stm32_pm_get_optee_ep(void)
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
-	if (backup_data->magic != OPTEE_MAILBOX_MAGIC) {
+	switch (MAGIC_ID(backup_data->magic)) {
+	case OPTEE_MAILBOX_MAGIC_V1:
+	case OPTEE_MAILBOX_MAGIC_V2:
+		if (MAGIC_AREA_SIZE(backup_data->magic) != TRAINING_AREA_SIZE) {
+			panic();
+		}
+		break;
+	default:
+		ERROR("PM context: bad magic\n");
 		panic();
 	}
 
@@ -215,20 +226,47 @@ uint32_t stm32_get_zdata_from_context(void)
 	return zdata;
 }
 
-void stm32_get_pll1_settings_from_context(void)
+#ifdef AARCH32_SP_OPTEE
+static int pll1_settings_in_context(struct backup_data_s *backup_data)
+{
+	switch (MAGIC_ID(backup_data->magic)) {
+	case OPTEE_MAILBOX_MAGIC_V1:
+		return -ENOENT;
+	case OPTEE_MAILBOX_MAGIC_V2:
+		assert(MAGIC_AREA_SIZE(backup_data->magic) ==
+		       TRAINING_AREA_SIZE);
+		return 0;
+	default:
+		panic();
+	}
+}
+#else
+static int pll1_settings_in_context(struct backup_data_s *backup_data)
+{
+	return 0;
+}
+#endif
+
+int stm32_get_pll1_settings_from_context(void)
 {
 	struct backup_data_s *backup_data;
-	uint8_t *data;
-
-	stm32mp_clk_enable(BKPSRAM);
+	int ret;
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
-	data = (uint8_t *)backup_data->pll1_settings;
-	stm32mp1_clk_lp_load_opp_pll1_settings(data,
-					sizeof(backup_data->pll1_settings));
+	stm32mp_clk_enable(BKPSRAM);
+
+	ret = pll1_settings_in_context(backup_data);
+	if (ret == 0) {
+		uint8_t *data = (uint8_t *)backup_data->pll1_settings;
+		size_t size = sizeof(backup_data->pll1_settings);
+
+		stm32mp1_clk_lp_load_opp_pll1_settings(data, size);
+	}
 
 	stm32mp_clk_disable(BKPSRAM);
+
+	return ret;
 }
 
 bool stm32_are_pll1_settings_valid_in_context(void)

@@ -215,10 +215,10 @@ static void initialize_clock(bool wakeup_standby)
 {
 	uint32_t voltage_mv = 0U;
 	uint32_t freq_khz = 0U;
-	int ret;
+	int ret = 0;
 
 	if (wakeup_standby) {
-		stm32_get_pll1_settings_from_context();
+		ret = stm32_get_pll1_settings_from_context();
 	}
 
 	/*
@@ -228,7 +228,7 @@ static void initialize_clock(bool wakeup_standby)
 	 * If PLL1 settings found in DT, we consider VDDCORE voltage in DT is
 	 * consistent with it.
 	 */
-	if (!fdt_is_pll1_predefined()) {
+	if ((ret == 0) && !fdt_is_pll1_predefined()) {
 		if (wakeup_standby) {
 			ret = stm32mp1_clk_get_maxfreq_opp(&freq_khz,
 							   &voltage_mv);
