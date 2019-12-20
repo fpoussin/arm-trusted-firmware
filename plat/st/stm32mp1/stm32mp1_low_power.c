@@ -132,6 +132,9 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 
 	stm32mp1_syscfg_disable_io_compensation();
 
+	/* Switch to Software Self-Refresh */
+	ddr_sr_mode_ssr();
+
 	dcsw_op_all(DC_OP_CISW);
 
 	stm32_clean_context();
@@ -240,6 +243,9 @@ void stm32_exit_cstop(void)
 	if (ddr_sw_self_refresh_exit() != 0) {
 		panic();
 	}
+
+	/* Switch to Automatic Self-Refresh */
+	ddr_sr_mode_asr();
 
 	plat_ic_set_priority_mask(gicc_pmr);
 
