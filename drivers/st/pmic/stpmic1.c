@@ -657,6 +657,10 @@ int stpmic1_lp_copy_reg(const char *name)
 	int status;
 	const struct regul_struct *regul = get_regulator_data(name);
 
+	if (regul->low_power_reg == 0U) {
+		return 0;
+	}
+
 	status = stpmic1_register_read(regul->control_reg, &val);
 	if (status != 0) {
 		return status;
