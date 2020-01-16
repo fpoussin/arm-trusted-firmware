@@ -2286,7 +2286,7 @@ static uint32_t stm32mp1_clk_get_pll1_current_clksrc(void)
 
 int stm32mp1_clk_compute_all_pll1_settings(uint32_t buck1_voltage)
 {
-	unsigned int i;
+	int i;
 	int ret;
 	int index;
 	uint32_t count = PLAT_MAX_OPP_NB;
@@ -2309,8 +2309,8 @@ int stm32mp1_clk_compute_all_pll1_settings(uint32_t buck1_voltage)
 
 	clksrc = stm32mp1_clk_get_pll1_current_clksrc();
 
-	for (i = 0; i < count; i++) {
-		if ((index > 0) && (i == (unsigned int)index)) {
+	for (i = 0; i < (int)count; i++) {
+		if (i == index) {
 			continue;
 		}
 
