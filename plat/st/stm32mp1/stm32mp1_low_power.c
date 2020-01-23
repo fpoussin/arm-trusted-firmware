@@ -213,6 +213,8 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 			(PWR_CR2_BRRDY | PWR_CR2_RRRDY)) == 0U) {
 			;
 		}
+	} else {
+		stm32mp1_clock_stopmode_save();
 	}
 
 	stm32mp_clk_disable(RTCAPB);
@@ -271,6 +273,10 @@ void stm32_exit_cstop(void)
 				      stdby_time_in_ms);
 
 	stm32mp1_syscfg_enable_io_compensation();
+
+	if (stm32mp1_clock_stopmode_resume() != 0) {
+		panic();
+	}
 }
 
 static void enter_shutdown(void)

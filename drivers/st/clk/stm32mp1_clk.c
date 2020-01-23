@@ -658,6 +658,10 @@ static unsigned int gate_refcounts[NB_GATES];
 static struct spinlock refcount_lock;
 static struct stm32mp1_pll_settings pll1_settings;
 static uint32_t current_opp_khz;
+static uint32_t pll3cr;
+static uint32_t pll4cr;
+static uint32_t mssckselr;
+static uint32_t mcudivr;
 
 static const struct stm32mp1_clk_gate *gate_ref(unsigned int idx)
 {
@@ -3203,6 +3207,51 @@ void stm32mp1_clock_resume(void)
 	}
 
 	disable_kernel_clocks();
+}
+
+void stm32mp1_clock_stopmode_save(void)
+{
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	/* Save registers not restored after STOP mode */
+	pll3cr = mmio_read_32(rcc_base + RCC_PLL3CR);
+	pll4cr = mmio_read_32(rcc_base + RCC_PLL4CR);
+	mssckselr = mmio_read_32(rcc_base + RCC_MSSCKSELR);
+	mcudivr = mmio_read_32(rcc_base + RCC_MCUDIVR) & RCC_MCUDIV_MASK;
+}
+
+int stm32mp1_clock_stopmode_resume(void)
+{
+	int res;
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	if ((pll4cr & RCC_PLLNCR_PLLON) != 0U) {
+		stm32mp1_pll_start(_PLL4);
+	}
+
+	if ((pll3cr & RCC_PLLNCR_PLLON) != 0U) {
+		stm32mp1_pll_start(_PLL3);
+		/* Restore PLL config */
+		res = stm32mp1_pll_output(_PLL3,
+					  pll3cr >> RCC_PLLNCR_DIVEN_SHIFT);
+		if (res != 0) {
+			return res;
+		}
+	}
+
+	if ((pll4cr & RCC_PLLNCR_PLLON) != 0U) {
+		res = stm32mp1_pll_output(_PLL4,
+					  pll4cr >> RCC_PLLNCR_DIVEN_SHIFT);
+		if (res != 0) {
+			return res;
+		}
+	}
+
+	/* Restore MCU clock src after PLL3 RDY */
+	mmio_write_32(rcc_base + RCC_MSSCKSELR, mssckselr);
+
+	/* Restore MCUDIV */
+	return stm32mp1_set_clkdiv(mcudivr, rcc_base + RCC_MCUDIVR);
 }
 
 static void sync_earlyboot_clocks_state(void)

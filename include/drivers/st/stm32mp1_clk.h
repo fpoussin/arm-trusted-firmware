@@ -78,6 +78,9 @@ void stm32mp1_clk_mpu_resume(void);
 void stm32mp1_clock_suspend(void);
 void stm32mp1_clock_resume(void);
 
+void stm32mp1_clock_stopmode_save(void);
+int stm32mp1_clock_stopmode_resume(void);
+
 void restore_clock_pm_context(void);
 void save_clock_pm_context(void);
 
