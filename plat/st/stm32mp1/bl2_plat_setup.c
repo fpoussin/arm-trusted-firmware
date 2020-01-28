@@ -39,6 +39,21 @@
 
 #define RESET_TIMEOUT_US_1MS		1000U
 
+static const char debug_msg[626] = {
+	"***************************************************\n"
+	"** NOTICE   NOTICE   NOTICE   NOTICE   NOTICE    **\n"
+	"**                                               **\n"
+	"** DEBUG ACCESS PORT IS OPEN!                    **\n"
+	"** This boot image is only for debugging purpose **\n"
+	"** and is unsafe for production use.             **\n"
+	"**                                               **\n"
+	"** If you see this message and you are not       **\n"
+	"** debugging report this immediately to your     **\n"
+	"** vendor!                                       **\n"
+	"**                                               **\n"
+	"***************************************************\n"
+};
+
 static console_t console;
 static enum boot_device_e boot_device = BOOT_DEVICE_BOARD;
 static struct stm32mp_auth_ops stm32mp1_auth_ops;
@@ -486,6 +501,10 @@ skip_console_init:
 				      boot_context->boot_interface_instance) !=
 	    0) {
 		ERROR("Cannot save boot interface\n");
+	}
+
+	if ((bsec_read_debug_conf() != 0U) && stm32mp_is_closed_device()) {
+		NOTICE("\n%s", debug_msg);
 	}
 
 	if (stm32mp_is_auth_supported()) {
