@@ -53,6 +53,7 @@ void stm32mp_pwr_regs_unlock(void);
 int stm32_get_otp_index(const char *otp_name, uint32_t *otp_idx,
 			uint32_t *otp_len);
 int stm32_get_otp_value(const char *otp_name, uint32_t *otp_val);
+int stm32_get_otp_value_from_idx(const uint32_t otp_idx, uint32_t *otp_val);
 
 /* Get IWDG platform instance ID from peripheral IO memory base address */
 uint32_t stm32_iwdg_get_instance(uintptr_t base);
