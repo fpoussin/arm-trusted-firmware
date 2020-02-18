@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -193,6 +193,8 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 	mmio_write_32(bkpr_core1_addr, 0);
 	mmio_write_32(bkpr_core1_magic, 0);
 
+	stm32mp1_clock_stopmode_save();
+
 	if (mode == STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR) {
 		/*
 		 * Save non-secure world entrypoint after standby in Backup
@@ -213,8 +215,6 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 			(PWR_CR2_BRRDY | PWR_CR2_RRRDY)) == 0U) {
 			;
 		}
-	} else {
-		stm32mp1_clock_stopmode_save();
 	}
 
 	stm32mp_clk_disable(RTCAPB);

@@ -3251,18 +3251,32 @@ void stm32mp1_clock_stopmode_save(void)
 	mcudivr = mmio_read_32(rcc_base + RCC_MCUDIVR) & RCC_MCUDIV_MASK;
 }
 
+static bool pll_is_running(uint32_t pll_offset)
+{
+	uintptr_t pll_cr = stm32mp_rcc_base() + pll_offset;
+
+	return (mmio_read_32(pll_cr) & RCC_PLLNCR_PLLON) != 0U;
+}
+
+static bool pll_was_running(uint32_t saved_value)
+{
+	return (saved_value & RCC_PLLNCR_PLLON) != 0U;
+}
+
 int stm32mp1_clock_stopmode_resume(void)
 {
 	int res;
 	uintptr_t rcc_base = stm32mp_rcc_base();
 
-	if ((pll4cr & RCC_PLLNCR_PLLON) != 0U) {
+	if (pll_was_running(pll4cr) && !pll_is_running(RCC_PLL4CR)) {
 		stm32mp1_pll_start(_PLL4);
 	}
 
-	if ((pll3cr & RCC_PLLNCR_PLLON) != 0U) {
-		stm32mp1_pll_start(_PLL3);
-		/* Restore PLL config */
+	if (pll_was_running(pll3cr)) {
+		if (!pll_is_running(RCC_PLL3CR)) {
+			stm32mp1_pll_start(_PLL3);
+		}
+
 		res = stm32mp1_pll_output(_PLL3,
 					  pll3cr >> RCC_PLLNCR_DIVEN_SHIFT);
 		if (res != 0) {
@@ -3270,7 +3284,7 @@ int stm32mp1_clock_stopmode_resume(void)
 		}
 	}
 
-	if ((pll4cr & RCC_PLLNCR_PLLON) != 0U) {
+	if (pll_was_running(pll4cr)) {
 		res = stm32mp1_pll_output(_PLL4,
 					  pll4cr >> RCC_PLLNCR_DIVEN_SHIFT);
 		if (res != 0) {
