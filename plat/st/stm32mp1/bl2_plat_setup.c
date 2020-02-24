@@ -490,19 +490,21 @@ skip_console_init:
 
 	stm32_iwdg_refresh();
 
-	result = stm32mp1_dbgmcu_freeze_iwdg2();
-	if (result != 0) {
-		INFO("IWDG2 freeze error : %i\n", result);
+	if (bsec_read_debug_conf() != 0U) {
+		result = stm32mp1_dbgmcu_freeze_iwdg2();
+		if (result != 0) {
+			INFO("IWDG2 freeze error : %i\n", result);
+		}
+
+		if (stm32mp_is_closed_device()) {
+			NOTICE("\n%s", debug_msg);
+		}
 	}
 
 	if (stm32_save_boot_interface(boot_context->boot_interface_selected,
 				      boot_context->boot_interface_instance) !=
 	    0) {
 		ERROR("Cannot save boot interface\n");
-	}
-
-	if ((bsec_read_debug_conf() != 0U) && stm32mp_is_closed_device()) {
-		NOTICE("\n%s", debug_msg);
 	}
 
 	if (stm32mp_is_auth_supported()) {

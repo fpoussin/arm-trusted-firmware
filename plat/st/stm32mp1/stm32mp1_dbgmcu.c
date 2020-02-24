@@ -35,19 +35,11 @@ static uintptr_t get_rcc_base(void)
 
 static int stm32mp1_dbgmcu_init(void)
 {
-	uint32_t dbg_conf;
 	uintptr_t rcc_base = get_rcc_base();
 
-	dbg_conf = bsec_read_debug_conf();
-
-	if ((dbg_conf & BSEC_DBGSWGEN) == 0U) {
-		uint32_t result = bsec_write_debug_conf(dbg_conf |
-							BSEC_DBGSWGEN);
-
-		if (result != BSEC_OK) {
-			ERROR("Error enabling DBGSWGEN\n");
-			return -1;
-		}
+	if ((bsec_read_debug_conf() & BSEC_DBGSWGEN) == 0U) {
+		INFO("Software access to all debug components is disabled\n");
+		return -1;
 	}
 
 	mmio_setbits_32(rcc_base + RCC_DBGCFGR, RCC_DBGCFGR_DBGCKEN);

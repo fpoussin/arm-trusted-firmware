@@ -394,7 +394,8 @@ static uint32_t get_part_number(void)
 	}
 
 	if (stm32mp1_dbgmcu_get_chip_dev_id(&dev_id) < 0) {
-		panic();
+		INFO("Use default chip ID, debug disabled\n");
+		dev_id = STM32MP1_CHIP_ID;
 	}
 
 	if (stm32_get_otp_value(PART_NUMBER_OTP, &part_number) != 0) {
@@ -520,8 +521,7 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 	/* REVISION */
 	ret = stm32mp_get_chip_version(&chip_dev_id);
 	if (ret < 0) {
-		WARN("Cannot get CPU version\n");
-		return;
+		INFO("Cannot get CPU version, debug disabled\n");
 	}
 
 	switch (chip_dev_id) {
