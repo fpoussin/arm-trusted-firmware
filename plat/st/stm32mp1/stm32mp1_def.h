@@ -417,7 +417,7 @@ enum ddr_type {
 /*******************************************************************************
  * STM32MP1 TAMP
  ******************************************************************************/
-#define PLAT_MAX_TAMP_INT		U(5)
+#define PLAT_MAX_TAMP_INT		U(6)
 #define PLAT_MAX_TAMP_EXT		U(3)
 #define TAMP_BASE			U(0x5C00A000)
 #define TAMP_SMCR			(TAMP_BASE + U(0x20))

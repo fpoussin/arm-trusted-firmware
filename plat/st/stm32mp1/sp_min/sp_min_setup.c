@@ -46,11 +46,34 @@
 static entry_point_info_t bl33_image_ep_info;
 
 static console_t console;
+static void stm32mp1_tamper_action(int id);
+
+static const char *tamper_name[PLAT_MAX_TAMP_INT] = {
+	"RTC power domain",
+	"Temperature monitoring",
+	"LSE monitoring",
+	"HSE monitoring",
+	"RTC calendar overflow",
+	"Monotonic counter"
+};
 
 static struct stm32_tamp_int int_tamp[PLAT_MAX_TAMP_INT] = {
-	TAMP_UNUSED,
-	TAMP_UNUSED,
-	TAMP_UNUSED,
+	{
+		.id = ITAMP1,
+		.func = stm32mp1_tamper_action,
+	},
+	{
+		.id = ITAMP2,
+		.func = stm32mp1_tamper_action,
+	},
+	{
+		.id = ITAMP3,
+		.func = stm32mp1_tamper_action,
+	},
+	{
+		.id = ITAMP4,
+		.func = stm32mp1_tamper_action,
+	},
 	TAMP_UNUSED,
 	TAMP_UNUSED,
 };
@@ -80,6 +103,12 @@ static void stm32_sgi1_it_handler(void)
 	} while (id <= MAX_SPI_ID);
 
 	stm32mp_wait_cpu_reset();
+}
+
+static void stm32mp1_tamper_action(int id)
+{
+	ERROR("Tamper %s occurs\n", tamper_name[id]);
+	stm32mp_plat_reset(plat_my_core_pos());
 }
 
 static void configure_wakeup_interrupt(void)
