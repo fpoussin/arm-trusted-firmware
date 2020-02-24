@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -31,7 +31,7 @@
 
 #define STPMIC1_DEFAULT_START_UP_DELAY_MS	1
 
-#define CMD_GET_VOLTAGE			0U
+#define CMD_GET_MIN_VOLTAGE		0U
 #define CMD_CONFIG_BOOT_ON		1U
 #define CMD_CONFIG_LP			2U
 
@@ -85,24 +85,38 @@ static bool dt_pmic_is_secure(void)
 }
 
 static int dt_pmic_get_regulator_voltage(void *fdt, int node,
-					 uint16_t *voltage_mv)
+					 uint16_t *min_mv, uint16_t *max_mv)
 {
 	const fdt32_t *cuint;
 
 	cuint = fdt_getprop(fdt, node, "regulator-min-microvolt", NULL);
-	if (cuint != NULL) {
-		*voltage_mv = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
-
-		return 0;
+	if (cuint == NULL) {
+		return -FDT_ERR_NOTFOUND;
 	}
 
-	return -FDT_ERR_NOTFOUND;
+	if (min_mv != NULL) {
+		*min_mv = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
+	}
+
+	cuint = fdt_getprop(fdt, node, "regulator-max-microvolt", NULL);
+	if (cuint == NULL) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	if (max_mv != NULL) {
+		*max_mv = (uint16_t)(fdt32_to_cpu(*cuint) / 1000U);
+	}
+
+	return 0;
 }
 
 static int pmic_config_boot_on(void *fdt, int node, const char *regu_name)
 {
-	uint16_t voltage;
+	uint16_t voltage = 0U;
+	uint16_t voltage_min;
+	uint16_t voltage_max;
 	int status;
+	int pmic_voltage;
 
 	if ((fdt_getprop(fdt, node, "regulator-boot-on", NULL) == NULL) &&
 	    (fdt_getprop(fdt, node, "regulator-always-on", NULL) == NULL)) {
@@ -125,13 +139,30 @@ static int pmic_config_boot_on(void *fdt, int node, const char *regu_name)
 		}
 	}
 
-	if (dt_pmic_get_regulator_voltage(fdt, node, &voltage) < 0) {
+	if (dt_pmic_get_regulator_voltage(fdt, node, &voltage_min,
+					  &voltage_max) < 0) {
 		return 0;
 	}
 
-	status = stpmic1_regulator_voltage_set(regu_name, voltage);
-	if (status < 0) {
-		return status;
+	pmic_voltage = stpmic1_regulator_voltage_get(regu_name);
+	if (pmic_voltage < 0) {
+		return pmic_voltage;
+	}
+
+	if ((uint16_t)pmic_voltage < voltage_min) {
+		voltage = voltage_min;
+	}
+
+	if ((uint16_t)pmic_voltage > voltage_max) {
+		voltage = voltage_max;
+	}
+
+	/* Only re-program voltage if not in the range provided in DT. */
+	if (voltage != 0U) {
+		status = stpmic1_regulator_voltage_set(regu_name, voltage);
+		if (status < 0) {
+			return status;
+		}
 	}
 
 	if (!stpmic1_is_regulator_enabled(regu_name)) {
@@ -236,7 +267,7 @@ static int pmic_operate(uint8_t command, const char *node_name,
 		const char *regu_name = fdt_get_name(fdt, subnode, NULL);
 
 		switch (command) {
-		case CMD_GET_VOLTAGE:
+		case CMD_GET_MIN_VOLTAGE:
 			assert(node_name != NULL);
 			assert(voltage_mv != NULL);
 
@@ -245,7 +276,7 @@ static int pmic_operate(uint8_t command, const char *node_name,
 			}
 
 			ret = dt_pmic_get_regulator_voltage(fdt, subnode,
-							    voltage_mv);
+							    voltage_mv, NULL);
 			if (ret < 0) {
 				return -ENXIO;
 			}
@@ -494,7 +525,7 @@ int pmic_ddr_power_init(enum ddr_type ddr_type)
 	uint16_t buck2_mv;
 	uint16_t ldo3_mv;
 
-	if (pmic_operate(CMD_GET_VOLTAGE, "buck2", &buck2_mv) != 0) {
+	if (pmic_operate(CMD_GET_MIN_VOLTAGE, "buck2", &buck2_mv) != 0) {
 		return -EPERM;
 	}
 
@@ -575,7 +606,7 @@ int pmic_ddr_power_init(enum ddr_type ddr_type)
 			return status;
 		}
 
-		if (pmic_operate(CMD_GET_VOLTAGE, "ldo3", &ldo3_mv) != 0) {
+		if (pmic_operate(CMD_GET_MIN_VOLTAGE, "ldo3", &ldo3_mv) != 0) {
 			return -EPERM;
 		}
 
