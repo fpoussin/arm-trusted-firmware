@@ -3208,7 +3208,6 @@ void stm32mp1_clock_suspend(void)
 	backup_regular_cfg();
 	backup_sc_cfg();
 	backup_mux_cfg();
-	enable_kernel_clocks();
 	clear_rcc_reset_status();
 }
 
@@ -3249,6 +3248,7 @@ void stm32mp1_clock_stopmode_save(void)
 	pll4cr = mmio_read_32(rcc_base + RCC_PLL4CR);
 	mssckselr = mmio_read_32(rcc_base + RCC_MSSCKSELR);
 	mcudivr = mmio_read_32(rcc_base + RCC_MCUDIVR) & RCC_MCUDIV_MASK;
+	enable_kernel_clocks();
 }
 
 static bool pll_is_running(uint32_t pll_offset)
@@ -3296,7 +3296,14 @@ int stm32mp1_clock_stopmode_resume(void)
 	mmio_write_32(rcc_base + RCC_MSSCKSELR, mssckselr);
 
 	/* Restore MCUDIV */
-	return stm32mp1_set_clkdiv(mcudivr, rcc_base + RCC_MCUDIVR);
+	res = stm32mp1_set_clkdiv(mcudivr, rcc_base + RCC_MCUDIVR);
+	if (res != 0) {
+		return res;
+	}
+
+	disable_kernel_clocks();
+
+	return 0;
 }
 
 static void sync_earlyboot_clocks_state(void)
