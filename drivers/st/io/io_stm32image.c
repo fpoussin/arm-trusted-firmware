@@ -182,53 +182,26 @@ static int stm32image_partition_size(io_entity_t *entity, size_t *length)
 		return result;
 	}
 
-	/* Reset magic header value */
-	header->magic = 0;
-
-	while (header->magic == 0U) {
-		result = io_seek(backend_handle, IO_SEEK_SET, *stm32_img);
-		if (result != 0) {
-			ERROR("%s: io_seek (%i)\n", __func__, result);
-			break;
-		}
-
-		result = io_read(backend_handle, (uintptr_t)header,
-				 MAX_LBA_SIZE, (size_t *)&bytes_read);
-		if (result != 0) {
-			if (current_part->bkp_offset == 0U) {
-				ERROR("%s: io_read (%i)\n", __func__, result);
-			}
-			header->magic = 0;
-		}
-
-		if ((header->magic != BOOT_API_IMAGE_HEADER_MAGIC_NB) ||
-		    (header->binary_type != current_part->binary_type) ||
-		    (header->image_length >= stm32image_dev.device_size)) {
-			VERBOSE("%s: partition %s not found at %x\n",
-				__func__, current_part->name, *stm32_img);
-
-			if (current_part->bkp_offset == 0U) {
-				result = -ENOMEM;
-				break;
-			}
-
-			/* Header not correct, check next offset for backup */
-			*stm32_img += current_part->bkp_offset;
-			if (*stm32_img > stm32image_dev.device_size) {
-				/* No backup found, end of device reached */
-				WARN("%s : partition %s not found\n",
-				     __func__, current_part->name);
-				result = -ENOMEM;
-				break;
-			}
-			header->magic = 0;
-		}
+	result = io_seek(backend_handle, IO_SEEK_SET, *stm32_img);
+	if (result != 0) {
+		ERROR("%s: io_seek (%i)\n", __func__, result);
+		goto out;
 	}
 
-	io_close(backend_handle);
-
+	result = io_read(backend_handle, (uintptr_t)header,
+			 MAX_LBA_SIZE, &bytes_read);
 	if (result != 0) {
-		return result;
+		ERROR("%s: io_read (%i)\n", __func__, result);
+		goto out;
+	}
+
+	if ((header->magic != BOOT_API_IMAGE_HEADER_MAGIC_NB) ||
+	    (header->binary_type != current_part->binary_type) ||
+	    (header->image_length >= stm32image_dev.device_size)) {
+		VERBOSE("%s: partition %s not found at %x\n",
+			__func__, current_part->name, *stm32_img);
+		result = -ENOMEM;
+		goto out;
 	}
 
 	if (header->image_length < stm32image_dev.lba_size) {
@@ -239,13 +212,19 @@ static int stm32image_partition_size(io_entity_t *entity, size_t *length)
 
 	INFO("STM32 Image size : %lu\n", (unsigned long)*length);
 
-	return 0;
+out:
+	io_close(backend_handle);
+
+	return result;
 }
 
 /* Read data from a partition */
 static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 				     size_t length, size_t *length_read)
 {
+	int offset;
+	int local_length;
+	uintptr_t backend_handle;
 	int result = -EINVAL;
 	uint8_t *local_buffer;
 	boot_api_image_header_t *header =
@@ -258,89 +237,52 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 	local_buffer = (uint8_t *)buffer;
 	*length_read = 0U;
 
-	while (*length_read == 0U) {
-		int offset;
-		int local_length;
-		uintptr_t backend_handle;
-
-		if (header->magic != BOOT_API_IMAGE_HEADER_MAGIC_NB) {
-			/* Check for backup as image is corrupted */
-			if (current_part->bkp_offset == 0U) {
-				result = -ENOMEM;
-				break;
-			}
-
-			*stm32_img += current_part->bkp_offset;
-			if (*stm32_img >= stm32image_dev.device_size) {
-				/* End of device reached */
-				result = -ENOMEM;
-				break;
-			}
-
-			local_buffer = (uint8_t *)buffer;
-
-			result = stm32image_partition_size(entity, &length);
-			if (result != 0) {
-				break;
-			}
-		}
 #if TRUSTED_BOARD_BOOT
-		stm32mp_save_loaded_header(header);
+	stm32mp_save_loaded_header(header);
 #endif
 
-		/* Part of image already loaded with the header */
-		memcpy(local_buffer, (uint8_t *)first_lba_buffer +
-		       sizeof(boot_api_image_header_t),
-		       MAX_LBA_SIZE - sizeof(boot_api_image_header_t));
-		local_buffer += MAX_LBA_SIZE - sizeof(boot_api_image_header_t);
-		offset = MAX_LBA_SIZE;
+	/* Part of image already loaded with the header */
+	memcpy(local_buffer, (uint8_t *)first_lba_buffer +
+	       sizeof(boot_api_image_header_t),
+	       MAX_LBA_SIZE - sizeof(boot_api_image_header_t));
+	local_buffer += MAX_LBA_SIZE - sizeof(boot_api_image_header_t);
+	offset = MAX_LBA_SIZE;
 
-		/* New image length to be read */
-		local_length = round_up(length -
-					((MAX_LBA_SIZE) -
-					 sizeof(boot_api_image_header_t)),
-					stm32image_dev.lba_size);
+	/* New image length to be read */
+	local_length = round_up(length - ((MAX_LBA_SIZE) -
+					  sizeof(boot_api_image_header_t)),
+				stm32image_dev.lba_size);
 
-		if ((header->load_address != 0U) &&
-		    (header->load_address != buffer)) {
-			ERROR("Wrong load address\n");
-			panic();
-		}
-
-		result = io_open(backend_dev_handle, backend_image_spec,
-				 &backend_handle);
-
-		if (result != 0) {
-			ERROR("%s: io_open (%i)\n", __func__, result);
-			break;
-		}
-
-		result = io_seek(backend_handle, IO_SEEK_SET,
-				 *stm32_img + offset);
-
-		if (result != 0) {
-			ERROR("%s: io_seek (%i)\n", __func__, result);
-			*length_read = 0;
-			io_close(backend_handle);
-			break;
-		}
-
-		result = io_read(backend_handle, (uintptr_t)local_buffer,
-				 local_length, length_read);
-
-		/* Adding part of size already read from header */
-		*length_read += MAX_LBA_SIZE - sizeof(boot_api_image_header_t);
-
-		if (result != 0) {
-			ERROR("%s: io_read (%i)\n", __func__, result);
-			*length_read = 0;
-			header->magic = 0;
-			continue;
-		}
-
-		io_close(backend_handle);
+	if ((header->load_address != 0U) && (header->load_address != buffer)) {
+		ERROR("Wrong load address\n");
+		panic();
 	}
 
+	result = io_open(backend_dev_handle, backend_image_spec,
+			 &backend_handle);
+	if (result != 0) {
+		ERROR("%s: io_open (%i)\n", __func__, result);
+		return result;
+	}
+
+	result = io_seek(backend_handle, IO_SEEK_SET, *stm32_img + offset);
+	if (result != 0) {
+		ERROR("%s: io_seek (%i)\n", __func__, result);
+		goto out;
+	}
+
+	result = io_read(backend_handle, (uintptr_t)local_buffer,
+			 local_length, length_read);
+	if (result != 0) {
+		ERROR("%s: io_read (%i)\n", __func__, result);
+		goto out;
+	}
+
+	/* Adding part of size already read from header */
+	*length_read += MAX_LBA_SIZE - sizeof(boot_api_image_header_t);
+
+out:
+	io_close(backend_handle);
 	return result;
 }
 
