@@ -713,3 +713,58 @@ int plat_get_image_source(unsigned int image_id, uintptr_t *dev_handle,
 
 	return rc;
 }
+
+/*
+ * This function shall return 0 if it cannot find an alternate
+ * image to be loaded and any non-zero value otherwise.
+ */
+int plat_try_next_boot_source(unsigned int image_id)
+{
+	int io_result __unused;
+	const struct stm32image_part_info *partition_spec;
+	struct stm32image_part_info *part;
+	const struct plat_io_policy *policy;
+	uint32_t idx;
+	static unsigned int backup_nb;
+	static unsigned int backup_id = MAX_NUMBER_IDS;
+
+	assert(image_id < ARRAY_SIZE(policies));
+
+	if (backup_id != image_id) {
+		backup_id = image_id;
+		backup_nb = 0;
+	}
+
+	backup_nb++;
+
+	if (backup_nb >= PLATFORM_MTD_BACKUP_BLOCKS) {
+		return 0;
+	}
+
+	policy = &policies[image_id];
+	partition_spec = (struct stm32image_part_info *)policy->image_spec;
+	for (idx = 0U; idx < STM32_PART_NUM; idx++) {
+		part = &stm32image_dev_info_spec.part_info[idx];
+		if (part->binary_type == partition_spec->binary_type) {
+			break;
+		}
+	}
+
+	assert(idx < STM32_PART_NUM);
+
+	if (part->bkp_offset == 0U) {
+		return 0;
+	}
+
+	part->part_offset += part->bkp_offset;
+	/*
+	 * Reopen the io_dev as it was closed in the load_auth_image()
+	 * sequence.
+	 */
+	io_result = io_dev_open(stm32image_dev_con,
+				(uintptr_t)&stm32image_dev_info_spec,
+				&image_dev_handle);
+	assert(io_result == 0);
+
+	return 1;
+}
