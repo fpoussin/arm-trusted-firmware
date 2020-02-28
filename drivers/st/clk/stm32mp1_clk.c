@@ -1957,10 +1957,35 @@ static int stm32mp1_is_pll_config_on_the_fly(enum stm32mp1_pll_id pll_id,
 	return 0;
 }
 
+static int stm32mp1_get_mpu_div(uint32_t freq_khz)
+{
+	unsigned long freq_pll1_p;
+	unsigned long div;
+
+	freq_pll1_p = get_clock_rate(_PLL1_P) / 1000UL;
+	if ((freq_pll1_p % freq_khz) != 0U) {
+		return -1;
+	}
+
+	div = freq_pll1_p / freq_khz;
+
+	switch (div) {
+	case 1UL:
+	case 2UL:
+	case 4UL:
+	case 8UL:
+	case 16UL:
+		return __builtin_ffs(div) - 1;
+	default:
+		return -1;
+	}
+}
+
 static int stm32mp1_pll1_config_from_opp_khz(uint32_t freq_khz)
 {
 	unsigned int i;
 	int ret;
+	int div;
 	int config_on_the_fly = -1;
 
 	for (i = 0; i < PLAT_MAX_OPP_NB; i++) {
@@ -1971,6 +1996,22 @@ static int stm32mp1_pll1_config_from_opp_khz(uint32_t freq_khz)
 
 	if (i == PLAT_MAX_OPP_NB) {
 		return -ENXIO;
+	}
+
+	div = stm32mp1_get_mpu_div(freq_khz);
+
+	switch (div) {
+	case -1:
+		break;
+	case 0:
+		return stm32mp1_set_clksrc(CLK_MPU_PLL1P);
+	default:
+		ret = stm32mp1_set_clkdiv(div, stm32mp_rcc_base() +
+					  RCC_MPCKDIVR);
+		if (ret == 0) {
+			ret = stm32mp1_set_clksrc(CLK_MPU_PLL1P_DIV);
+		}
+		return ret;
 	}
 
 	ret = stm32mp1_is_pll_config_on_the_fly(_PLL1, &pll1_settings.cfg[i][0],
@@ -2025,6 +2066,9 @@ static int stm32mp1_pll1_config_from_opp_khz(uint32_t freq_khz)
 
 int stm32mp1_set_opp_khz(uint32_t freq_khz)
 {
+	uintptr_t rcc_base = stm32mp_rcc_base();
+	uint32_t mpu_src;
+
 	if (freq_khz == current_opp_khz) {
 		/* OPP already set, nothing to do */
 		return 0;
@@ -2039,9 +2083,10 @@ int stm32mp1_set_opp_khz(uint32_t freq_khz)
 		return -EACCES;
 	}
 
-	/* Check that PLL1 (without MPUDIV) is MPU clock source */
-	if (((mmio_read_32(stm32mp_rcc_base() + RCC_MPCKSELR) &
-	     RCC_SELR_SRC_MASK)) != RCC_MPCKSELR_PLL) {
+	/* Check that PLL1 is MPU clock source */
+	mpu_src = mmio_read_32(rcc_base + RCC_MPCKSELR) & RCC_SELR_SRC_MASK;
+	if ((mpu_src != RCC_MPCKSELR_PLL) &&
+	    (mpu_src != RCC_MPCKSELR_PLL_MPUDIV)) {
 		return -EPERM;
 	}
 
