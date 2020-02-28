@@ -148,8 +148,6 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 		stm32_save_ddr_training_area();
 	}
 
-	stm32mp1_clk_mpu_suspend();
-
 	if (dt_pmic_status() > 0) {
 		stm32_apply_pmic_suspend_config(mode);
 
@@ -247,8 +245,6 @@ void stm32_exit_cstop(void)
 	}
 
 	enter_cstop_done = false;
-
-	stm32mp1_clk_mpu_resume();
 
 	if (ddr_sw_self_refresh_exit() != 0) {
 		panic();

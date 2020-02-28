@@ -2105,30 +2105,6 @@ int stm32mp1_set_opp_khz(uint32_t freq_khz)
 	return 0;
 }
 
-void stm32mp1_clk_mpu_suspend(void)
-{
-	uintptr_t mpckselr = stm32mp_rcc_base() + RCC_MPCKSELR;
-
-	if (((mmio_read_32(mpckselr) & RCC_SELR_SRC_MASK)) ==
-	    RCC_MPCKSELR_PLL) {
-		if (stm32mp1_set_clksrc(CLK_MPU_PLL1P_DIV) != 0) {
-			panic();
-		}
-	}
-}
-
-void stm32mp1_clk_mpu_resume(void)
-{
-	uintptr_t mpckselr = stm32mp_rcc_base() + RCC_MPCKSELR;
-
-	if (((mmio_read_32(mpckselr) & RCC_SELR_SRC_MASK)) ==
-	    RCC_MPCKSELR_PLL_MPUDIV) {
-		if (stm32mp1_set_clksrc(CLK_MPU_PLL1P) != 0) {
-			panic();
-		}
-	}
-}
-
 static int clk_get_pll_settings_from_dt(int plloff, unsigned int *pllcfg,
 					uint32_t *fracv, uint32_t *csg,
 					bool *csg_set)
