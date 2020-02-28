@@ -304,6 +304,36 @@ int32_t plat_scmi_clock_rates_by_step(unsigned int agent_id,
 	return SCMI_SUCCESS;
 }
 
+int32_t plat_scmi_clock_set_rate(unsigned int agent_id,
+				 unsigned int scmi_id,
+				 unsigned long rate)
+{
+	struct stm32_scmi_clk *clock = find_clock(agent_id, scmi_id);
+
+	if (clock == NULL) {
+		return SCMI_NOT_FOUND;
+	}
+
+	if (!stm32mp_nsec_can_access_clock(clock->clock_id)) {
+		return SCMI_DENIED;
+	}
+
+	switch (scmi_id) {
+	case CK_SCMI0_MPU:
+		if (stm32mp1_set_opp_khz(rate / 1000UL) != 0) {
+			return SCMI_INVALID_PARAMETERS;
+		}
+		break;
+	default:
+		if (rate != clk_get_rate(clock->clock_id)) {
+			return SCMI_INVALID_PARAMETERS;
+		}
+		break;
+	}
+
+	return SCMI_SUCCESS;
+}
+
 unsigned long plat_scmi_clock_get_rate(unsigned int agent_id,
 				       unsigned int scmi_id)
 {
