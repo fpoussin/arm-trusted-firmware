@@ -264,25 +264,11 @@ const char *plat_scmi_clock_get_name(unsigned int agent_id,
 int32_t plat_scmi_clock_rates_array(unsigned int agent_id, unsigned int scmi_id,
 				    unsigned long *array, size_t *nb_elts)
 {
-	struct stm32_scmi_clk *clock = find_clock(agent_id, scmi_id);
-
-	if (clock == NULL) {
-		return SCMI_NOT_FOUND;
-	}
-
-	if (!stm32mp_nsec_can_access_clock(clock->clock_id)) {
-		return SCMI_DENIED;
-	}
-
-	if (array == NULL) {
-		*nb_elts = 1U;
-	} else if (*nb_elts == 1U) {
-		*array = clk_get_rate(clock->clock_id);
-	} else {
-		return SCMI_GENERIC_ERROR;
-	}
-
-	return SCMI_SUCCESS;
+	/*
+	 * Do not expose clock rates by array since not supported by
+	 * Linux kernel
+	 */
+	return SCMI_NOT_SUPPORTED;
 }
 
 int32_t plat_scmi_clock_rates_by_step(unsigned int agent_id,
