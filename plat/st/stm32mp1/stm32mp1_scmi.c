@@ -285,6 +285,39 @@ int32_t plat_scmi_clock_rates_array(unsigned int agent_id, unsigned int scmi_id,
 	return SCMI_SUCCESS;
 }
 
+int32_t plat_scmi_clock_rates_by_step(unsigned int agent_id,
+				      unsigned int scmi_id,
+				      unsigned long *array)
+{
+	struct stm32_scmi_clk *clock = find_clock(agent_id, scmi_id);
+
+	if (clock == NULL) {
+		return SCMI_NOT_FOUND;
+	}
+
+	if (!stm32mp_nsec_can_access_clock(clock->clock_id)) {
+		return SCMI_DENIED;
+	}
+
+	switch (scmi_id) {
+	case CK_SCMI0_MPU:
+		/*
+		 * Pretend we support all rates for MPU clock,
+		 * CLOCK_RATE_SET will reject unsupported rates.
+		 */
+		array[0] = 0U;
+		array[1] = UINT32_MAX;
+		array[2] = 1U;
+		break;
+	default:
+		array[0] = clk_get_rate(clock->clock_id);
+		array[1] = array[0];
+		array[2] = 0U;
+		break;
+	}
+	return SCMI_SUCCESS;
+}
+
 unsigned long plat_scmi_clock_get_rate(unsigned int agent_id,
 				       unsigned int scmi_id)
 {
