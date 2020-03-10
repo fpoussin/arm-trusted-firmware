@@ -344,8 +344,12 @@ static int stm32mp1_ddr_setup(void)
 		}
 	}
 
-	/* Switch to Automatic Self-Refresh */
-	ddr_sr_mode_asr();
+	/*
+	 * Initialization sequence has configured DDR registers with settings.
+	 * The Self Refresh (SR) mode corresponding to these settings has now
+	 * to be set.
+	 */
+	ddr_set_sr_mode(ddr_read_sr_mode());
 
 	if (stm32mp_unmap_ddr() != 0) {
 		panic();
