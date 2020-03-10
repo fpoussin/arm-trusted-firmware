@@ -262,6 +262,9 @@ static int pmic_operate(uint8_t command, const char *node_name,
 	}
 
 	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
+	if (regulators_node < 0) {
+		return -ENOENT;
+	}
 
 	fdt_for_each_subnode(subnode, fdt, regulators_node) {
 		const char *regu_name = fdt_get_name(fdt, subnode, NULL);
