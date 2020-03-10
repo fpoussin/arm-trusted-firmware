@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -11,7 +11,6 @@
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32mp1_ddr_helpers.h>
 #include <lib/mmio.h>
-#include <plat/common/platform.h>
 
 #define TIMEOUT_500US	500U
 
@@ -386,10 +385,6 @@ void ddr_sr_mode_ssr(void)
 	uintptr_t rcc_ddritfcr = stm32mp_rcc_base() + RCC_DDRITFCR;
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
 
-	if (!stm32mp_ddr_supports_ssr_asr()) {
-		return;
-	}
-
 	stm32mp1_clk_rcc_regs_lock();
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC1LPEN);
@@ -441,10 +436,6 @@ void ddr_sr_mode_asr(void)
 {
 	uintptr_t rcc_ddritfcr = stm32mp_rcc_base() + RCC_DDRITFCR;
 	uintptr_t ddrctrl_base = stm32mp_ddrctrl_base();
-
-	if (!stm32mp_ddr_supports_ssr_asr()) {
-		return;
-	}
 
 	stm32mp1_clk_rcc_regs_lock();
 
