@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -30,6 +30,21 @@ int dt_pmic_status(void);
 int pmic_configure_boot_on_regulators(void);
 
 int pmic_set_lp_config(const char *node_name);
+
+/*
+ * dt_pmic_find_supply - Find the supply name related to a regulator name
+ *
+ * Returns 0 on success, and negative values on errors
+ */
+int dt_pmic_find_supply(const char **supply_name, const char *regu_name);
+
+/*
+ * pmic_set_regulator_min_voltage - Set target supply to its device tree
+ * "regulator-min-microvolt" value.
+ *
+ * Returns 0 on success, and negative values on errors
+ */
+int pmic_set_regulator_min_voltage(const char *regu_name);
 
 /*
  * initialize_pmic_i2c - Initialize I2C for the PMIC control

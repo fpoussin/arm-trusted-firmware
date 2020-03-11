@@ -370,6 +370,56 @@ int pmic_set_lp_config(const char *node_name)
 	return pmic_operate(CMD_CONFIG_LP, node_name, NULL);
 }
 
+int dt_pmic_find_supply(const char **supply_name, const char *regu_name)
+{
+	int pmic_node, regulators_node, subnode;
+	void *fdt;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	pmic_node = dt_get_pmic_node(fdt);
+	if (pmic_node < 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	regulators_node = fdt_subnode_offset(fdt, pmic_node, "regulators");
+	if (regulators_node < 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	fdt_for_each_subnode(subnode, fdt, regulators_node) {
+		const char *name;
+
+		name = fdt_getprop(fdt, subnode, "regulator-name", NULL);
+		if ((name != NULL) &&
+		    (strcmp(name, regu_name) == 0)) {
+			*supply_name = fdt_get_name(fdt, subnode, NULL);
+			return 0;
+		}
+	}
+
+	return -FDT_ERR_NOTFOUND;
+}
+
+int pmic_set_regulator_min_voltage(const char *regu_name)
+{
+	int rc = -ENOENT;
+	const char *supply_name;
+
+	if (dt_pmic_find_supply(&supply_name, regu_name) == 0) {
+		uint16_t min_mv;
+
+		rc = pmic_operate(CMD_GET_MIN_VOLTAGE, supply_name, &min_mv);
+		if (rc == 0) {
+			rc = stpmic1_regulator_voltage_set(supply_name, min_mv);
+		}
+	}
+
+	return rc;
+}
+
 bool initialize_pmic_i2c(void)
 {
 	int ret;
