@@ -126,6 +126,12 @@ void stm32mp_io_setup(void);
  */
 int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer);
 
+#if TRUSTED_BOARD_BOOT
+void stm32mp_save_loaded_header(void *header);
+void stm32mp_delete_loaded_header(void);
+boot_api_image_header_t *stm32mp_get_loaded_header(void);
+#endif
+
 /* Functions to map DDR in MMU with non-cacheable attribute, and unmap it */
 int stm32mp_map_ddr_non_cacheable(void);
 int stm32mp_unmap_ddr(void);

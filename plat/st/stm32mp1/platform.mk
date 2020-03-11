@@ -15,6 +15,8 @@ ENABLE_PIE		:=	1
 ST_VERSION 		:=	r1.0
 VERSION_STRING		:=	v${VERSION_MAJOR}.${VERSION_MINOR}-${ST_VERSION}(${BUILD_TYPE}):${BUILD_STRING}
 
+TRUSTED_BOARD_BOOT	:=	1
+
 # Please don't increment this value without good understanding of
 # the monotonic counter
 STM32_TF_VERSION	?=	0
@@ -171,9 +173,20 @@ BL2_SOURCES		+=	drivers/io/io_block.c					\
 				drivers/io/io_storage.c					\
 				drivers/st/crypto/stm32_hash.c				\
 				drivers/st/io/io_stm32image.c				\
-				plat/st/common/stm32mp_auth.c				\
 				plat/st/common/bl2_io_storage.c				\
 				plat/st/stm32mp1/bl2_plat_setup.c
+
+ifeq (${TRUSTED_BOARD_BOOT},1)
+AUTH_SOURCES		:=	drivers/auth/auth_mod.c					\
+				drivers/auth/crypto_mod.c				\
+				drivers/auth/img_parser_mod.c
+
+BL2_SOURCES		+= 	$(AUTH_SOURCES)						\
+				plat/st/common/stm32mp_cot.c				\
+				plat/st/common/stm32mp_crypto_lib.c			\
+				plat/st/common/stm32mp_img_parser_lib.c			\
+				plat/st/common/stm32mp_trusted_boot.c
+endif
 
 ifneq ($(filter 1,${STM32MP_EMMC} ${STM32MP_SDMMC}),)
 BL2_SOURCES		+=	drivers/mmc/mmc.c					\

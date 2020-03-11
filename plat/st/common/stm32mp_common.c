@@ -14,6 +14,7 @@
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <lib/spinlock.h>
+#include <lib/utils.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
 
@@ -109,14 +110,11 @@ void stm32mp_pwr_regs_unlock(void)
 
 int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 {
-	uint32_t i;
-	uint32_t img_checksum = 0U;
-
 	/*
 	 * Check header/payload validity:
 	 *	- Header magic
 	 *	- Header version
-	 *	- Payload checksum
+	 *	- Payload checksum if no signature verification
 	 */
 	if (header->magic != BOOT_API_IMAGE_HEADER_MAGIC_NB) {
 		ERROR("Header magic\n");
@@ -129,14 +127,19 @@ int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 		return -EINVAL;
 	}
 
-	for (i = 0U; i < header->image_length; i++) {
-		img_checksum += *(uint8_t *)(buffer + i);
-	}
+	if (header->option_flags == 1U) {
+		uint32_t i;
+		uint32_t img_checksum = 0U;
 
-	if (header->payload_checksum != img_checksum) {
-		ERROR("Checksum: 0x%x (awaited: 0x%x)\n", img_checksum,
-		      header->payload_checksum);
-		return -EINVAL;
+		for (i = 0U; i < header->image_length; i++) {
+			img_checksum += *(uint8_t *)(buffer + i);
+		}
+
+		if (header->payload_checksum != img_checksum) {
+			ERROR("Checksum: 0x%x (awaited: 0x%x)\n", img_checksum,
+			      header->payload_checksum);
+			return -EINVAL;
+		}
 	}
 
 	return 0;
@@ -161,6 +164,38 @@ const char *stm32mp_get_cpu_supply_name(void)
 
 	return supply;
 }
+
+#if TRUSTED_BOARD_BOOT
+/* Save pointer to last loaded header */
+static boot_api_image_header_t *latest_stm32_header;
+
+/* Save last loaded header */
+void stm32mp_save_loaded_header(void *header)
+{
+	assert(latest_stm32_header == NULL);
+
+	latest_stm32_header = header;
+}
+
+/* Discard last loaded header */
+void stm32mp_delete_loaded_header(void)
+{
+	if (latest_stm32_header == NULL) {
+		return;
+	}
+
+	zeromem(latest_stm32_header, sizeof(boot_api_image_header_t));
+	latest_stm32_header = NULL;
+}
+
+/* Get last loaded header */
+boot_api_image_header_t *stm32mp_get_loaded_header(void)
+{
+	assert(latest_stm32_header != NULL);
+
+	return latest_stm32_header;
+}
+#endif /* TRUSTED_BOARD_BOOT */
 
 int stm32mp_map_ddr_non_cacheable(void)
 {

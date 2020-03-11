@@ -23,7 +23,6 @@
 #include <drivers/st/stm32mp1_pwr.h>
 
 #include <boot_api.h>
-#include <stm32mp_auth.h>
 #include <stm32mp_common.h>
 #include <stm32mp_dt.h>
 #include <stm32mp_shres_helpers.h>
@@ -347,6 +346,7 @@ enum ddr_type {
 #define NAND_OTP			"nand_otp"
 #define MONOTONIC_OTP			"monotonic_otp"
 #define UID_OTP				"uid_otp"
+#define PKH_OTP				"pkh_otp"
 #define BOARD_ID_OTP			"board_id"
 
 /* OTP mask */

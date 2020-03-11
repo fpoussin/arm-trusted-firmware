@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -284,6 +284,9 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 				break;
 			}
 		}
+#if TRUSTED_BOARD_BOOT
+		stm32mp_save_loaded_header(header);
+#endif
 
 		/* Part of image already loaded with the header */
 		memcpy(local_buffer, (uint8_t *)first_lba_buffer +
@@ -333,19 +336,6 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 			*length_read = 0;
 			header->magic = 0;
 			continue;
-		}
-
-		result = stm32mp_check_header(header, buffer);
-		if (result != 0) {
-			ERROR("Header check failed\n");
-			*length_read = 0;
-			header->magic = 0;
-		}
-
-		result = stm32mp_auth_image(header, buffer);
-		if (result != 0) {
-			ERROR("Authentication Failed (%i)\n", result);
-			return result;
 		}
 
 		io_close(backend_handle);

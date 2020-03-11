@@ -33,7 +33,8 @@
 			      <&nand_otp>,
 			      <&uid_otp>,
 			      <&package_otp>,
-			      <&hw2_otp>;
+			      <&hw2_otp>,
+			      <&pkh_otp>;
 
 		nvmem-cell-names = "cfg0_otp",
 				   "part_number_otp",
@@ -41,7 +42,8 @@
 				   "nand_otp",
 				   "uid_otp",
 				   "package_otp",
-				   "hw2_otp";
+				   "hw2_otp",
+				   "pkh_otp";
 	};
 
 	psci {
@@ -488,6 +490,9 @@
 			};
 			ts_cal2: calib@5e {
 				reg = <0x5e 0x2>;
+			};
+			pkh_otp: pkh_otp@60 {
+				reg = <0x60 0x20>;
 			};
 			mac_addr: mac_addr@e4 {
 				reg = <0xe4 0x8>;

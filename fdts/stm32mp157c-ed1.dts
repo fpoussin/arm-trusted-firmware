@@ -223,6 +223,7 @@
 		      <&uid_otp>,
 		      <&package_otp>,
 		      <&hw2_otp>,
+		      <&pkh_otp>,
 		      <&board_id>;
 
 	nvmem-cell-names = "cfg0_otp",
@@ -232,6 +233,7 @@
 			   "uid_otp",
 			   "package_otp",
 			   "hw2_otp",
+			   "pkh_otp",
 			   "board_id";
 };
 

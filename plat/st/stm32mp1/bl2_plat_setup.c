@@ -56,7 +56,6 @@ static const char debug_msg[626] = {
 
 static console_t console;
 static enum boot_device_e boot_device = BOOT_DEVICE_BOARD;
-static struct stm32mp_auth_ops stm32mp1_auth_ops;
 static bool wakeup_standby;
 
 static void print_reset_reason(void)
@@ -479,13 +478,23 @@ void bl2_el3_plat_arch_setup(void)
 
 	stm32mp_print_boardinfo();
 
+#if TRUSTED_BOARD_BOOT
 	if (boot_context->auth_status != BOOT_API_CTX_AUTH_NO) {
 		NOTICE("Bootrom authentication %s\n",
 		       (boot_context->auth_status == BOOT_API_CTX_AUTH_FAILED) ?
 		       "failed" : "succeeded");
 	}
+#endif
 
 skip_console_init:
+#if !TRUSTED_BOARD_BOOT
+	if (stm32mp_is_closed_device()) {
+		/* Closed chip required authentication */
+		ERROR("Secured chip must enabled TRUSTED_BOARD_BOOT\n");
+		panic();
+	}
+#endif
+
 	if (stm32_iwdg_init() < 0) {
 		panic();
 	}
@@ -507,15 +516,6 @@ skip_console_init:
 				      boot_context->boot_interface_instance) !=
 	    0) {
 		ERROR("Cannot save boot interface\n");
-	}
-
-	if (stm32mp_is_auth_supported()) {
-		stm32mp1_auth_ops.check_key =
-			boot_context->bootrom_ecdsa_check_key;
-		stm32mp1_auth_ops.verify_signature =
-			boot_context->bootrom_ecdsa_verify_signature;
-
-		stm32mp_init_auth(&stm32mp1_auth_ops);
 	}
 
 	stm32mp1_arch_security_setup();
@@ -574,6 +574,11 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 #endif
 
 	assert(bl_mem_params != NULL);
+
+#if TRUSTED_BOARD_BOOT
+	/* Clean header to avoid loaded header reused */
+	stm32mp_delete_loaded_header();
+#endif
 
 	switch (image_id) {
 	case BL32_IMAGE_ID:
