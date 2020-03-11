@@ -126,24 +126,29 @@ static void configure_wakeup_interrupt(void)
 
 static void initialize_pll1_settings(void)
 {
-	uint32_t vddcore_voltage = 0U;
+	uint32_t cpu_voltage = 0U;
 
 	if (stm32_are_pll1_settings_valid_in_context()) {
 		return;
 	}
 
 	if (dt_pmic_status() > 0) {
+		const char *name = stm32mp_get_cpu_supply_name();
 		int ret;
 
-		ret = stpmic1_regulator_voltage_get("buck1");
+		if (name == NULL) {
+			panic();
+		}
+
+		ret = stpmic1_regulator_voltage_get(name);
 		if (ret < 0) {
 			panic();
 		}
 
-		vddcore_voltage = (uint32_t)ret;
+		cpu_voltage = (uint32_t)ret;
 	}
 
-	if (stm32mp1_clk_compute_all_pll1_settings(vddcore_voltage) != 0) {
+	if (stm32mp1_clk_compute_all_pll1_settings(cpu_voltage) != 0) {
 		panic();
 	}
 }

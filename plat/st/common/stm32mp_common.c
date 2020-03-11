@@ -12,6 +12,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/st/stm32mp_clkfunc.h>
+#include <drivers/st/stm32mp_pmic.h>
 #include <lib/spinlock.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
@@ -139,6 +140,26 @@ int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 	}
 
 	return 0;
+}
+
+/* Return CPU supply name */
+const char *stm32mp_get_cpu_supply_name(void)
+{
+	const char *regulator;
+	const char *supply = NULL;
+
+	regulator = dt_get_cpu_regulator_name();
+	if (regulator == NULL) {
+		return NULL;
+	}
+
+	if (dt_pmic_status() > 0) {
+		if (dt_pmic_find_supply(&supply, regulator) != 0) {
+			return NULL;
+		}
+	}
+
+	return supply;
 }
 
 int stm32mp_map_ddr_non_cacheable(void)

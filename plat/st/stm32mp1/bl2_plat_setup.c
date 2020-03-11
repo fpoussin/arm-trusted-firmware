@@ -244,9 +244,9 @@ static void initialize_clock(void)
 	/*
 	 * If no pre-defined PLL1 settings in DT, find the highest frequency
 	 * in the OPP table (in DT, compatible with plaform capabilities, or
-	 * in structure restored in RAM), and set related VDDCORE voltage.
-	 * If PLL1 settings found in DT, we consider VDDCORE voltage in DT is
-	 * consistent with it.
+	 * in structure restored in RAM), and set related CPU supply voltage.
+	 * If PLL1 settings found in DT, we consider CPU supply voltage in DT
+	 * is consistent with it.
 	 */
 	if ((ret == 0) && !fdt_is_pll1_predefined()) {
 		if (wakeup_standby) {
@@ -262,7 +262,12 @@ static void initialize_clock(void)
 
 		if (dt_pmic_status() > 0) {
 			int read_voltage;
-			const char *name = "buck1";
+			const char *name;
+
+			name = stm32mp_get_cpu_supply_name();
+			if (name == NULL) {
+				panic();
+			}
 
 			read_voltage = stpmic1_regulator_voltage_get(name);
 			if (read_voltage < 0) {

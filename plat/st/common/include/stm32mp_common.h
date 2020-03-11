@@ -25,6 +25,8 @@ bool stm32mp_is_single_core(void);
 bool stm32mp_is_closed_device(void);
 bool stm32mp_is_auth_supported(void);
 
+const char *stm32mp_get_cpu_supply_name(void);
+
 /* Return the base address of the DDR controller */
 uintptr_t stm32mp_ddrctrl_base(void);
 
