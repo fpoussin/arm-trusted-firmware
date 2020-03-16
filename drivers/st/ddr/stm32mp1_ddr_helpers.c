@@ -356,16 +356,17 @@ int ddr_sw_self_refresh_exit(void)
 	return 0;
 }
 
-int ddr_standby_sr_entry(uint32_t *zq0cr0_zdata)
+uint32_t ddr_get_io_calibration_val(void)
 {
-	uintptr_t pwr_base = stm32mp_pwr_base();
 	uintptr_t ddrphyc_base = stm32mp_ddrphyc_base();
 
-	/* Save IOs calibration values */
-	if (zq0cr0_zdata != NULL) {
-		*zq0cr0_zdata = mmio_read_32(ddrphyc_base + DDRPHYC_ZQ0CR0) &
-				DDRPHYC_ZQ0CRN_ZDATA_MASK;
-	}
+	return mmio_read_32(ddrphyc_base + DDRPHYC_ZQ0CR0) &
+		DDRPHYC_ZQ0CRN_ZDATA_MASK;
+}
+
+int ddr_standby_sr_entry(void)
+{
+	uintptr_t pwr_base = stm32mp_pwr_base();
 
 	/* Put DDR in Self-Refresh */
 	if (ddr_sw_self_refresh_in() != 0) {

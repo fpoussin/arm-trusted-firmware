@@ -179,12 +179,14 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 
 	gicc_pmr = plat_ic_set_priority_mask(GICC_PMR_PRIORITY_8);
 
+	zq0cr0_zdata = ddr_get_io_calibration_val();
+
 	/*
 	 * Set DDR in Self-refresh, even if no return address is given.
 	 * This is also the procedure awaited when switching off power supply.
 	 */
-	if (ddr_standby_sr_entry(&zq0cr0_zdata) != 0) {
-		return;
+	if (ddr_standby_sr_entry() != 0) {
+		panic();
 	}
 
 	stm32mp_clk_enable(RTCAPB);
@@ -286,7 +288,7 @@ void stm32_exit_cstop(void)
 static void enter_shutdown(void)
 {
 	/* Set DDR in Self-refresh before shutting down the platform */
-	if (ddr_standby_sr_entry(NULL) != 0) {
+	if (ddr_standby_sr_entry() != 0) {
 		WARN("DDR can't be set in Self-refresh mode\n");
 	}
 
