@@ -1792,16 +1792,33 @@ unsigned long stm32mp_clk_timer_get_rate(unsigned long id)
 
 	parent_rate = stm32mp_clk_get_rate(id);
 
-	if (id < TIM1_K) {
+	switch (id) {
+	case TIM2_K:
+	case TIM3_K:
+	case TIM4_K:
+	case TIM5_K:
+	case TIM6_K:
+	case TIM7_K:
+	case TIM12_K:
+	case TIM13_K:
+	case TIM14_K:
 		prescaler = mmio_read_32(rcc_base + RCC_APB1DIVR) &
 			    RCC_APBXDIV_MASK;
 		timpre = mmio_read_32(rcc_base + RCC_TIMG1PRER) &
 			 RCC_TIMGXPRER_TIMGXPRE;
-	} else {
+		break;
+	case TIM1_K:
+	case TIM8_K:
+	case TIM15_K:
+	case TIM16_K:
+	case TIM17_K:
 		prescaler = mmio_read_32(rcc_base + RCC_APB2DIVR) &
 			    RCC_APBXDIV_MASK;
 		timpre = mmio_read_32(rcc_base + RCC_TIMG2PRER) &
 			 RCC_TIMGXPRER_TIMGXPRE;
+		break;
+	default:
+		return 0;
 	}
 
 	if (!prescaler) {
