@@ -295,8 +295,8 @@ int plat_setup_psci_ops(uintptr_t sec_entrypoint,
 			scpi_available = true;
 	}
 
-	NOTICE("PSCI: System suspend is %s\n",
-	       scpi_available ? "available via SCPI" : "unavailable");
+	INFO("PSCI: System suspend is %s\n",
+	     scpi_available ? "available via SCPI" : "unavailable");
 	if (scpi_available) {
 		/* Suspend is only available via SCPI. */
 		sunxi_psci_ops.pwr_domain_suspend = sunxi_pwr_domain_off;

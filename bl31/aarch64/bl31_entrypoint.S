@@ -73,10 +73,10 @@ func bl31_entrypoint
 	 * arguments passed to the platform layer to reflect that.
 	 * ---------------------------------------------------------------------
 	 */
-	mov	x20, 0
+/*	mov	x20, 0
 	mov	x21, 0
 	mov	x22, 0
-	mov	x23, 0
+	mov	x23, 0*/
 #endif /* RESET_TO_BL31 */
 
 	/* --------------------------------------------------------------------

@@ -95,8 +95,8 @@ void bl31_setup(u_register_t arg0, u_register_t arg1, u_register_t arg2,
  ******************************************************************************/
 void bl31_main(void)
 {
-	NOTICE("BL31: %s\n", version_string);
-	NOTICE("BL31: %s\n", build_message);
+	INFO("BL31: %s\n", version_string);
+	INFO("BL31: %s\n", build_message);
 
 	/* Perform platform setup in BL31 */
 	bl31_platform_setup();

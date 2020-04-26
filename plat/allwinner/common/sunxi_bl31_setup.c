@@ -27,6 +27,7 @@
 
 static entry_point_info_t bl32_image_ep_info;
 static entry_point_info_t bl33_image_ep_info;
+static uintptr_t fdt_blob_addr;
 
 static console_t console;
 
@@ -53,6 +54,18 @@ static void *sunxi_find_dtb(void)
 	int i;
 
 	u_boot_base = (void *)(SUNXI_DRAM_VIRT_BASE + SUNXI_DRAM_SEC_SIZE);
+
+	if (fdt_blob_addr) {
+		if (fdt_blob_addr != PLAT_SUNXI_NS_IMAGE_OFFSET) {
+			INFO("BL31: BL2 used bad address to pass FDT\n");
+			return NULL;
+		}
+		if (fdt_check_header(u_boot_base)) {
+			INFO("BL31: BL2 sent invalid FDT\n");
+			return NULL;
+		}
+		return u_boot_base;
+	}
 
 	for (i = 0; i < 2048 / sizeof(uint64_t); i++) {
 		uint32_t *dtb_base;
@@ -82,6 +95,27 @@ void bl31_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	/* Initialize the debug console as soon as possible */
 	console_16550_register(SUNXI_UART0_BASE, SUNXI_UART0_CLK_IN_HZ,
 			       SUNXI_UART0_BAUDRATE, &console);
+
+	// p-boot passes special value in arg2 for ATF to detect it
+	if (arg2 == 0xb001) {
+		entry_point_info_t *from_bl2 = (entry_point_info_t *) arg0;
+
+		/* p-boot passes entrypoint info directly in arg0 */
+		bl33_image_ep_info = *from_bl2;
+		/* FDT address in arg1 */
+		fdt_blob_addr = arg1;
+
+		INFO("BL31: BL33 pc=%p spsr=%x sec=%x FDT=%p arg2=%lx\n", (void*)bl33_image_ep_info.pc, bl33_image_ep_info.spsr, bl33_image_ep_info.h.attr, (void*)fdt_blob_addr, arg2);
+
+		if (bl33_image_ep_info.pc == 0U) {
+			ERROR("BL31: BL33 entrypoint not obtained from BL2\n");
+			panic();
+		}
+
+		/* Turn off all secondary CPUs */
+		sunxi_disable_secondary_cpus(read_mpidr());
+		return;
+	}
 
 #ifdef BL32_BASE
 	/* Populate entry point information for BL32 */
@@ -130,7 +164,7 @@ void bl31_platform_setup(void)
 		soc_name = "unknown";
 		break;
 	}
-	NOTICE("BL31: Detected Allwinner %s SoC (%04x)\n", soc_name, soc_id);
+	INFO("BL31: Detected Allwinner %s SoC (%04x)\n", soc_name, soc_id);
 
 	generic_delay_timer_init();
 
@@ -140,7 +174,7 @@ void bl31_platform_setup(void)
 		int length;
 
 		model = fdt_getprop(fdt, 0, "model", &length);
-		NOTICE("BL31: Found U-Boot DTB at %p, model: %s\n", fdt,
+		INFO("BL31: Found DTB at %p, model: %s\n", fdt,
 		     model ?: "unknown");
 	} else {
 		NOTICE("BL31: No DTB found.\n");

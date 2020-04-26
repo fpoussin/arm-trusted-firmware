@@ -98,8 +98,9 @@ static int setup_regulator(const void *fdt, int node,
 
 static bool should_enable_regulator(const void *fdt, int node)
 {
-	if (fdt_getprop(fdt, node, "phandle", NULL) != NULL)
-		return true;
+//XXX: no need to enable referenced regulators
+//	if (fdt_getprop(fdt, node, "phandle", NULL) != NULL)
+//		return true;
 	if (fdt_getprop(fdt, node, "regulator-always-on", NULL) != NULL)
 		return true;
 	return false;
