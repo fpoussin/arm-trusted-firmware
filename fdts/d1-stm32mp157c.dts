@@ -11,7 +11,7 @@
 
 / {
 	model = "D1 Dashboard - STM32MP1";
-	compatible = "st,stm32mp157a-dk1", "st,stm32mp157";
+	compatible = "st,stm32mp157a-dk2", "st,stm32mp157";
 
 	aliases {
 		serial0 = &uart4;
