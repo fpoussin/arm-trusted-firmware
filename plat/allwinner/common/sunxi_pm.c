@@ -138,6 +138,8 @@ static void __dead2 sunxi_system_off(void)
 
 		if (ret != SCP_OK)
 			ERROR("PSCI: SCPI %s failed: %d\n", "shutdown", ret);
+		else
+			udelay(1000);
 	}
 
 	/* Turn off all secondary CPUs */
@@ -161,6 +163,9 @@ static void __dead2 sunxi_system_reset(void)
 
 		if (ret != SCP_OK)
 			ERROR("PSCI: SCPI %s failed: %d\n", "reboot", ret);
+		else
+			udelay(1000);
+
 	}
 
 	/* Reset the whole system when the watchdog times out */
