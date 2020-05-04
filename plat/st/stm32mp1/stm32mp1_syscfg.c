@@ -107,7 +107,7 @@ void stm32mp1_syscfg_init(void)
 
 	/* Check if VDD is Low Voltage */
 	if (vdd_voltage == 0U) {
-		WARN("VDD unknown");
+		WARN("VDD unknown\n");
 	} else if (vdd_voltage < 2700000U) {
 		mmio_write_32(SYSCFG_BASE + SYSCFG_IOCTRLSETR,
 			      SYSCFG_IOCTRLSETR_HSLVEN_TRACE |
