@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2016-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -27,22 +27,14 @@
 
 #define DBGMCU_APB4FZ1_IWDG2	BIT(2)
 
-static uintptr_t get_rcc_base(void)
-{
-	/* This is called before stm32mp_rcc_base() is available */
-	return RCC_BASE;
-}
-
 static int stm32mp1_dbgmcu_init(void)
 {
-	uintptr_t rcc_base = get_rcc_base();
-
 	if ((bsec_read_debug_conf() & BSEC_DBGSWGEN) == 0U) {
 		INFO("Software access to all debug components is disabled\n");
 		return -1;
 	}
 
-	mmio_setbits_32(rcc_base + RCC_DBGCFGR, RCC_DBGCFGR_DBGCKEN);
+	mmio_setbits_32(RCC_BASE + RCC_DBGCFGR, RCC_DBGCFGR_DBGCKEN);
 
 	return 0;
 }
