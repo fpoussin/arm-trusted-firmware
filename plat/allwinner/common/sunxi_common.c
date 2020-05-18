@@ -82,35 +82,6 @@ uint16_t sunxi_read_soc_id(void)
 	return reg >> 16;
 }
 
-/*
- * Configure a given pin to the GPIO-OUT function and sets its level.
- * The port is given as a capital letter, the pin is the number within
- * this port group.
- * So to set pin PC7 to high, use: sunxi_set_gpio_out('C', 7, true);
- */
-void sunxi_set_gpio_out(char port, int pin, bool level_high)
-{
-	uintptr_t port_base;
-
-	if (port < 'A' || port > 'L')
-		return;
-	if (port == 'L')
-		port_base = SUNXI_R_PIO_BASE;
-	else
-		port_base = SUNXI_PIO_BASE + (port - 'A') * 0x24;
-
-	/* Set the new level first before configuring the pin. */
-	if (level_high)
-		mmio_setbits_32(port_base + 0x10, BIT(pin));
-	else
-		mmio_clrbits_32(port_base + 0x10, BIT(pin));
-
-	/* configure pin as GPIO out (4(3) bits per pin, 1: GPIO out */
-	mmio_clrsetbits_32(port_base + (pin / 8) * 4,
-			   0x7 << ((pin % 8) * 4),
-			   0x1 << ((pin % 8) * 4));
-}
-
 int sunxi_init_platform_r_twi(uint16_t socid, bool use_rsb)
 {
 	uint32_t pin_func = 0x77;
@@ -164,51 +135,4 @@ int sunxi_init_platform_r_twi(uint16_t socid, bool use_rsb)
 	mmio_setbits_32(SUNXI_R_PRCM_BASE + reset_offset, device_bit);
 
 	return 0;
-}
-
-/* This lock synchronises access to the arisc management processor. */
-DEFINE_BAKERY_LOCK(arisc_lock);
-
-/*
- * Tell the "arisc" SCP core (an OpenRISC core) to execute some code.
- * We don't have any service running there, so we place some OpenRISC code
- * in SRAM, put the address of that into the reset vector and release the
- * arisc reset line. The SCP will execute that code and pull the line up again.
- */
-void sunxi_execute_arisc_code(uint32_t *code, size_t size, uint16_t param)
-{
-	uintptr_t arisc_reset_vec = SUNXI_SRAM_A2_BASE + 0x100;
-
-	do {
-		bakery_lock_get(&arisc_lock);
-		/* Wait until the arisc is in reset state. */
-		if (!(mmio_read_32(SUNXI_R_CPUCFG_BASE) & BIT(0)))
-			break;
-
-		bakery_lock_release(&arisc_lock);
-	} while (1);
-
-	/* Patch up the code to feed in an input parameter. */
-	code[0] = (code[0] & ~0xffff) | param;
-	clean_dcache_range((uintptr_t)code, size);
-
-	/*
-	 * The OpenRISC unconditional branch has opcode 0, the branch offset
-	 * is in the lower 26 bits, containing the distance to the target,
-	 * in instruction granularity (32 bits).
-	 */
-	mmio_write_32(arisc_reset_vec, ((uintptr_t)code - arisc_reset_vec) / 4);
-	clean_dcache_range(arisc_reset_vec, 4);
-
-	/* De-assert the arisc reset line to let it run. */
-	mmio_setbits_32(SUNXI_R_CPUCFG_BASE, BIT(0));
-
-	/*
-	 * We release the lock here, although the arisc is still busy.
-	 * But as long as it runs, the reset line is high, so other users
-	 * won't leave the loop above.
-	 * Once it has finished, the code is supposed to clear the reset line,
-	 * to signal this to other users.
-	 */
-	bakery_lock_release(&arisc_lock);
 }
