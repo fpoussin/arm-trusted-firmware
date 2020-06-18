@@ -120,13 +120,6 @@ void axp_setup_regulators(const void *fdt)
 		return;
 	}
 
-	/* This applies to AXP803 only. */
-	if (fdt_getprop(fdt, node, "x-powers,drive-vbus-en", NULL)) {
-		axp_clrbits(0x8f, BIT(4));
-		axp_setbits(0x30, BIT(2));
-		INFO("PMIC: Enabling DRIVEVBUS\n");
-	}
-
 	/* descend into the "regulators" subnode */
 	node = fdt_subnode_offset(fdt, node, "regulators");
 	if (node < 0) {
