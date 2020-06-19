@@ -229,6 +229,7 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 	uint8_t *local_buffer;
 	boot_api_image_header_t *header =
 		(boot_api_image_header_t *)first_lba_buffer;
+	size_t hdr_sz = sizeof(boot_api_image_header_t);
 
 	assert(entity != NULL);
 	assert(buffer != 0U);
@@ -242,15 +243,13 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 #endif
 
 	/* Part of image already loaded with the header */
-	memcpy(local_buffer, (uint8_t *)first_lba_buffer +
-	       sizeof(boot_api_image_header_t),
-	       MAX_LBA_SIZE - sizeof(boot_api_image_header_t));
-	local_buffer += MAX_LBA_SIZE - sizeof(boot_api_image_header_t);
+	memcpy(local_buffer, (uint8_t *)first_lba_buffer + hdr_sz,
+	       MAX_LBA_SIZE - hdr_sz);
+	local_buffer += MAX_LBA_SIZE - hdr_sz;
 	offset = MAX_LBA_SIZE;
 
 	/* New image length to be read */
-	local_length = round_up(length - ((MAX_LBA_SIZE) -
-					  sizeof(boot_api_image_header_t)),
+	local_length = round_up(length - ((MAX_LBA_SIZE) - hdr_sz),
 				stm32image_dev.lba_size);
 
 	if ((header->load_address != 0U) && (header->load_address != buffer)) {
@@ -279,7 +278,7 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 	}
 
 	/* Adding part of size already read from header */
-	*length_read += MAX_LBA_SIZE - sizeof(boot_api_image_header_t);
+	*length_read += MAX_LBA_SIZE - hdr_sz;
 
 out:
 	io_close(backend_handle);
