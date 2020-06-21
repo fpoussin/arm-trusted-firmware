@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2018-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -62,6 +62,7 @@
 #define TIM_PRESCAL_HSI		10U
 #define TIM_PRESCAL_CSI		7U
 #define TIM_MIN_FREQ_CALIB	50000000U
+#define TIM_THRESHOLD		1U
 
 struct stm32_timer_instance {
 	uintptr_t base;
@@ -127,8 +128,8 @@ static uint32_t stm32_timer_start_capture(struct stm32_timer_instance *timer)
 {
 	uint32_t timeout = TIM_TIMEOUT_US / TIM_TIMEOUT_STEP_US;
 	uint32_t counter = 0U;
-	uint32_t old_counter = 0U;
-	int twice = 0;
+	uint32_t old_counter;
+	uint64_t conv_timeout;
 
 	if (stm32_timer_config(timer) < 0) {
 		return 0U;
@@ -149,22 +150,29 @@ static uint32_t stm32_timer_start_capture(struct stm32_timer_instance *timer)
 
 	mmio_write_32(timer->base + TIM_SR, 0U);
 
-	while ((twice < 2) || (old_counter != counter)) {
-		timeout = TIM_TIMEOUT_US / TIM_TIMEOUT_STEP_US;
+	conv_timeout = timeout_init_us(TIM_TIMEOUT_US);
+	do {
+		if (timeout_elapsed(conv_timeout)) {
+			WARN("Timer counter not stable\n");
+			timeout = 0U;
+			goto out;
+		}
 
+		timeout = TIM_TIMEOUT_US / TIM_TIMEOUT_STEP_US;
 		while (((mmio_read_32(timer->base + TIM_SR) &
 			 TIM_SR_CC1IF) == 0U) && (timeout != 0U)) {
 			udelay(TIM_TIMEOUT_STEP_US);
 			timeout--;
 		}
+
 		if (timeout == 0U) {
 			goto out;
 		}
 
 		old_counter = counter;
 		counter = mmio_read_32(timer->base + TIM_CCR1);
-		twice++;
-	}
+	} while ((MAX(counter, old_counter) - MIN(counter, old_counter)) >
+		 TIM_THRESHOLD);
 
 out:
 	stm32mp_clk_disable(timer->clk);
