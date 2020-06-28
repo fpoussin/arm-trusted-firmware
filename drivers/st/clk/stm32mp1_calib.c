@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019, STMicroelectronics - All Rights Reserved
+ * Copyright (C) 2019-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -517,8 +517,14 @@ void stm32mp1_calib_init(void)
 	timer_val = fdt_rcc_read_uint32_default("st,cal-sec", 0) *
 		plat_get_syscnt_freq2();
 
+	if (timer_val > INT32_MAX) {
+		timer_val = INT32_MAX;
+	}
+
 	if (timer_val != 0U) {
 		/* Load & enable timer */
+		INFO("Set calibration timer to %u sec\n",
+		     timer_val / plat_get_syscnt_freq2());
 		write_cntp_tval(timer_val);
 		write_cntp_ctl(BIT(0));
 	};
