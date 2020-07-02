@@ -31,6 +31,7 @@
 #include <stm32mp_dt.h>
 #include <stm32mp1_context.h>
 #include <stm32mp1_low_power.h>
+#include <stm32mp1_power_config.h>
 #include <stm32mp1_private.h>
 
 static unsigned int gicc_pmr;
@@ -208,11 +209,18 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 			panic();
 		}
 
-		/* Keep retention and backup RAM content in standby */
-		mmio_setbits_32(pwr_base + PWR_CR2, PWR_CR2_BREN |
-				PWR_CR2_RREN);
+		if (stm32mp1_get_retram_enabled()) {
+			mmio_setbits_32(pwr_base + PWR_CR2, PWR_CR2_RREN);
+			while ((mmio_read_32(pwr_base + PWR_CR2) &
+				PWR_CR2_RRRDY) == 0U) {
+				;
+			}
+		}
+
+		/* Keep backup RAM content in standby */
+		mmio_setbits_32(pwr_base + PWR_CR2, PWR_CR2_BREN);
 		while ((mmio_read_32(pwr_base + PWR_CR2) &
-			(PWR_CR2_BRRDY | PWR_CR2_RRRDY)) == 0U) {
+			PWR_CR2_BRRDY) == 0U) {
 			;
 		}
 	}

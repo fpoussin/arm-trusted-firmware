@@ -15,5 +15,6 @@
 
 void stm32mp1_init_lp_states(void);
 uint32_t stm32mp1_get_lp_soc_mode(uint32_t psci_mode);
+bool stm32mp1_get_retram_enabled(void);
 
 #endif /* STM32MP1_POWER_CONFIG_H */
