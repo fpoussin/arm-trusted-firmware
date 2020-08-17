@@ -174,6 +174,13 @@ void sp_min_plat_fiq_handler(uint32_t id)
 	case ARM_IRQ_SEC_SGI_1:
 		stm32_sgi1_it_handler();
 		break;
+	case ARM_IRQ_SEC_SGI_6:
+		/* tell the primary cpu to exit from stm32_pwr_down_wfi() */
+		if (plat_my_core_pos() == STM32MP_PRIMARY_CPU) {
+			stm32mp1_calib_set_wakeup(true);
+		}
+		gicv2_end_of_interrupt(ARM_IRQ_SEC_SGI_6);
+		break;
 	case STM32MP1_IRQ_IWDG1:
 	case STM32MP1_IRQ_IWDG2:
 		stm32_iwdg_it_handler(id);
