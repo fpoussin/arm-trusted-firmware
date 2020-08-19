@@ -10,10 +10,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <drivers/st/stm32_rtc.h>
+
 #define DDR_CRC_GRANULE		32
 
 void stm32_clean_context(void);
-int stm32_save_context(uint32_t zq0cr0_zdata);
+int stm32_save_context(uint32_t zq0cr0_zdata,
+		       struct stm32_rtc_calendar *rtc_time,
+		       unsigned long long stgen_cnt);
 int stm32_restore_context(void);
 unsigned long long stm32_get_stgen_from_context(void);
 int stm32_restore_backup_reg(void);

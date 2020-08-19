@@ -38,6 +38,7 @@ static unsigned int gicc_pmr;
 static struct stm32_rtc_calendar sleep_time;
 static bool enter_cstop_done;
 static uint32_t int_stack[STM32MP_INT_STACK_SIZE];
+static unsigned long long stgen_cnt;
 
 extern void wfi_svc_int_enable(uintptr_t stack_addr);
 
@@ -196,6 +197,9 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 
 	stm32mp1_clock_stopmode_save();
 
+	stm32_rtc_get_calendar(&sleep_time);
+	stgen_cnt = stm32mp_stgen_get_counter();
+
 	if (mode == STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR) {
 		/*
 		 * Save non-secure world entrypoint after standby in Backup
@@ -205,7 +209,8 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 		mmio_write_32(bkpr_core1_magic,
 			      BOOT_API_A7_CORE0_MAGIC_NUMBER);
 
-		if (stm32_save_context(zq0cr0_zdata) != 0) {
+		if (stm32_save_context(zq0cr0_zdata, &sleep_time,
+				       stgen_cnt) != 0) {
 			panic();
 		}
 
@@ -226,8 +231,6 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 	}
 
 	stm32mp_clk_disable(RTCAPB);
-
-	stm32_rtc_get_calendar(&sleep_time);
 
 	enter_cstop_done = true;
 }
@@ -275,8 +278,7 @@ void stm32_exit_cstop(void)
 
 	stdby_time_in_ms = stm32_rtc_diff_calendar(&current_calendar,
 						   &sleep_time);
-	stm32mp_stgen_restore_counter(stm32_get_stgen_from_context(),
-				      stdby_time_in_ms);
+	stm32mp_stgen_restore_counter(stgen_cnt, stdby_time_in_ms);
 
 	stm32mp1_syscfg_enable_io_compensation();
 

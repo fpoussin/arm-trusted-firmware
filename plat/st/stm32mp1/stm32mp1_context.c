@@ -158,7 +158,9 @@ void stm32mp1_pm_restore_clock_cfg(size_t offset, uint8_t *data, size_t size)
 	stm32mp_clk_disable(BKPSRAM);
 }
 
-int stm32_save_context(uint32_t zq0cr0_zdata)
+int stm32_save_context(uint32_t zq0cr0_zdata,
+		       struct stm32_rtc_calendar *rtc_time,
+		       unsigned long long stgen_cnt)
 {
 	void *smc_context;
 	void *cpu_context;
@@ -185,8 +187,8 @@ int stm32_save_context(uint32_t zq0cr0_zdata)
 
 	backup_data->zq0cr0_zdata = zq0cr0_zdata;
 
-	stm32_rtc_get_calendar(&backup_data->rtc);
-	backup_data->stgen = stm32mp_stgen_get_counter();
+	memcpy(&backup_data->rtc, rtc_time, sizeof(struct stm32_rtc_calendar));
+	backup_data->stgen = stgen_cnt;
 
 	stm32mp1_clk_lp_save_opp_pll1_settings(backup_data->pll1_settings,
 					sizeof(backup_data->pll1_settings));
