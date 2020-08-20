@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * Copyright (c) 2020, STMicroelectronics - All Rights Reserved
+ */
+
+#include <common/tbbr/tbbr_img_def.h>
+#include <dt-bindings/soc/stm32mp1-tzc400.h>
+
+/dts-v1/;
+
+/ {
+	dtb-registry {
+		compatible = "fconf,dyn_cfg-dtb_registry";
+
+		hw-config {
+			load-address = <0x0 0xC0600000>;
+			max-size = <0x00020000>;
+			id = <HW_CONFIG_ID>;
+		};
+
+		nt_fw {
+			load-address = <0x0 0xC0100000>;
+			max-size = <0x00400000>;
+			id = <BL33_IMAGE_ID>;
+		};
+
+#ifdef AARCH32_SP_OPTEE
+		tos_fw {
+			load-address = <0x0 0x2FFC0000>;
+			max-size = <0x0001F000>;
+			id = <BL32_IMAGE_ID>;
+		};
+#else
+		tos_fw {
+			load-address = <0x0 0x2FFC0000>;
+			max-size = <0x00019000>;
+			id = <BL32_IMAGE_ID>;
+		};
+
+		tos_fw-config {
+			load-address = <0x0 0x2FFD9000>;
+			max-size = <0x00005000>;
+			id = <TOS_FW_CONFIG_ID>;
+		};
+#endif
+	};
+};

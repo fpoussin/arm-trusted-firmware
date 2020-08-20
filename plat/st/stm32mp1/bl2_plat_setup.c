@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <string.h>
 
 #include <platform_def.h>
@@ -26,6 +27,8 @@
 #include <drivers/st/stm32mp1_pwr.h>
 #include <drivers/st/stm32mp1_ram.h>
 #include <drivers/st/stpmic1.h>
+#include <lib/fconf/fconf.h>
+#include <lib/fconf/fconf_dyn_cfg_getter.h>
 #include <lib/mmio.h>
 #include <lib/optee_utils.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
@@ -159,7 +162,6 @@ void bl2_el3_early_platform_setup(u_register_t arg0,
 void bl2_platform_setup(void)
 {
 	int ret;
-	uint32_t ddr_ns_size;
 
 	ret = stm32mp1_ddr_probe();
 	if (ret < 0) {
@@ -167,26 +169,8 @@ void bl2_platform_setup(void)
 		panic();
 	}
 
-	ddr_ns_size = stm32mp_get_ddr_ns_size();
-	assert(ddr_ns_size > 0U);
-
-	/* Map non secure DDR for BL33 load, now with cacheable attribute */
-	ret = mmap_add_dynamic_region(STM32MP_DDR_BASE, STM32MP_DDR_BASE,
-				      ddr_ns_size, MT_MEMORY | MT_RW | MT_NS);
-	assert(ret == 0);
-
 #ifdef AARCH32_SP_OPTEE
 	INFO("BL2 runs OP-TEE setup\n");
-
-	/* Map secure DDR for OP-TEE paged area */
-	ret = mmap_add_dynamic_region(STM32MP_DDR_BASE + ddr_ns_size,
-				      STM32MP_DDR_BASE + ddr_ns_size,
-				      STM32MP_DDR_S_SIZE,
-				      MT_MEMORY | MT_RW | MT_SECURE);
-	assert(ret == 0);
-
-	/* Initialize tzc400 after DDR initialization */
-	stm32mp1_security_setup();
 #else
 	INFO("BL2 runs SP_MIN setup\n");
 #endif
@@ -532,33 +516,6 @@ skip_console_init:
 	stm32mp_io_setup();
 }
 
-#if defined(AARCH32_SP_OPTEE)
-static void set_mem_params_info(entry_point_info_t *ep_info,
-				image_info_t *unpaged, image_info_t *paged)
-{
-	uintptr_t bl32_ep = 0;
-
-	/* Use the default dram setup if no valid ep found */
-	if (get_optee_header_ep(ep_info, &bl32_ep) &&
-	    (bl32_ep >= STM32MP_OPTEE_BASE) &&
-	    (bl32_ep < (STM32MP_OPTEE_BASE + STM32MP_OPTEE_SIZE))) {
-		assert((STM32MP_OPTEE_BASE >= BL2_LIMIT) ||
-		       ((STM32MP_OPTEE_BASE + STM32MP_OPTEE_SIZE) <= BL2_BASE));
-
-		unpaged->image_base = STM32MP_OPTEE_BASE;
-		unpaged->image_max_size = STM32MP_OPTEE_SIZE;
-	} else {
-		unpaged->image_base = STM32MP_DDR_BASE + dt_get_ddr_size() -
-				      STM32MP_DDR_S_SIZE -
-				      STM32MP_DDR_SHMEM_SIZE;
-		unpaged->image_max_size = STM32MP_DDR_S_SIZE;
-	}
-	paged->image_base = STM32MP_DDR_BASE + dt_get_ddr_size() -
-			    STM32MP_DDR_S_SIZE - STM32MP_DDR_SHMEM_SIZE;
-	paged->image_max_size = STM32MP_DDR_S_SIZE;
-}
-#endif
-
 /*******************************************************************************
  * This function can be used by the platforms to update/use image
  * information for given `image_id`.
@@ -572,6 +529,24 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 	bl_mem_params_node_t *pager_mem_params;
 	bl_mem_params_node_t *paged_mem_params;
 #endif
+	const struct dyn_cfg_dtb_info_t *fw_config_info, *config_info;
+	uint32_t fw_config_max_size;
+	uintptr_t nsec_base_address = 0U;
+	size_t nsec_size = 0U;
+#if defined(AARCH32_SP_OPTEE)
+	uintptr_t sec_base_address = 0U;
+	size_t sec_size = 0U;
+#endif
+	unsigned int i;
+	unsigned long long ddr_top __unused;
+	const unsigned int image_ids[] = {
+		BL32_IMAGE_ID,
+		BL33_IMAGE_ID,
+		HW_CONFIG_ID,
+#if !defined(AARCH32_SP_OPTEE)
+		TOS_FW_CONFIG_ID,
+#endif
+	};
 
 	assert(bl_mem_params != NULL);
 
@@ -581,6 +556,123 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 #endif
 
 	switch (image_id) {
+	case FW_CONFIG_ID:
+		/* Set global DTB info for fixed fw_config information */
+		fw_config_max_size = STM32MP_FW_CONFIG_MAX_SIZE;
+		set_config_info(STM32MP_FW_CONFIG_BASE, fw_config_max_size, FW_CONFIG_ID);
+
+		fw_config_info = FCONF_GET_PROPERTY(dyn_cfg, dtb, FW_CONFIG_ID);
+		if (fw_config_info == NULL) {
+			ERROR("Invalid FW_CONFIG address\n");
+			plat_error_handler(-1);
+		}
+
+		err = fconf_populate_dtb_registry(fw_config_info->config_addr);
+		if (err < 0) {
+			ERROR("Parsing of FW_CONFIG failed %d\n", err);
+			plat_error_handler(err);
+		}
+
+		/* Iterate through all the fw config IDs */
+		for (i = 0; i < ARRAY_SIZE(image_ids); i++) {
+			bl_mem_params = get_bl_mem_params_node(image_ids[i]);
+			assert(bl_mem_params != NULL);
+
+			config_info = FCONF_GET_PROPERTY(dyn_cfg, dtb, image_ids[i]);
+			if (config_info == NULL) {
+				ERROR("BL32_IMAGE_ID not found\n");
+				plat_error_handler(-1);
+			}
+
+			bl_mem_params->image_info.image_base = config_info->config_addr;
+			bl_mem_params->image_info.image_max_size = config_info->config_max_size;
+
+			switch (image_ids[i]) {
+			case BL32_IMAGE_ID:
+				bl_mem_params->ep_info.pc = config_info->config_addr;
+#if defined(AARCH32_SP_OPTEE)
+				sec_base_address += config_info->config_addr;
+				sec_size += config_info->config_max_size;
+
+				/* In case of OPTEE, initialize address space with tos_fw addr */
+				bl_mem_params = get_bl_mem_params_node(BL32_EXTRA1_IMAGE_ID);
+				bl_mem_params->image_info.image_base = config_info->config_addr;
+				bl_mem_params->image_info.image_max_size =
+					config_info->config_max_size;
+#endif
+				break;
+			case TOS_FW_CONFIG_ID:
+				break;
+			case BL33_IMAGE_ID:
+				if (!wakeup_standby) {
+					bl_mem_params->ep_info.pc = config_info->config_addr;
+				}
+				nsec_base_address = config_info->config_addr;
+				nsec_size = config_info->config_max_size;
+				break;
+			case HW_CONFIG_ID:
+				if (config_info->config_addr < nsec_base_address) {
+					nsec_size += nsec_base_address - config_info->config_addr;
+					nsec_base_address = config_info->config_addr;
+				} else {
+					nsec_size = config_info->config_addr - nsec_base_address +
+						    config_info->config_max_size;
+				}
+				break;
+			default:
+				return -EINVAL;
+			}
+		}
+#if defined(AARCH32_SP_OPTEE)
+		/* Fix PAGEABLE part into DDR */
+		bl_mem_params = get_bl_mem_params_node(BL32_EXTRA2_IMAGE_ID);
+
+		if (sec_base_address < STM32MP_DDR_BASE) {
+			sec_base_address = STM32MP_DDR_BASE + (dt_get_ddr_size() -
+							       STM32MP_DDR_S_SIZE -
+							       STM32MP_DDR_SHMEM_SIZE);
+			sec_size = STM32MP_DDR_S_SIZE;
+			bl_mem_params->image_info.image_base = sec_base_address;
+			bl_mem_params->image_info.image_max_size = sec_size;
+		}
+
+		err = mmap_add_dynamic_region(sec_base_address,
+					      sec_base_address,
+					      sec_size,
+					      MT_MEMORY | MT_RW | MT_SECURE);
+		assert(err == 0);
+#endif
+
+		err = mmap_add_dynamic_region(nsec_base_address,
+					      nsec_base_address,
+					      nsec_size,
+					      MT_MEMORY | MT_RW | MT_NS);
+		assert(err == 0);
+
+		/* Configuration of TZC400 */
+		stm32mp1_security_setup_begin();
+
+#if defined(AARCH32_SP_OPTEE)
+		stm32mp1_security_add_region(sec_base_address, sec_size, true);
+
+		if (sec_base_address > STM32MP_DDR_BASE) {
+			stm32mp1_security_add_region(STM32MP_DDR_BASE,
+						     sec_base_address - STM32MP_DDR_BASE,
+						     false);
+		}
+
+		ddr_top = STM32MP_DDR_BASE + dt_get_ddr_size() - 1U;
+		if (sec_base_address + sec_size < ddr_top) {
+			stm32mp1_security_add_region(sec_base_address + sec_size,
+						     ddr_top - (sec_base_address + sec_size) + 1U,
+						     false);
+		}
+#else
+		stm32mp1_security_add_region(STM32MP_DDR_BASE, dt_get_ddr_size(), false);
+#endif
+		stm32mp1_security_setup_end();
+
+		break;
 	case BL32_IMAGE_ID:
 #if defined(AARCH32_SP_OPTEE)
 		bl_mem_params->ep_info.pc =
@@ -591,10 +683,6 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 		paged_mem_params = get_bl_mem_params_node(BL32_EXTRA2_IMAGE_ID);
 		assert(paged_mem_params != NULL);
-
-		set_mem_params_info(&bl_mem_params->ep_info,
-				    &pager_mem_params->image_info,
-				    &paged_mem_params->image_info);
 
 		err = parse_optee_header(&bl_mem_params->ep_info,
 					 &pager_mem_params->image_info,

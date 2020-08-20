@@ -33,14 +33,7 @@ static bool addr_inside_backupsram(uintptr_t addr)
  ******************************************************************************/
 bl_load_info_t *plat_get_bl_image_load_info(void)
 {
-#ifdef AARCH32_SP_OPTEE
-	bl_mem_params_node_t *bl32 = get_bl_mem_params_node(BL32_IMAGE_ID);
-#endif
-	bl_mem_params_node_t *bl33 = get_bl_mem_params_node(BL33_IMAGE_ID);
-	uint32_t ddr_ns_size = stm32mp_get_ddr_ns_size();
 	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_MP_RSTSCLRR);
-	uint32_t bkpr_core1_addr =
-		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
 	uintptr_t pwr_base = stm32mp_pwr_base();
 
 	/*
@@ -52,12 +45,22 @@ bl_load_info_t *plat_get_bl_image_load_info(void)
 	if (stm32mp_boot_action_is_wakeup_from_standby() &&
 	    ((mmio_read_32(pwr_base + PWR_CR3) & PWR_CR3_DDRSREN) != 0U) &&
 	    ((rstsr & RCC_MP_RSTSCLRR_PADRSTF) == 0U)) {
+		uint32_t bkpr_core1_addr =
+			tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+
 		stm32mp_clk_enable(RTCAPB);
 
 		if (mmio_read_32(bkpr_core1_addr) != 0U) {
+			bl_mem_params_node_t *bl33 = get_bl_mem_params_node(BL33_IMAGE_ID);
+			bl_mem_params_node_t *bl32 __unused;
+			bl_mem_params_node_t *ns_dt __unused;
+
 			bl33->image_info.h.attr |= IMAGE_ATTRIB_SKIP_LOADING;
 
-#ifdef AARCH32_SP_OPTEE
+			ns_dt = get_bl_mem_params_node(HW_CONFIG_ID);
+			ns_dt->image_info.h.attr |= IMAGE_ATTRIB_SKIP_LOADING;
+#if AARCH32_SP_OPTEE
+			bl32 = get_bl_mem_params_node(BL32_IMAGE_ID);
 			bl32->image_info.h.attr |= IMAGE_ATTRIB_SKIP_LOADING;
 			bl32->ep_info.pc = stm32_pm_get_optee_ep();
 
@@ -75,10 +78,6 @@ bl_load_info_t *plat_get_bl_image_load_info(void)
 
 		stm32mp_clk_disable(RTCAPB);
 	}
-
-	/* Max size is non-secure DDR end address minus image_base */
-	bl33->image_info.image_max_size = STM32MP_DDR_BASE + ddr_ns_size -
-					  bl33->image_info.image_base;
 
 	return get_bl_load_info_from_mem_params_desc();
 }

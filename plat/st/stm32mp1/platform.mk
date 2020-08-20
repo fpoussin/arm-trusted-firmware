@@ -91,6 +91,11 @@ STM32IMAGE		?= ${STM32IMAGEPATH}/stm32image${BIN_EXT}
 STM32IMAGE_SRC		:= ${STM32IMAGEPATH}/stm32image.c
 
 STM32MP_NT_FW_CONFIG	:=	${BL33_CFG}
+STM32MP_FW_CONFIG_NAME	:=	$(patsubst %.dtb,%-fw-config.dtb,$(DTB_FILE_NAME))
+STM32MP_FW_CONFIG	:=	${BUILD_PLAT}/fdts/$(STM32MP_FW_CONFIG_NAME)
+FDT_SOURCES		+=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NAME)))
+# Add the FW_CONFIG to FIP and specify the same to certtool
+$(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_FW_CONFIG},--fw-config))
 # Add the NT_FW_CONFIG to FIP and specify the same to certtool
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_NT_FW_CONFIG},--hw-config))
 ifeq ($(AARCH32_SP),sp_min)
@@ -184,6 +189,9 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 				plat/st/stm32mp1/stm32mp1_helper.S			\
 				plat/st/stm32mp1/stm32mp1_security.c			\
 				plat/st/stm32mp1/stm32mp1_syscfg.c
+
+BL2_SOURCES		+=	lib/fconf/fconf.c				\
+				lib/fconf/fconf_dyn_cfg_getter.c
 
 BL2_SOURCES		+=	drivers/io/io_block.c					\
 				drivers/io/io_dummy.c					\

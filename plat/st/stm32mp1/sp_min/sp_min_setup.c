@@ -289,32 +289,47 @@ static void stm32mp1_etzpc_early_setup(void)
 	etzpc_configure_tzma(STM32MP1_ETZPC_TZMA_SYSRAM, TZMA1_SECURE_RANGE);
 }
 
-static void populate_ns_dt(u_register_t ns_dt_addr)
+static void populate_ns_dt(u_register_t ns_dt_addr, uintptr_t sec_base, size_t sec_size)
 {
 	void *external_fdt = (void *)ns_dt_addr;
 	int ret;
 
+	if (sec_base < STM32MP_DDR_BASE) {
+		/* No need to reserve memory if secure monitor is not in DDR */
+		return;
+	}
+
+	/* Map Base Non Secure DDR for Non secure DT update */
+	ret = mmap_add_dynamic_region(ns_dt_addr, ns_dt_addr, STM32MP_HW_CONFIG_MAX_SIZE,
+				      MT_NON_CACHEABLE | MT_EXECUTE_NEVER | MT_RW | MT_NS);
+	assert(ret == 0);
+
 	if (fdt_check_header(external_fdt) != 0) {
 		INFO("Non-secure device tree not found\n");
 
-		return;
+		goto out;
 	}
 
 	ret = fdt_open_into(external_fdt, external_fdt, STM32MP_HW_CONFIG_MAX_SIZE);
 	if (ret < 0) {
 		WARN("Error opening DT %i\n", ret);
+		goto out;
 	}
 
-	ret = fdt_add_reserved_memory(external_fdt, "tf-a", BL_CODE_BASE,
-				      (BL32_LIMIT + STM32MP_BL32_DTB_SIZE) - BL_CODE_BASE);
+	ret = fdt_add_reserved_memory(external_fdt, "tf-a", sec_base, sec_size);
 	if (ret < 0) {
 		WARN("Error updating DT %i\n", ret);
+		goto out;
 	}
 
 	ret = fdt_pack(external_fdt);
 	if (ret < 0) {
 		WARN("Error packing DT %i\n", ret);
 	}
+
+out:
+	ret = mmap_remove_dynamic_region(ns_dt_addr, STM32MP_HW_CONFIG_MAX_SIZE);
+	assert(ret == 0);
 }
 
 /*******************************************************************************
@@ -364,6 +379,9 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				  u_register_t arg2, u_register_t arg3)
 {
 	bl_params_t *params_from_bl2 = (bl_params_t *)arg0;
+	uintptr_t dt_addr = arg1;
+	uintptr_t sec_base = 0U;
+	size_t sec_size = 0U;
 
 	/* Imprecise aborts can be masked in NonSecure */
 	write_scr(read_scr() | SCR_AW_BIT);
@@ -380,11 +398,11 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 
 	bl_params_node_t *bl_params = params_from_bl2->head;
 
-	/*
-	 * Copy BL33 entry point information.
-	 * They are stored in Secure RAM, in BL2's address space.
-	 */
 	while (bl_params != NULL) {
+		/*
+		 * Copy BL33 entry point information.
+		 * They are stored in Secure RAM, in BL2's address space.
+		 */
 		if (bl_params->image_id == BL33_IMAGE_ID) {
 			bl33_image_ep_info = *bl_params->ep_info;
 			/*
@@ -396,14 +414,17 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				bl33_image_ep_info.args.arg1 = 0U;
 				bl33_image_ep_info.args.arg2 = arg2;
 			}
+		}
 
-			break;
+		if (bl_params->image_id == BL32_IMAGE_ID) {
+			sec_base = bl_params->image_info->image_base;
+			sec_size = bl_params->image_info->image_max_size;
 		}
 
 		bl_params = bl_params->next_params_info;
 	}
 
-	if (dt_open_and_check(STM32MP_DTB_BASE) < 0) {
+	if (dt_open_and_check(dt_addr) < 0) {
 		panic();
 	}
 
@@ -420,7 +441,7 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	stm32mp1_etzpc_early_setup();
 
 	if (arg2 != 0U) {
-		populate_ns_dt(arg2);
+		populate_ns_dt(arg2, sec_base, sec_size);
 	} else {
 		INFO("Non-secure device tree not found\n");
 	}
@@ -473,9 +494,6 @@ static void init_sec_peripherals(void)
 void sp_min_platform_setup(void)
 {
 	ddr_save_sr_mode();
-
-	/* Initialize tzc400 after DDR initialization */
-	stm32mp1_security_setup();
 
 	generic_delay_timer_init();
 

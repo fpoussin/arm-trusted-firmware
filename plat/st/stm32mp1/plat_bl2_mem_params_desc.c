@@ -19,6 +19,21 @@
  * the next executable image id.
  ******************************************************************************/
 static bl_mem_params_node_t bl2_mem_params_descs[] = {
+	/* Fill FW_CONFIG related information if it exists */
+	{
+	    .image_id = FW_CONFIG_ID,
+	    SET_STATIC_PARAM_HEAD(ep_info, PARAM_IMAGE_BINARY,
+				  VERSION_2, entry_point_info_t,
+				  SECURE | NON_EXECUTABLE),
+	    SET_STATIC_PARAM_HEAD(image_info, PARAM_IMAGE_BINARY,
+				  VERSION_2, image_info_t,
+				  IMAGE_ATTRIB_PLAT_SETUP),
+
+	    .image_info.image_base = STM32MP_FW_CONFIG_BASE,
+	    .image_info.image_max_size = STM32MP_FW_CONFIG_MAX_SIZE,
+
+	    .next_handoff_image_id = INVALID_IMAGE_ID,
+	},
 	/* Fill BL32 related information */
 	{
 		.image_id = BL32_IMAGE_ID,
@@ -27,24 +42,14 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				      VERSION_2, entry_point_info_t,
 				      SECURE | EXECUTABLE | EP_FIRST_EXE),
 
-#if !defined(AARCH32_SP_OPTEE)
-		.ep_info.pc = STM32MP_BL32_BASE,
-#endif
 		.ep_info.spsr = SPSR_MODE32(MODE32_svc, SPSR_T_ARM,
 					    SPSR_E_LITTLE,
 					    DISABLE_ALL_EXCEPTIONS),
 
 		SET_STATIC_PARAM_HEAD(image_info, PARAM_EP,
 				      VERSION_2, image_info_t,
-				      IMAGE_ATTRIB_PLAT_SETUP),
-#if defined(AARCH32_SP_OPTEE)
-		/* optee header is loaded in SYSRAM above BL2 */
-		.image_info.image_base = STM32MP_OPTEE_BASE,
-		.image_info.image_max_size = STM32MP_OPTEE_SIZE,
-#else
-		.image_info.image_base = STM32MP_BL32_BASE,
-		.image_info.image_max_size = STM32MP_BL32_SIZE,
-#endif
+				      0),
+
 		.next_handoff_image_id = BL33_IMAGE_ID,
 	},
 
@@ -88,10 +93,6 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				  VERSION_2, image_info_t,
 				  0),
 
-	    .image_info.image_base = STM32MP_HW_CONFIG_BASE,
-	    .image_info.image_max_size =
-		    PLAT_STM32MP_NS_IMAGE_OFFSET - STM32MP_HW_CONFIG_BASE,
-
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
 #if !defined(AARCH32_SP_OPTEE)
@@ -104,8 +105,6 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				  VERSION_2, image_info_t,
 				  0),
 
-	    .image_info.image_base = STM32MP_BL32_DTB_BASE,
-	    .image_info.image_max_size = STM32MP_BL32_DTB_SIZE,
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
 #endif
@@ -117,17 +116,12 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				      VERSION_2, entry_point_info_t,
 				      NON_SECURE | EXECUTABLE),
 
-		.ep_info.pc = PLAT_STM32MP_NS_IMAGE_OFFSET,
 		.ep_info.spsr = SPSR_MODE32(MODE32_svc, SPSR_T_ARM,
 					    SPSR_E_LITTLE,
 					    DISABLE_ALL_EXCEPTIONS),
 
 		SET_STATIC_PARAM_HEAD(image_info, PARAM_EP,
 				      VERSION_2, image_info_t, 0),
-
-		.image_info.image_base = PLAT_STM32MP_NS_IMAGE_OFFSET,
-		.image_info.image_max_size = STM32MP_DDR_MAX_SIZE -
-			(PLAT_STM32MP_NS_IMAGE_OFFSET - STM32MP_DDR_BASE),
 
 		.next_handoff_image_id = INVALID_IMAGE_ID,
 	}

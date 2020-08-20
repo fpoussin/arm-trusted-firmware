@@ -106,6 +106,10 @@ static const io_dev_connector_t *spi_dev_con;
 static const io_dev_connector_t *memmap_dev_con;
 #endif
 
+static const io_uuid_spec_t fw_config_uuid_spec = {
+	.uuid = UUID_FW_CONFIG,
+};
+
 static const io_uuid_spec_t bl33_partition_spec = {
 	.uuid = UUID_NON_TRUSTED_FIRMWARE_BL33
 };
@@ -215,6 +219,11 @@ static const struct plat_io_policy policies[] = {
 	[BL33_IMAGE_ID] = {
 		.dev_handle = &image_dev_handle,
 		.image_spec = (uintptr_t)&bl33_partition_spec,
+		.check = open_image
+	},
+	[FW_CONFIG_ID] = {
+		.dev_handle = &image_dev_handle,
+		.image_spec = (uintptr_t)&fw_config_uuid_spec,
 		.check = open_image
 	},
 	[TOS_FW_CONFIG_ID] = {
