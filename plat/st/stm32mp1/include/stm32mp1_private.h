@@ -23,6 +23,10 @@ void __dead2 stm32mp_wait_cpu_reset(void);
 
 void stm32mp1_arch_security_setup(void);
 void stm32mp1_security_setup(void);
+void stm32mp1_security_setup_begin(void);
+void stm32mp1_security_setup_end(void);
+void stm32mp1_security_add_region(unsigned long long region_base,
+				  unsigned long long region_size, bool sec);
 
 enum boot_device_e get_boot_device(void);
 
