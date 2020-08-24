@@ -9,6 +9,7 @@
 #define STM32MP_DT_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <libfdt.h>
 
@@ -27,7 +28,7 @@ struct dt_node_info {
 /*******************************************************************************
  * Function and variable prototypes
  ******************************************************************************/
-int dt_open_and_check(void);
+int dt_open_and_check(uintptr_t dt_addr);
 int fdt_get_address(void **fdt_addr);
 bool fdt_check_node(int node);
 uint8_t fdt_get_status(int node);
