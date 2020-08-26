@@ -33,8 +33,6 @@ static bool addr_inside_backupsram(uintptr_t addr)
  ******************************************************************************/
 bl_load_info_t *plat_get_bl_image_load_info(void)
 {
-	boot_api_context_t *boot_context =
-		(boot_api_context_t *)stm32mp_get_boot_ctx_address();
 #ifdef AARCH32_SP_OPTEE
 	bl_mem_params_node_t *bl32 = get_bl_mem_params_node(BL32_IMAGE_ID);
 #endif
@@ -51,10 +49,7 @@ bl_load_info_t *plat_get_bl_image_load_info(void)
 	 * in DDR. For this, the BL33 part of the bl_mem_params_desc_ptr
 	 * struct should be modified to skip its loading
 	 */
-	if (((boot_context->boot_action ==
-	      BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY) ||
-	     (boot_context->boot_action ==
-	      BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY)) &&
+	if (stm32mp_boot_action_is_wakeup_from_standby() &&
 	    ((mmio_read_32(pwr_base + PWR_CR3) & PWR_CR3_DDRSREN) != 0U) &&
 	    ((rstsr & RCC_MP_RSTSCLRR_PADRSTF) == 0U)) {
 		stm32mp_clk_enable(RTCAPB);

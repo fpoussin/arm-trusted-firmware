@@ -379,10 +379,7 @@ void bl2_el3_plat_arch_setup(void)
 		      TAMP_BKP_SEC_NUMBER << TAMP_BKP_SEC_WDPROT_SHIFT |
 		      TAMP_BKP_SEC_NUMBER << TAMP_BKP_SEC_RWDPROT_SHIFT);
 
-	if ((boot_context->boot_action !=
-	     BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY) &&
-	    (boot_context->boot_action !=
-	     BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY)) {
+	if (!stm32mp_boot_action_is_wakeup_from_standby()) {
 		mmio_write_32(bkpr_core1_addr, 0);
 		mmio_write_32(bkpr_core1_magic, 0);
 	}
