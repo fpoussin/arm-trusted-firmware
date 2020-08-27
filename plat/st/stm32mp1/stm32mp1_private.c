@@ -761,3 +761,9 @@ uint32_t stm32mp_get_ddr_ns_size(void)
 
 	return ddr_ns_size;
 }
+
+bool stm32mp_boot_action_is_wakeup_from_standby(void)
+{
+	return (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY) ||
+	       (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY);
+}

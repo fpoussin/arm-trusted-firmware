@@ -37,15 +37,31 @@ void __dead2 stm32mp_plat_reset(int cpu)
 }
 
 static uintptr_t boot_ctx_address;
+static uint16_t boot_itf_selected;
+static uint32_t boot_action_saved;
 
 void stm32mp_save_boot_ctx_address(uintptr_t address)
 {
+	boot_api_context_t *boot_context = (boot_api_context_t *)address;
+
 	boot_ctx_address = address;
+	boot_itf_selected = boot_context->boot_interface_selected;
+	boot_action_saved = boot_context->boot_action;
 }
 
 uintptr_t stm32mp_get_boot_ctx_address(void)
 {
 	return boot_ctx_address;
+}
+
+uint16_t stm32mp_get_boot_itf_selected(void)
+{
+	return boot_itf_selected;
+}
+
+uint32_t stm32mp_get_boot_action(void)
+{
+	return boot_action_saved;
 }
 
 uintptr_t stm32mp_ddrctrl_base(void)
