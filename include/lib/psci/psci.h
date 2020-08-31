@@ -349,6 +349,7 @@ int psci_node_hw_state(u_register_t target_cpu,
 int psci_features(unsigned int psci_fid);
 void __dead2 psci_power_down_wfi(void);
 void psci_arch_setup(void);
+unsigned int psci_is_last_on_cpu(void);
 
 #endif /*__ASSEMBLER__*/
 
