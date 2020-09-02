@@ -11,6 +11,7 @@
 
 #include <platform_def.h>
 
+#include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32_rng.h>
 #include <drivers/st/stm32_rtc.h>
 #include <drivers/st/stm32_tamp.h>
@@ -358,8 +359,10 @@ int stm32_tamp_init(void)
 
 	stm32_tamp_set_secured(stm32_tamp.base);
 
-	if (fdt_getprop(fdt, node, "st,out3-pc13", NULL) != NULL) {
-		stm32_tamp_configure_or(stm32_tamp.base, 1);
+	if (dt_set_pinctrl_config(node) != -FDT_ERR_NOTFOUND) {
+		if (fdt_getprop(fdt, node, "st,out3-pc13", NULL) != NULL) {
+			stm32_tamp_configure_or(stm32_tamp.base, 1);
+		}
 	}
 
 	if (stm32_gic_enable_spi(node, NULL) < 0) {
