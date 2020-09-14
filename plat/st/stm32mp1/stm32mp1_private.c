@@ -194,9 +194,9 @@ static int get_cpu_package(uint32_t *cpu_package)
 	return 0;
 }
 
-void stm32mp_print_cpuinfo(void)
+void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 {
-	const char *cpu_s, *cpu_r, *pkg;
+	char *cpu_s, *cpu_r, *pkg;
 	uint32_t part_number;
 	uint32_t cpu_package;
 	uint32_t chip_dev_id;
@@ -295,7 +295,16 @@ void stm32mp_print_cpuinfo(void)
 		break;
 	}
 
-	NOTICE("CPU: STM32MP%s%s Rev.%s\n", cpu_s, pkg, cpu_r);
+	snprintf(name, STM32_SOC_NAME_SIZE,
+		 "STM32MP%s%s Rev.%s", cpu_s, pkg, cpu_r);
+}
+
+void stm32mp_print_cpuinfo(void)
+{
+	char name[STM32_SOC_NAME_SIZE];
+
+	stm32mp_get_soc_name(name);
+	NOTICE("CPU: %s\n", name);
 }
 
 void stm32mp_print_boardinfo(void)
