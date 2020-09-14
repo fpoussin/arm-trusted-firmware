@@ -14,6 +14,7 @@
 #include <drivers/io/io_block.h>
 #include <drivers/io/io_driver.h>
 #include <drivers/io/io_dummy.h>
+#include <drivers/io/io_memmap.h>
 #include <drivers/io/io_mtd.h>
 #include <drivers/io/io_storage.h>
 #include <drivers/mmc.h>
@@ -28,7 +29,11 @@
 #include <drivers/st/stm32_sdmmc2.h>
 #include <lib/mmio.h>
 #include <lib/utils.h>
+#include <lib/usb/usb_core.h>
+#include <lib/usb/usb_st_dfu.h>
 #include <plat/common/platform.h>
+
+#include <stm32cubeprogrammer.h>
 
 /* IO devices */
 static const io_dev_connector_t *dummy_dev_con;
@@ -94,6 +99,10 @@ static io_mtd_dev_spec_t spi_nand_dev_spec = {
 
 #if STM32MP_SPI_NAND || STM32MP_SPI_NOR
 static const io_dev_connector_t *spi_dev_con;
+#endif
+
+#if STM32MP_USB_PROGRAMMER
+static const io_dev_connector_t *memmap_dev_con;
 #endif
 
 #ifdef AARCH32_SP_OPTEE
@@ -257,6 +266,9 @@ static void print_boot_device(boot_api_context_t *boot_context)
 		break;
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NAND_QSPI:
 		INFO("Using SPI NAND\n");
+		break;
+	case BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB:
+		INFO("Using USB\n");
 		break;
 	default:
 		ERROR("Boot interface not found\n");
@@ -500,6 +512,48 @@ static void boot_spi_nand(boot_api_context_t *boot_context)
 }
 #endif /* STM32MP_SPI_NAND */
 
+#if STM32MP_USB_PROGRAMMER
+static void mmap_io_setup(void)
+{
+	int io_result __unused;
+
+	io_result = register_io_dev_memmap(&memmap_dev_con);
+	assert(io_result == 0);
+
+	io_result = io_dev_open(memmap_dev_con, (uintptr_t)NULL,
+				&storage_dev_handle);
+	assert(io_result == 0);
+}
+
+static void stm32image_mmap_setup(void)
+{
+	uint8_t idx;
+	struct stm32image_part_info *part;
+
+	stm32image_dev_info_spec.device_size = SSBL_SIZE;
+
+	idx = IMG_IDX_BL33;
+	part = &stm32image_dev_info_spec.part_info[idx];
+	part->part_offset = 0;
+	part->bkp_offset = 0;
+}
+
+static void stm32cubeprogrammer_usb(unsigned int image_id)
+{
+	usb_handle_t *pdev;
+	int ret __unused;
+
+	/* init USB on platform */
+	pdev = usb_dfu_plat_init();
+
+	ret = stm32cubeprog_usb_load(image_id, pdev, FLASHLAYOUT_BASE, FLASHLAYOUT_SIZE,
+				     DWL_BUFFER_BASE, DWL_BUFFER_SIZE);
+	assert(ret == 0);
+
+	flush_dcache_range(FLASHLAYOUT_BASE, FLASHLAYOUT_SIZE);
+}
+#endif
+
 void stm32mp_io_setup(void)
 {
 	int io_result __unused;
@@ -557,12 +611,42 @@ void stm32mp_io_setup(void)
 		stm32image_io_setup();
 		break;
 #endif
-
+#if STM32MP_USB_PROGRAMMER
+	case BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB:
+		dmbsy();
+		mmap_io_setup();
+		stm32image_mmap_setup();
+		stm32image_io_setup();
+		break;
+#endif
 	default:
 		ERROR("Boot interface %d not supported\n",
 		      boot_context->boot_interface_selected);
 		break;
 	}
+}
+
+int bl2_plat_handle_pre_image_load(unsigned int image_id)
+{
+	boot_api_context_t *boot_context =
+		(boot_api_context_t *)stm32mp_get_boot_ctx_address();
+
+	switch (boot_context->boot_interface_selected) {
+#if STM32MP_USB_PROGRAMMER
+	case BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB:
+		if (image_id == BL33_IMAGE_ID) {
+			stm32cubeprogrammer_usb(STM32_IMAGE_ID);
+			/* BL33 at SSBL load address */
+			image_block_spec.offset = DWL_BUFFER_BASE;
+			image_block_spec.length = DWL_BUFFER_SIZE;
+		}
+		break;
+#endif
+	default:
+		break;
+	}
+
+	return 0;
 }
 
 /*
