@@ -15,6 +15,7 @@
 #include <lib/usb/usb_core.h>
 #include <lib/usb/usb_st_dfu.h>
 
+#include <stm32cubeprogrammer.h>
 #include <stm32mp_common.h>
 
 /*  String size (1 byte) + type (1 byte) + 24 UTF16 characters */
@@ -447,4 +448,19 @@ usb_handle_t *usb_dfu_plat_init(void)
 	register_platform(&usb_core_handle, &dfu_desc);
 
 	return &usb_core_handle;
+}
+
+/* Link between USB alternate and STM32CubeProgramer phase */
+uint8_t usb_dfu_get_phase(uint8_t alt)
+{
+	switch (alt) {
+	case 0:
+		return PHASE_FLASHLAYOUT;
+	case 3:
+		return PHASE_SSBL;
+	case 5:
+		return PHASE_CMD;
+	default:
+		return PHASE_RESET;
+	}
 }

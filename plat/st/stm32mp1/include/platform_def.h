@@ -88,6 +88,12 @@
  */
 #define PLAT_STM32MP_NS_IMAGE_OFFSET	BL33_BASE
 
+/* Needed by STM32CubeProgrammer support */
+#define FLASHLAYOUT_BASE		STM32MP_DDR_BASE
+#define FLASHLAYOUT_SIZE		0x00100000
+#define DWL_BUFFER_BASE			(STM32MP_DDR_BASE + 0x08000000)
+#define DWL_BUFFER_SIZE			0x08000000
+
 /*******************************************************************************
  * DTB specific defines.
  ******************************************************************************/
