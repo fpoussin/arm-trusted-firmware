@@ -191,7 +191,8 @@ BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_boot_device.c
 endif
 
 ifeq (${STM32MP_USB_PROGRAMMER},1)
-BL2_SOURCES		+=	lib/usb/usb_core.c
+BL2_SOURCES		+=	lib/usb/usb_core.c					\
+				lib/usb/usb_st_dfu.c
 endif
 
 BL2_SOURCES		+=	drivers/st/ddr/stm32mp1_ddr.c				\
