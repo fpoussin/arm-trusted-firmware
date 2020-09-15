@@ -34,6 +34,7 @@
 #define RESET_TIMEOUT_US_1MS		1000U
 
 static console_t console;
+static enum boot_device_e boot_device = BOOT_DEVICE_BOARD;
 static struct stm32mp_auth_ops stm32mp1_auth_ops;
 
 static void print_reset_reason(void)
@@ -119,6 +120,11 @@ static void print_reset_reason(void)
 	}
 
 	ERROR("  Unidentified reset reason\n");
+}
+
+enum boot_device_e get_boot_device(void)
+{
+	return boot_device;
 }
 
 void bl2_el3_early_platform_setup(u_register_t arg0,
@@ -235,6 +241,12 @@ void bl2_el3_plat_arch_setup(void)
 
 	generic_delay_timer_init();
 
+#if STM32MP_USB_PROGRAMMER
+	if (boot_context->boot_interface_selected ==
+	    BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB) {
+		boot_device = BOOT_DEVICE_USB;
+	}
+#endif
 	if (stm32mp1_clk_probe() < 0) {
 		panic();
 	}

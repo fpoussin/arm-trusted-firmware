@@ -9,10 +9,17 @@
 
 #include <stdint.h>
 
+enum boot_device_e {
+	BOOT_DEVICE_USB,
+	BOOT_DEVICE_BOARD
+};
+
 void configure_mmu(void);
 
 void stm32mp1_arch_security_setup(void);
 void stm32mp1_security_setup(void);
+
+enum boot_device_e get_boot_device(void);
 
 void stm32mp1_gic_pcpu_init(void);
 void stm32mp1_gic_init(void);
