@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include <drivers/st/etzpc.h>
+
 enum boot_device_e {
 	BOOT_DEVICE_USB,
 	BOOT_DEVICE_BOARD
@@ -26,6 +28,8 @@ enum boot_device_e get_boot_device(void);
 
 void stm32mp1_gic_pcpu_init(void);
 void stm32mp1_gic_init(void);
+
+enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode);
 
 void stm32mp1_syscfg_init(void);
 void stm32mp1_syscfg_enable_io_compensation(void);

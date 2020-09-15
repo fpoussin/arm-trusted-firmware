@@ -87,6 +87,64 @@ static const char __unused *shres2str_state(unsigned int state)
 	return shres2str_state_tbl[state];
 }
 
+struct shres2decprot {
+	unsigned int shres_id;
+	unsigned int decprot_id;
+	const char *decprot_str;
+};
+
+#define SHRES2DECPROT(shres, decprot, str) {	\
+		.shres_id = shres,		\
+		.decprot_id = decprot,		\
+		.decprot_str = str,		\
+	}
+
+#define SHRES_INVALID		~0U
+
+static const struct shres2decprot shres2decprot_tbl[] = {
+	SHRES2DECPROT(STM32MP1_SHRES_IWDG1, STM32MP1_ETZPC_IWDG1_ID, "IWDG1"),
+	SHRES2DECPROT(STM32MP1_SHRES_USART1, STM32MP1_ETZPC_USART1_ID, "UART1"),
+	SHRES2DECPROT(STM32MP1_SHRES_SPI6, STM32MP1_ETZPC_SPI6_ID, "SPI6"),
+	SHRES2DECPROT(STM32MP1_SHRES_I2C4, STM32MP1_ETZPC_I2C4_ID, "I2C4"),
+	SHRES2DECPROT(STM32MP1_SHRES_RNG1, STM32MP1_ETZPC_RNG1_ID, "RNG1"),
+	SHRES2DECPROT(STM32MP1_SHRES_HASH1, STM32MP1_ETZPC_HASH1_ID, "HASH1"),
+	SHRES2DECPROT(STM32MP1_SHRES_CRYP1, STM32MP1_ETZPC_CRYP1_ID, "CRYP1"),
+	SHRES2DECPROT(STM32MP1_SHRES_I2C6, STM32MP1_ETZPC_I2C6_ID, "I2C6"),
+	/* Below are specific IDs without a 1-to-1 mapping to SHRES IDs */
+	SHRES2DECPROT(SHRES_INVALID, STM32MP1_ETZPC_STGENC_ID, "STGEN"),
+	SHRES2DECPROT(SHRES_INVALID, STM32MP1_ETZPC_BKPSRAM_ID, "BKPSRAM"),
+	SHRES2DECPROT(SHRES_INVALID, STM32MP1_ETZPC_DDRCTRL_ID, "DDRCTRL"),
+	SHRES2DECPROT(SHRES_INVALID, STM32MP1_ETZPC_DDRPHYC_ID, "DDRPHY"),
+};
+
+static unsigned int decprot2shres(unsigned int decprot_id)
+{
+	uint32_t i;
+
+	for (i = 0; i < ARRAY_SIZE(shres2decprot_tbl); i++) {
+		if (shres2decprot_tbl[i].decprot_id == decprot_id) {
+			return shres2decprot_tbl[i].shres_id;
+		}
+	}
+
+	VERBOSE("No shared resource %u", decprot_id);
+	return SHRES_INVALID;
+}
+
+static const char *decprot2str(unsigned int decprot_id)
+{
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(shres2decprot_tbl); i++) {
+		if (shres2decprot_tbl[i].decprot_id == decprot_id) {
+			return shres2decprot_tbl[i].decprot_str;
+		}
+	}
+
+	ERROR("Invalid ID %u", decprot_id);
+	panic();
+}
+
 /* Get resource state: these accesses lock the registering support */
 static void lock_registering(void)
 {
@@ -334,6 +392,53 @@ void stm32mp_register_non_secure_gpio(unsigned int bank, unsigned int pin)
 	}
 }
 
+void stm32mp1_register_etzpc_decprot(unsigned int id,
+				     enum etzpc_decprot_attributes attr)
+{
+	unsigned int state = SHRES_SECURE;
+	unsigned int id_shres;
+
+	switch (attr) {
+	case ETZPC_DECPROT_S_RW:
+		break;
+	case ETZPC_DECPROT_NS_R_S_W:
+	case ETZPC_DECPROT_MCU_ISOLATION:
+	case ETZPC_DECPROT_NS_RW:
+		state = SHRES_NON_SECURE;
+		break;
+	default:
+		panic();
+	}
+
+	switch (id) {
+	case STM32MP1_ETZPC_STGENC_ID:
+	case STM32MP1_ETZPC_BKPSRAM_ID:
+		/* We assume these must always be assigned to secure world */
+		if (state != SHRES_SECURE) {
+			panic();
+		}
+		break;
+	case STM32MP1_ETZPC_DDRCTRL_ID:
+	case STM32MP1_ETZPC_DDRPHYC_ID:
+		/* allow write only for secure world */
+		if ((attr != ETZPC_DECPROT_S_RW) &&
+		    (attr != ETZPC_DECPROT_NS_R_S_W)) {
+			panic();
+		}
+		break;
+	default:
+		id_shres = decprot2shres(id);
+		if (id_shres == SHRES_INVALID) {
+			if (state == SHRES_SECURE) {
+				panic();
+			}
+		} else {
+			register_periph(id_shres, state);
+		}
+		break;
+	}
+}
+
 static bool stm32mp_gpio_bank_is_non_secure(unsigned int bank)
 {
 	unsigned int non_secure = 0U;
@@ -379,12 +484,15 @@ bool stm32mp_nsec_can_access_clock(unsigned long clock_id)
 	enum stm32mp_shres shres_id = STM32MP1_SHRES_COUNT;
 
 	switch (clock_id) {
+	case BSEC:
+	case CK_AXI:
 	case CK_CSI:
 	case CK_HSE:
 	case CK_HSE_DIV2:
 	case CK_HSI:
 	case CK_LSE:
 	case CK_LSI:
+	case CK_MPU:
 	case PLL1_P:
 	case PLL1_Q:
 	case PLL1_R:
@@ -499,33 +607,81 @@ static enum etzpc_decprot_attributes shres2decprot_attr(enum stm32mp_shres id)
 	return ETZPC_DECPROT_S_RW;
 }
 
-static void set_etzpc_secure_configuration(void)
+static bool check_decprot(unsigned int id, enum etzpc_decprot_attributes exp)
 {
-	/* Some system peripherals shall be secure */
-	etzpc_configure_decprot(STM32MP1_ETZPC_STGENC_ID, ETZPC_DECPROT_S_RW);
-	etzpc_configure_decprot(STM32MP1_ETZPC_BKPSRAM_ID, ETZPC_DECPROT_S_RW);
-	etzpc_configure_decprot(STM32MP1_ETZPC_DDRCTRL_ID,
-				ETZPC_DECPROT_NS_R_S_W);
-	etzpc_configure_decprot(STM32MP1_ETZPC_DDRPHYC_ID,
-				ETZPC_DECPROT_NS_R_S_W);
+	enum etzpc_decprot_attributes cur = etzpc_get_decprot(id);
 
-	/* Configure ETZPC with peripheral registering */
-	etzpc_configure_decprot(STM32MP1_ETZPC_CRYP1_ID,
-				shres2decprot_attr(STM32MP1_SHRES_CRYP1));
-	etzpc_configure_decprot(STM32MP1_ETZPC_HASH1_ID,
-				shres2decprot_attr(STM32MP1_SHRES_HASH1));
-	etzpc_configure_decprot(STM32MP1_ETZPC_I2C4_ID,
-				shres2decprot_attr(STM32MP1_SHRES_I2C4));
-	etzpc_configure_decprot(STM32MP1_ETZPC_I2C6_ID,
-				shres2decprot_attr(STM32MP1_SHRES_I2C6));
-	etzpc_configure_decprot(STM32MP1_ETZPC_IWDG1_ID,
-				shres2decprot_attr(STM32MP1_SHRES_IWDG1));
-	etzpc_configure_decprot(STM32MP1_ETZPC_RNG1_ID,
-				shres2decprot_attr(STM32MP1_SHRES_RNG1));
-	etzpc_configure_decprot(STM32MP1_ETZPC_USART1_ID,
+	if (cur == exp) {
+		return true;
+	}
+
+	switch (exp) {
+	case ETZPC_DECPROT_NS_RW:
+		if (cur == ETZPC_DECPROT_S_RW) {
+			INFO("ETZPC: %s (%d) could be non secure\n",
+			     decprot2str(id), id);
+		}
+		return true;
+
+	case ETZPC_DECPROT_S_RW:
+		ERROR("ETZPC: %s (%d) expected secure but DECPROT = %d\n",
+		      decprot2str(id), id, cur);
+		break;
+
+	case ETZPC_DECPROT_NS_R_S_W:
+	case ETZPC_DECPROT_MCU_ISOLATION:
+		break;
+	default:
+		panic();
+	}
+
+	return false;
+}
+
+static void check_etzpc_secure_configuration(void)
+{
+	bool error = false;
+
+	assert(registering_locked);
+
+	error |= !check_decprot(STM32MP1_ETZPC_STGENC_ID, ETZPC_DECPROT_S_RW);
+
+	error |= !check_decprot(STM32MP1_ETZPC_BKPSRAM_ID, ETZPC_DECPROT_S_RW);
+
+	error |= !check_decprot(STM32MP1_ETZPC_USART1_ID,
 				shres2decprot_attr(STM32MP1_SHRES_USART1));
-	etzpc_configure_decprot(STM32MP1_ETZPC_SPI6_ID,
+
+	error |= !check_decprot(STM32MP1_ETZPC_I2C4_ID,
+				shres2decprot_attr(STM32MP1_SHRES_I2C4));
+
+	error |= !check_decprot(STM32MP1_ETZPC_SPI6_ID,
 				shres2decprot_attr(STM32MP1_SHRES_SPI6));
+
+	error |= !check_decprot(STM32MP1_ETZPC_RNG1_ID,
+				shres2decprot_attr(STM32MP1_SHRES_RNG1));
+
+	error |= !check_decprot(STM32MP1_ETZPC_HASH1_ID,
+				shres2decprot_attr(STM32MP1_SHRES_HASH1));
+
+	error |= !check_decprot(STM32MP1_ETZPC_CRYP1_ID,
+				shres2decprot_attr(STM32MP1_SHRES_CRYP1));
+
+	error |= !((check_decprot(STM32MP1_ETZPC_DDRCTRL_ID,
+				  ETZPC_DECPROT_NS_R_S_W)) ||
+		   (check_decprot(STM32MP1_ETZPC_DDRCTRL_ID,
+				  ETZPC_DECPROT_S_RW)));
+
+	error |= !((check_decprot(STM32MP1_ETZPC_DDRPHYC_ID,
+				  ETZPC_DECPROT_NS_R_S_W)) ||
+		   (check_decprot(STM32MP1_ETZPC_DDRPHYC_ID,
+				  ETZPC_DECPROT_S_RW)));
+
+	error |= !check_decprot(STM32MP1_ETZPC_I2C6_ID,
+				shres2decprot_attr(STM32MP1_SHRES_I2C6));
+
+	if (error) {
+		panic();
+	}
 }
 
 static void check_rcc_secure_configuration(void)
@@ -592,6 +748,6 @@ void stm32mp_lock_periph_registering(void)
 	print_shared_resources_state();
 
 	check_rcc_secure_configuration();
-	set_etzpc_secure_configuration();
+	check_etzpc_secure_configuration();
 	set_gpio_secure_configuration();
 }

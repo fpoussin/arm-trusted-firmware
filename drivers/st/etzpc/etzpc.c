@@ -66,6 +66,10 @@ struct etzpc_instance {
 /* Only 1 instance of the ETZPC is expected per platform */
 static struct etzpc_instance etzpc_dev;
 
+struct dt_id_attr {
+	fdt32_t id_attr[STM32MP1_ETZPC_MAX_ID];
+};
+
 /*
  * Implementation uses uint8_t to store each securable DECPROT configuration.
  * When resuming from deep suspend, the DECPROT configurations are restored.
@@ -84,6 +88,50 @@ static bool valid_tzma_id(unsigned int id)
 	return id < (unsigned int)etzpc_dev.num_tzma;
 }
 #endif
+
+static int etzpc_dt_conf_decprot(int node)
+{
+	const struct dt_id_attr *conf_list;
+	void *fdt;
+	unsigned int i;
+	int len = 0;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -ENOENT;
+	}
+
+	conf_list = (const struct dt_id_attr *)fdt_getprop(fdt, node,
+							   "st,decprot", &len);
+	if (conf_list == NULL) {
+		INFO("No ETZPC configuration in DT, use default\n");
+		return 0;
+	}
+
+	for (i = 0U; i < (unsigned int)len / sizeof(uint32_t); i++) {
+		enum etzpc_decprot_attributes attr;
+		uint32_t value;
+		uint32_t id;
+		uint32_t mode;
+
+		value = fdt32_to_cpu(conf_list->id_attr[i]);
+
+		id = ((value >> ETZPC_ID_SHIFT) & ETZPC_ID_MASK);
+		assert(valid_decprot_id(id));
+
+		mode = (value >> ETZPC_MODE_SHIFT) & ETZPC_MODE_MASK;
+		attr = stm32mp_etzpc_binding2decprot(mode);
+
+		stm32mp1_register_etzpc_decprot(id, attr);
+
+		etzpc_configure_decprot(id, attr);
+
+		if ((value & ETZPC_LOCK_MASK) != 0U) {
+			etzpc_lock_decprot(id);
+		}
+	}
+
+	return 0;
+}
 
 /*
  * etzpc_configure_decprot : Load a DECPROT configuration
@@ -254,5 +302,5 @@ int etzpc_init(void)
 
 	VERBOSE("ETZPC version 0x%x", etzpc_dev.revision);
 
-	return 0;
+	return etzpc_dt_conf_decprot(node);
 }
