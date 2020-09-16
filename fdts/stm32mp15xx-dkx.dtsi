@@ -344,7 +344,7 @@
 &timers15 {
 	secure-status = "okay";
 	st,hsi-cal-input = <7>;
-	st,csi_cal-input = <8>;
+	st,csi-cal-input = <8>;
 };
 
 &uart4 {
