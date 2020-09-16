@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2015-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -454,6 +454,9 @@
 #define RCC_MP_SREQCLRR_STPREQ_P0	BIT(0)
 #define RCC_MP_SREQCLRR_STPREQ_P1	BIT(1)
 
+/* Global Control Register */
+#define RCC_MP_GCR_BOOT_MCU		BIT(0)
+
 /* Values of RCC_UART24CKSELR register */
 #define RCC_UART24CKSELR_HSI		0x00000002
 
@@ -467,8 +470,15 @@
 #define RCC_MP_APB5ENSETR_USART1EN	BIT(4)
 #define RCC_MP_APB5ENSETR_RTCAPBEN	BIT(8)
 #define RCC_MP_APB5ENSETR_IWDG1APBEN	BIT(15)
+#define RCC_MP_APB5ENSETR_STGENEN	BIT(20)
 
 /* Values of RCC_MP_AHB4ENSETR register */
+#define RCC_MP_AHB4ENSETR_GPIOAEN	BIT(0)
+#define RCC_MP_AHB4ENSETR_GPIOBEN	BIT(1)
+#define RCC_MP_AHB4ENSETR_GPIOCEN	BIT(2)
+#define RCC_MP_AHB4ENSETR_GPIODEN	BIT(3)
+#define RCC_MP_AHB4ENSETR_GPIOEEN	BIT(4)
+#define RCC_MP_AHB4ENSETR_GPIOFEN	BIT(5)
 #define RCC_MP_AHB4ENSETR_GPIOGEN	BIT(6)
 #define RCC_MP_AHB4ENSETR_GPIOHEN	BIT(7)
 
@@ -480,6 +490,9 @@
 
 /* Values of RCC_AHB6RSTSETR register */
 #define RCC_AHB6RSTSETR_GPURST		BIT(5)
+
+/* Values of RCC_MP_APB5LPENSETR register */
+#define RCC_MP_APB5LPENSETR_STGENSTPEN	BIT(21)
 
 /* Values of RCC_MP_IWDGFZSETR register */
 #define RCC_MP_IWDGFZSETR_IWDG1		BIT(0)
@@ -565,5 +578,13 @@
 #define RCC_USBCKSELR_USBPHYSRC_SHIFT		0
 #define RCC_USBCKSELR_USBOSRC_MASK		BIT(4)
 #define RCC_USBCKSELR_USBOSRC_SHIFT		4
+
+/* RCC_MPCKSELR register fields */
+#define RCC_MPCKSELR_MPUSRC_MASK		GENMASK(1, 0)
+#define RCC_MPCKSELR_MPUSRC_SHIFT		0
+
+/* RCC_CPERCKSELR register fields */
+#define RCC_CPERCKSELR_PERSRC_MASK		GENMASK(1, 0)
+#define RCC_CPERCKSELR_PERSRC_SHIFT		0
 
 #endif /* STM32MP1_RCC_H */
