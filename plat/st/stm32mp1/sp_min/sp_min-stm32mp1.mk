@@ -32,6 +32,9 @@ BL32_SOURCES		+=	${GICV2_SOURCES}			\
 # Generic PSCI
 BL32_SOURCES		+=	plat/common/plat_psci_common.c
 
+# Generic FDT
+BL32_SOURCES		+=	common/fdt_fixup.c
+
 # SCMI server drivers
 BL32_SOURCES		+=	drivers/scmi-msg/base.c		\
 				drivers/scmi-msg/clock.c		\

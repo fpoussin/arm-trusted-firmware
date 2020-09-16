@@ -12,6 +12,7 @@
 #include <arch_helpers.h>
 #include <common/bl_common.h>
 #include <common/debug.h>
+#include <common/fdt_fixup.h>
 #include <context.h>
 #include <drivers/arm/gicv2.h>
 #include <drivers/arm/tzc400.h>
@@ -288,6 +289,34 @@ static void stm32mp1_etzpc_early_setup(void)
 	etzpc_configure_tzma(STM32MP1_ETZPC_TZMA_SYSRAM, TZMA1_SECURE_RANGE);
 }
 
+static void populate_ns_dt(u_register_t ns_dt_addr)
+{
+	void *external_fdt = (void *)ns_dt_addr;
+	int ret;
+
+	if (fdt_check_header(external_fdt) != 0) {
+		INFO("Non-secure device tree not found\n");
+
+		return;
+	}
+
+	ret = fdt_open_into(external_fdt, external_fdt, STM32MP_HW_CONFIG_MAX_SIZE);
+	if (ret < 0) {
+		WARN("Error opening DT %i\n", ret);
+	}
+
+	ret = fdt_add_reserved_memory(external_fdt, "tf-a", BL_CODE_BASE,
+				      (BL32_LIMIT + STM32MP_BL32_DTB_SIZE) - BL_CODE_BASE);
+	if (ret < 0) {
+		WARN("Error updating DT %i\n", ret);
+	}
+
+	ret = fdt_pack(external_fdt);
+	if (ret < 0) {
+		WARN("Error packing DT %i\n", ret);
+	}
+}
+
 /*******************************************************************************
  * Setup UART console using device tree information.
  ******************************************************************************/
@@ -358,6 +387,16 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	while (bl_params != NULL) {
 		if (bl_params->image_id == BL33_IMAGE_ID) {
 			bl33_image_ep_info = *bl_params->ep_info;
+			/*
+			 *  Check if hw_configuration is given to BL32 and
+			 *  share it to BL33
+			 */
+			if (arg2 != 0U) {
+				bl33_image_ep_info.args.arg0 = 0U;
+				bl33_image_ep_info.args.arg1 = 0U;
+				bl33_image_ep_info.args.arg2 = arg2;
+			}
+
 			break;
 		}
 
@@ -379,6 +418,12 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	setup_uart_console();
 
 	stm32mp1_etzpc_early_setup();
+
+	if (arg2 != 0U) {
+		populate_ns_dt(arg2);
+	} else {
+		INFO("Non-secure device tree not found\n");
+	}
 
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();

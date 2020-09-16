@@ -88,5 +88,9 @@ bl_load_info_t *plat_get_bl_image_load_info(void)
  ******************************************************************************/
 bl_params_t *plat_get_next_bl_params(void)
 {
-	return get_next_bl_params_from_mem_params_desc();
+	bl_params_t *bl_params = get_next_bl_params_from_mem_params_desc();
+
+	populate_next_bl_params_config(bl_params);
+
+	return bl_params;
 }

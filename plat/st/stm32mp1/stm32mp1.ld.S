@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -43,7 +43,7 @@ SECTIONS
          * The strongest and only alignment contraint is MMU 4K page.
          * Indeed as images below will be removed, 4K pages will be re-used.
          */
-        . = ( STM32MP_DTB_BASE - STM32MP_BINARY_BASE );
+        . = ( STM32MP_BL2_DTB_BASE - STM32MP_BINARY_BASE );
         __DTB_IMAGE_START__ = .;
         *(.dtb_image*)
         __DTB_IMAGE_END__ = .;
@@ -57,18 +57,6 @@ SECTIONS
         __BL2_IMAGE_START__ = .;
         *(.bl2_image*)
         __BL2_IMAGE_END__ = .;
-
-#ifndef AARCH32_SP_OPTEE
-        /*
-         * bl32 will be settled by bl2.
-         * The strongest and only alignment constraint is 8 words to simplify
-         * memraise8 assembly code.
-         */
-        . = ( STM32MP_BL32_BASE - STM32MP_BINARY_BASE );
-        __BL32_IMAGE_START__ = .;
-        *(.bl32_image*)
-        __BL32_IMAGE_END__ = .;
-#endif
 
         __DATA_END__ = .;
     } >RAM

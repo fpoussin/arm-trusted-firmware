@@ -25,18 +25,7 @@
 #define PLATFORM_STACK_SIZE		0xC00
 #endif
 
-#ifdef AARCH32_SP_OPTEE
-#define OPTEE_HEADER_IMAGE_NAME		"teeh"
-#define OPTEE_CORE_IMAGE_NAME		"teex"
-#define OPTEE_PAGED_IMAGE_NAME		"teed"
-#define OPTEE_HEADER_BINARY_TYPE	U(0x20)
-#define OPTEE_CORE_BINARY_TYPE		U(0x21)
-#define OPTEE_PAGED_BINARY_TYPE		U(0x22)
-#endif
-
-/* SSBL = second stage boot loader */
-#define BL33_IMAGE_NAME			"ssbl"
-#define BL33_BINARY_TYPE		U(0x0)
+#define FIP_IMAGE_NAME			"fip"
 
 #define STM32MP_PRIMARY_CPU		U(0x0)
 #define STM32MP_SECONDARY_CPU		U(0x1)

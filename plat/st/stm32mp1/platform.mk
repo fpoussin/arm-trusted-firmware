@@ -15,7 +15,8 @@ ENABLE_PIE		:=	1
 ST_VERSION 		:=	r1.0
 VERSION_STRING		:=	v${VERSION_MAJOR}.${VERSION_MINOR}-${ST_VERSION}(${BUILD_TYPE}):${BUILD_STRING}
 
-TRUSTED_BOARD_BOOT	:=	1
+ENABLE_PIE		:=	1
+TRUSTED_BOARD_BOOT	?=	0
 
 # Please don't increment this value without good understanding of
 # the monotonic counter
@@ -44,7 +45,7 @@ STM32_BL33_PARTS_NUM		:=	1
 ifeq ($(AARCH32_SP),optee)
 STM32_RUNTIME_PARTS_NUM		:=	3
 else
-STM32_RUNTIME_PARTS_NUM		:=	0
+STM32_RUNTIME_PARTS_NUM		:=	1
 endif
 PLAT_PARTITION_MAX_ENTRIES	:=	$(shell echo $$(($(STM32_TF_A_COPIES) + \
 							 $(STM32_BL33_PARTS_NUM) + \
@@ -69,7 +70,12 @@ endif
 
 # Device tree
 DTB_FILE_NAME		?=	stm32mp157c-ev1.dtb
-FDT_SOURCES		:=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(DTB_FILE_NAME)))
+BL2_DTSI		:=	stm32mp15-bl2.dtsi
+FDT_SOURCES		:=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl2.dts,$(DTB_FILE_NAME)))
+ifeq ($(AARCH32_SP),sp_min)
+BL32_DTSI		:=	stm32mp15-bl32.dtsi
+FDT_SOURCES		+=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl32.dts,$(DTB_FILE_NAME)))
+endif
 DTC_FLAGS		+=	-Wno-unit_address_vs_reg
 
 # Macros and rules to build TF binary
@@ -78,16 +84,28 @@ STM32_TF_STM32		:=	$(addprefix ${BUILD_PLAT}/tf-a-, $(patsubst %.dtb,%.stm32,$(D
 STM32_TF_LINKERFILE	:=	${BUILD_PLAT}/stm32mp1.ld
 
 ASFLAGS			+= -DBL2_BIN_PATH=\"${BUILD_PLAT}/bl2.bin\"
-ifeq ($(AARCH32_SP),sp_min)
-# BL32 is built only if using SP_MIN
-BL32_DEP		:= bl32
-ASFLAGS			+= -DBL32_BIN_PATH=\"${BUILD_PLAT}/bl32.bin\"
-endif
 
 # Variables for use with stm32image
 STM32IMAGEPATH		?= tools/stm32image
 STM32IMAGE		?= ${STM32IMAGEPATH}/stm32image${BIN_EXT}
 STM32IMAGE_SRC		:= ${STM32IMAGEPATH}/stm32image.c
+
+STM32MP_NT_FW_CONFIG	:=	${BL33_CFG}
+# Add the NT_FW_CONFIG to FIP and specify the same to certtool
+$(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_NT_FW_CONFIG},--hw-config))
+ifeq ($(AARCH32_SP),sp_min)
+STM32MP_TOS_FW_CONFIG	:= $(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl32.dtb,$(DTB_FILE_NAME)))
+$(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_TOS_FW_CONFIG},--tos-fw-config))
+else
+# Add the build options to pack Trusted OS Extra1 and Trusted OS Extra2 images
+# in the FIP if the platform requires.
+ifneq ($(BL32_EXTRA1),)
+$(eval $(call TOOL_ADD_IMG,BL32_EXTRA1,--tos-fw-extra1))
+endif
+ifneq ($(BL32_EXTRA2),)
+$(eval $(call TOOL_ADD_IMG,BL32_EXTRA2,--tos-fw-extra2))
+endif
+endif
 
 # Enable flags for C files
 $(eval $(call assert_booleans,\
@@ -169,10 +187,10 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 
 BL2_SOURCES		+=	drivers/io/io_block.c					\
 				drivers/io/io_dummy.c					\
+				drivers/io/io_fip.c					\
 				drivers/io/io_mtd.c					\
 				drivers/io/io_storage.c					\
 				drivers/st/crypto/stm32_hash.c				\
-				drivers/st/io/io_stm32image.c				\
 				plat/st/common/bl2_io_storage.c				\
 				plat/st/stm32mp1/bl2_plat_setup.c
 
@@ -181,10 +199,15 @@ AUTH_SOURCES		:=	drivers/auth/auth_mod.c					\
 				drivers/auth/crypto_mod.c				\
 				drivers/auth/img_parser_mod.c
 
-BL2_SOURCES		+= 	$(AUTH_SOURCES)						\
-				plat/st/common/stm32mp_cot.c				\
-				plat/st/common/stm32mp_crypto_lib.c			\
-				plat/st/common/stm32mp_img_parser_lib.c			\
+IMG_PARSER_LIB_MK	:=	drivers/auth/mbedtls/mbedtls_x509.mk
+
+$(info Including ${IMG_PARSER_LIB_MK})
+include ${IMG_PARSER_LIB_MK}
+
+AUTH_SOURCES		+=	drivers/auth/tbbr/tbbr_cot_common.c			\
+				plat/st/common/stm32mp_crypto_lib.c
+
+BL2_SOURCES		+=	$(AUTH_SOURCES)						\
 				plat/st/common/stm32mp_trusted_boot.c
 endif
 
@@ -275,8 +298,23 @@ check_dtc_version:
 		false; \
 	fi
 
+# Create DTB file for BL2
+${BUILD_PLAT}/fdts/%-bl2.dts: fdts/%.dts fdts/${BL2_DTSI} | ${BUILD_PLAT} fdt_dirs
+	@echo '#include "$(patsubst fdts/%,%,$<)"' > $@
+	@echo '#include "${BL2_DTSI}"' >> $@
 
-${BUILD_PLAT}/stm32mp1-%.o: ${BUILD_PLAT}/fdts/%.dtb plat/st/stm32mp1/stm32mp1.S bl2 ${BL32_DEP}
+${BUILD_PLAT}/fdts/%-bl2.dtb: ${BUILD_PLAT}/fdts/%-bl2.dts
+
+ifeq ($(AARCH32_SP),sp_min)
+# Create DTB file for BL32
+${BUILD_PLAT}/fdts/%-bl32.dts: fdts/%.dts fdts/${BL32_DTSI} | ${BUILD_PLAT} fdt_dirs
+	@echo '#include "$(patsubst fdts/%,%,$<)"' > $@
+	@echo '#include "${BL32_DTSI}"' >> $@
+
+${BUILD_PLAT}/fdts/%-bl32.dtb: ${BUILD_PLAT}/fdts/%-bl32.dts
+endif
+
+${BUILD_PLAT}/stm32mp1-%.o: ${BUILD_PLAT}/fdts/%-bl2.dtb plat/st/stm32mp1/stm32mp1.S bl2
 	@echo "  AS      stm32mp1.S"
 	${Q}${AS} ${ASFLAGS} ${TF_CFLAGS} \
 		-DDTB_BIN_PATH=\"$<\" \
