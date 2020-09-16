@@ -2466,7 +2466,7 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 	int usbphy_p = stm32mp1_clk_get_parent((int)USBPHY_K);
 
 	if (fdt_get_address(&fdt) == 0) {
-		return false;
+		return -FDT_ERR_NOTFOUND;
 	}
 
 	/* Check status field to disable security */
