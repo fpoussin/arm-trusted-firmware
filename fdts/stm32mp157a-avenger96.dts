@@ -290,10 +290,12 @@
 
 &rng1 {
 	status = "okay";
+	secure-status = "okay";
 };
 
 &rtc {
 	status = "okay";
+	secure-status = "okay";
 };
 
 &sdmmc1 {
