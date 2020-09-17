@@ -7,6 +7,7 @@
 #ifndef STM32MP1_DDR_HELPERS_H
 #define STM32MP1_DDR_HELPERS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 enum stm32mp1_ddr_sr_mode {
@@ -24,5 +25,6 @@ enum stm32mp1_ddr_sr_mode ddr_read_sr_mode(void);
 void ddr_set_sr_mode(enum stm32mp1_ddr_sr_mode mode);
 void ddr_save_sr_mode(void);
 void ddr_restore_sr_mode(void);
+bool ddr_is_nonsecured_area(uintptr_t address, uint32_t length);
 
 #endif /* STM32MP1_DDR_HELPERS_H */
