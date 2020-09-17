@@ -25,6 +25,9 @@ STM32_TF_VERSION	?=	0
 # Enable dynamic memory mapping
 PLAT_XLAT_TABLES_DYNAMIC :=	1
 
+# DDR controller with dual AXI port
+STM32MP_DDR_DUAL_AXI_PORT:= 	1
+
 # STM32 image header version v1.0
 STM32_HEADER_VERSION_MAJOR:=	1
 STM32_HEADER_VERSION_MINOR:=	0
@@ -123,6 +126,7 @@ $(eval $(call assert_booleans,\
 		PLAT_XLAT_TABLES_DYNAMIC \
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
+		STM32MP_DDR_DUAL_AXI_PORT \
 )))
 
 $(eval $(call assert_numerics,\
@@ -145,6 +149,7 @@ $(eval $(call add_defines,\
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
 		STM32_TF_VERSION \
+		STM32MP_DDR_DUAL_AXI_PORT \
 )))
 
 # Include paths and source files

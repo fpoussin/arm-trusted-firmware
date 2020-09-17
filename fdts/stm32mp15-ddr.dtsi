@@ -14,14 +14,18 @@
 
 			clocks = <&rcc AXIDCG>,
 				 <&rcc DDRC1>,
+#if STM32MP_DDR_DUAL_AXI_PORT
 				 <&rcc DDRC2>,
+#endif
 				 <&rcc DDRPHYC>,
 				 <&rcc DDRCAPB>,
 				 <&rcc DDRPHYCAPB>;
 
 			clock-names = "axidcg",
 				      "ddrc1",
+#if STM32MP_DDR_DUAL_AXI_PORT
 				      "ddrc2",
+#endif
 				      "ddrphyc",
 				      "ddrcapb",
 				      "ddrphycapb";
@@ -97,12 +101,14 @@
 				DDR_PCFGQOS1_0
 				DDR_PCFGWQOS0_0
 				DDR_PCFGWQOS1_0
+#if STM32MP_DDR_DUAL_AXI_PORT
 				DDR_PCFGR_1
 				DDR_PCFGW_1
 				DDR_PCFGQOS0_1
 				DDR_PCFGQOS1_1
 				DDR_PCFGWQOS0_1
 				DDR_PCFGWQOS1_1
+#endif
 			>;
 
 			st,phy-reg = <
@@ -115,8 +121,10 @@
 				DDR_ZQ0CR1
 				DDR_DX0GCR
 				DDR_DX1GCR
+#if STM32MP_DDR_DUAL_AXI_PORT
 				DDR_DX2GCR
 				DDR_DX3GCR
+#endif
 			>;
 
 			st,phy-timing = <
@@ -140,12 +148,14 @@
 				DDR_DX1DLLCR
 				DDR_DX1DQTR
 				DDR_DX1DQSTR
+#if STM32MP_DDR_DUAL_AXI_PORT
 				DDR_DX2DLLCR
 				DDR_DX2DQTR
 				DDR_DX2DQSTR
 				DDR_DX3DLLCR
 				DDR_DX3DQTR
 				DDR_DX3DQSTR
+#endif
 			>;
 #endif
 

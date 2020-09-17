@@ -98,12 +98,14 @@ struct stm32mp1_ddrctrl_perf {
 	uint32_t pcfgqos1_0;
 	uint32_t pcfgwqos0_0;
 	uint32_t pcfgwqos1_0;
+#if STM32MP_DDR_DUAL_AXI_PORT
 	uint32_t pcfgr_1;
 	uint32_t pcfgw_1;
 	uint32_t pcfgqos0_1;
 	uint32_t pcfgqos1_1;
 	uint32_t pcfgwqos0_1;
 	uint32_t pcfgwqos1_1;
+#endif
 };
 
 struct stm32mp1_ddrphy_reg {
@@ -116,8 +118,10 @@ struct stm32mp1_ddrphy_reg {
 	uint32_t zq0cr1;
 	uint32_t dx0gcr;
 	uint32_t dx1gcr;
+#if STM32MP_DDR_DUAL_AXI_PORT
 	uint32_t dx2gcr;
 	uint32_t dx3gcr;
+#endif
 };
 
 struct stm32mp1_ddrphy_timing {
@@ -140,12 +144,14 @@ struct stm32mp1_ddrphy_cal {
 	uint32_t dx1dllcr;
 	uint32_t dx1dqtr;
 	uint32_t dx1dqstr;
+#if STM32MP_DDR_DUAL_AXI_PORT
 	uint32_t dx2dllcr;
 	uint32_t dx2dqtr;
 	uint32_t dx2dqstr;
 	uint32_t dx3dllcr;
 	uint32_t dx3dqtr;
 	uint32_t dx3dqstr;
+#endif
 };
 
 struct stm32mp1_ddr_info {

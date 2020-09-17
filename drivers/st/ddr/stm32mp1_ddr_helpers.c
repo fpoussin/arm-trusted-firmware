@@ -24,7 +24,9 @@ void ddr_enable_clock(void)
 
 	mmio_setbits_32(stm32mp_rcc_base() + RCC_DDRITFCR,
 			RCC_DDRITFCR_DDRC1EN |
+#if STM32MP_DDR_DUAL_AXI_PORT
 			RCC_DDRITFCR_DDRC2EN |
+#endif
 			RCC_DDRITFCR_DDRPHYCEN |
 			RCC_DDRITFCR_DDRPHYCAPBEN |
 			RCC_DDRITFCR_DDRCAPBEN);
@@ -76,8 +78,10 @@ static int ddr_sw_self_refresh_in(void)
 	/* Blocks AXI ports from taking anymore transactions */
 	mmio_clrbits_32(ddrctrl_base + DDRCTRL_PCTRL_0,
 			DDRCTRL_PCTRL_N_PORT_EN);
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_clrbits_32(ddrctrl_base + DDRCTRL_PCTRL_1,
 			DDRCTRL_PCTRL_N_PORT_EN);
+#endif
 
 	/* Waits unit all AXI ports are idle
 	 * Poll PSTAT.rd_port_busy_n = 0
@@ -177,11 +181,13 @@ static int ddr_sw_self_refresh_in(void)
 	mmio_setbits_32(ddrphyc_base + DDRPHYC_DX1DLLCR,
 			DDRPHYC_DXNDLLCR_DLLDIS);
 
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_setbits_32(ddrphyc_base + DDRPHYC_DX2DLLCR,
 			DDRPHYC_DXNDLLCR_DLLDIS);
 
 	mmio_setbits_32(ddrphyc_base + DDRPHYC_DX3DLLCR,
 			DDRPHYC_DXNDLLCR_DLLDIS);
+#endif
 
 	stm32mp1_clk_rcc_regs_lock();
 
@@ -191,7 +197,9 @@ static int ddr_sw_self_refresh_in(void)
 	/* Deactivate all DDR clocks */
 	mmio_clrbits_32(rcc_base + RCC_DDRITFCR,
 			RCC_DDRITFCR_DDRC1EN |
+#if STM32MP_DDR_DUAL_AXI_PORT
 			RCC_DDRITFCR_DDRC2EN |
+#endif
 			RCC_DDRITFCR_DDRCAPBEN |
 			RCC_DDRITFCR_DDRPHYCAPBEN);
 
@@ -207,8 +215,10 @@ selfref_sw_failed:
 pstat_failed:
 	mmio_setbits_32(ddrctrl_base + DDRCTRL_PCTRL_0,
 			DDRCTRL_PCTRL_N_PORT_EN);
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_setbits_32(ddrctrl_base + DDRCTRL_PCTRL_1,
 			DDRCTRL_PCTRL_N_PORT_EN);
+#endif
 
 	return -1;
 }
@@ -247,11 +257,13 @@ int ddr_sw_self_refresh_exit(void)
 	mmio_clrbits_32(ddrphyc_base + DDRPHYC_DX1DLLCR,
 			DDRPHYC_DXNDLLCR_DLLDIS);
 
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_clrbits_32(ddrphyc_base + DDRPHYC_DX2DLLCR,
 			DDRPHYC_DXNDLLCR_DLLDIS);
 
 	mmio_clrbits_32(ddrphyc_base + DDRPHYC_DX3DLLCR,
 			DDRPHYC_DXNDLLCR_DLLDIS);
+#endif
 
 	/* Additional delay to avoid early DLL clock switch */
 	udelay(50);
@@ -347,8 +359,10 @@ int ddr_sw_self_refresh_exit(void)
 	/* AXI ports are no longer blocked from taking transactions */
 	mmio_setbits_32(ddrctrl_base + DDRCTRL_PCTRL_0,
 			DDRCTRL_PCTRL_N_PORT_EN);
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_setbits_32(ddrctrl_base + DDRCTRL_PCTRL_1,
 			DDRCTRL_PCTRL_N_PORT_EN);
+#endif
 
 	stm32mp1_clk_rcc_regs_lock();
 
@@ -395,9 +409,11 @@ static void ddr_sr_mode_ssr(void)
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC1EN);
 
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC2LPEN);
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC2EN);
+#endif
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRCAPBLPEN);
 
@@ -447,7 +463,9 @@ static void ddr_sr_mode_asr(void)
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC1LPEN);
 
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC2LPEN);
+#endif
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRPHYCLPEN);
 
@@ -488,7 +506,9 @@ static void ddr_sr_mode_hsr(void)
 
 	mmio_clrbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC1LPEN);
 
+#if STM32MP_DDR_DUAL_AXI_PORT
 	mmio_clrbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRC2LPEN);
+#endif
 
 	mmio_setbits_32(rcc_ddritfcr, RCC_DDRITFCR_DDRPHYCLPEN);
 
