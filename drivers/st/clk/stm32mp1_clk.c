@@ -665,6 +665,29 @@ static const char * const stm32mp1_clk_parent_name[_PARENT_NB] __unused = {
 	[_USB_PHY_48] = "USB_PHY_48",
 };
 
+static const char *
+const stm32mp1_clk_parent_sel_name[_PARENT_SEL_NB] __unused = {
+	[_I2C12_SEL] = "I2C12",
+	[_I2C35_SEL] = "I2C35",
+	[_STGEN_SEL] = "STGEN",
+	[_I2C46_SEL] = "I2C46",
+	[_SPI6_SEL] = "SPI6",
+	[_UART1_SEL] = "USART1",
+	[_RNG1_SEL] = "RNG1",
+	[_UART6_SEL] = "UART6",
+	[_UART24_SEL] = "UART24",
+	[_UART35_SEL] = "UART35",
+	[_UART78_SEL] = "UART78",
+	[_SDMMC12_SEL] = "SDMMC12",
+	[_SDMMC3_SEL] = "SDMMC3",
+	[_QSPI_SEL] = "QSPI",
+	[_FMC_SEL] = "FMC",
+	[_AXIS_SEL] = "AXISS",
+	[_MCUS_SEL] = "MCUSS",
+	[_USBPHY_SEL] = "USBPHY",
+	[_USBO_SEL] = "USBO",
+};
+
 /* RCC clock device driver private */
 static unsigned long stm32mp1_osc[NB_OSC];
 static struct spinlock reg_lock;
@@ -809,6 +832,12 @@ static int stm32mp1_clk_get_parent(unsigned long id)
 	p_sel = (mmio_read_32(rcc_base + sel->offset) &
 		 (sel->msk << sel->src)) >> sel->src;
 	if (p_sel < sel->nb_parent) {
+#if LOG_LEVEL >= LOG_LEVEL_VERBOSE
+		VERBOSE("%s: %s clock is the parent %s of clk id %ld\n",
+			__func__,
+			stm32mp1_clk_parent_name[sel->parent[p_sel]],
+			stm32mp1_clk_parent_sel_name[s], id);
+#endif
 		return (int)sel->parent[p_sel];
 	}
 
@@ -3343,6 +3372,27 @@ int stm32mp1_clock_stopmode_resume(void)
 	disable_kernel_clocks();
 
 	return 0;
+}
+
+/* Sync secure clock refcount after all drivers probe/inits,  */
+void stm32mp1_dump_clocks_state(void)
+{
+#if LOG_LEVEL >= LOG_LEVEL_VERBOSE
+	unsigned int idx;
+
+	/* Dump clocks state */
+	for (idx = 0U; idx < NB_GATES; idx++) {
+		const struct stm32mp1_clk_gate *gate = gate_ref(idx);
+		unsigned long __unused clock_id = gate->index;
+		unsigned int __unused refcnt = gate_refcounts[idx];
+		int __unused p = stm32mp1_clk_get_parent(clock_id);
+
+		VERBOSE("stm32mp1 clk %lu %sabled (refcnt %d) (parent %d %s)\n",
+			clock_id, __clk_is_enabled(gate) ? "en" : "dis",
+			refcnt, p,
+			p < 0 ? "n.a" : stm32mp1_clk_parent_sel_name[p]);
+	}
+#endif
 }
 
 static void sync_earlyboot_clocks_state(void)

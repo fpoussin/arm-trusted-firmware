@@ -59,6 +59,8 @@ int stm32mp1_clock_stopmode_resume(void);
 void restore_clock_pm_context(void);
 void save_clock_pm_context(void);
 
+void stm32mp1_dump_clocks_state(void);
+
 #ifdef STM32MP_SHARED_RESOURCES
 void stm32mp1_register_clock_parents_secure(unsigned long id);
 #endif
