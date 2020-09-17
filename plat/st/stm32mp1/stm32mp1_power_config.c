@@ -135,9 +135,50 @@ void stm32mp1_init_lp_states(void)
 	}
 }
 
+/* Init with all domains ON */
+static bool pm_dom[STM32MP1_PD_MAX_PM_DOMAIN] = {
+	[STM32MP1_PD_VSW] = false,
+	[STM32MP1_PD_CORE_RET] = false,
+	[STM32MP1_PD_CORE] = false
+};
+
+static bool stm32mp1_get_pm_domain_state(uint8_t mode)
+{
+	bool res = true;
+	enum stm32mp1_pm_domain id = STM32MP1_PD_MAX_PM_DOMAIN;
+
+	while (res && (id > mode)) {
+		id--;
+		res &= pm_dom[id];
+	}
+
+	return res;
+}
+
+int stm32mp1_set_pm_domain_state(enum stm32mp1_pm_domain domain, bool status)
+{
+	if (domain >= STM32MP1_PD_MAX_PM_DOMAIN) {
+		return -EINVAL;
+	}
+
+	pm_dom[domain] = status;
+
+	return 0;
+}
+
 static bool is_allowed_mode(uint32_t soc_mode)
 {
 	assert(soc_mode < ARRAY_SIZE(stm32mp1_supported_soc_modes));
+
+	if ((soc_mode == STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR) &&
+	    !stm32mp1_get_pm_domain_state(STM32MP1_PD_CORE_RET)) {
+		return false;
+	}
+
+	if ((soc_mode == STM32_PM_CSTOP_ALLOW_LPLV_STOP) &&
+	    !stm32mp1_get_pm_domain_state(STM32MP1_PD_CORE)) {
+		return false;
+	}
 
 	return stm32mp1_supported_soc_modes[soc_mode] == 1U;
 }
@@ -157,6 +198,23 @@ uint32_t stm32mp1_get_lp_soc_mode(uint32_t psci_mode)
 	}
 
 	return mode;
+}
+
+int stm32mp1_set_lp_deepest_soc_mode(uint32_t psci_mode, uint32_t soc_mode)
+{
+	if (soc_mode >= STM32_PM_MAX_SOC_MODE) {
+		return -EINVAL;
+	}
+
+	if (psci_mode == PSCI_MODE_SYSTEM_SUSPEND) {
+		deepest_system_suspend_mode = soc_mode;
+	}
+
+	if (psci_mode == PSCI_MODE_SYSTEM_OFF) {
+		system_off_mode = soc_mode;
+	}
+
+	return 0;
 }
 
 bool stm32mp1_get_retram_enabled(void)

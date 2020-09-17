@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
+# Copyright (c) 2017-2020, ARM Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -44,6 +44,8 @@ BL32_SOURCES		+=	drivers/scmi-msg/base.c		\
 
 # stm32mp1 specific services
 BL32_SOURCES		+=	plat/st/stm32mp1/services/bsec_svc.c		\
+				plat/st/stm32mp1/services/low_power_svc.c	\
+				plat/st/stm32mp1/services/pwr_svc.c		\
 				plat/st/stm32mp1/services/rcc_svc.c		\
 				plat/st/stm32mp1/services/stm32mp1_svc_setup.c	\
 				plat/st/stm32mp1/stm32mp1_scmi.c
