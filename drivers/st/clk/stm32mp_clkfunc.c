@@ -414,9 +414,7 @@ void stm32mp_stgen_config(unsigned long rate)
 	}
 
 	mmio_clrbits_32(STGEN_BASE + CNTCR_OFF, CNTCR_EN);
-	counter = (unsigned long long)mmio_read_32(STGEN_BASE + CNTCVL_OFF);
-	counter |= ((unsigned long long)mmio_read_32(STGEN_BASE + CNTCVU_OFF)) << 32;
-	counter = (counter * rate / cntfid0);
+	counter = stm32mp_stgen_get_counter() * rate / cntfid0;
 
 	mmio_write_32(STGEN_BASE + CNTCVL_OFF, (uint32_t)counter);
 	mmio_write_32(STGEN_BASE + CNTCVU_OFF, (uint32_t)(counter >> 32));
