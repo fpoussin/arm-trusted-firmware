@@ -309,6 +309,10 @@ void bl2_el3_plat_arch_setup(void)
 	uint32_t bkpr_core1_addr =
 		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
 
+	if (bsec_probe() != 0) {
+		panic();
+	}
+
 	mmap_add_region(BL_CODE_BASE, BL_CODE_BASE,
 			BL_CODE_END - BL_CODE_BASE,
 			MT_CODE | MT_SECURE);
@@ -318,6 +322,7 @@ void bl2_el3_plat_arch_setup(void)
 			STM32MP_OPTEE_SIZE,
 			MT_MEMORY | MT_RW | MT_SECURE);
 #endif
+
 	/* Prevent corruption of preloaded Device Tree */
 	mmap_add_region(DTB_BASE, DTB_BASE,
 			DTB_LIMIT - DTB_BASE,
@@ -353,10 +358,6 @@ void bl2_el3_plat_arch_setup(void)
 	 * and allow to switch in standby SoC in all case
 	 */
 	mmio_setbits_32(pwr_base + PWR_MCUCR, PWR_MCUCR_PDDS);
-
-	if (bsec_probe() != 0) {
-		panic();
-	}
 
 	/* Reset backup domain on cold boot cases */
 	if ((mmio_read_32(rcc_base + RCC_BDCR) & RCC_BDCR_RTCSRC_MASK) == 0U) {
@@ -419,8 +420,6 @@ void bl2_el3_plat_arch_setup(void)
 
 	initialize_clock();
 
-	stm32mp1_syscfg_init();
-
 	result = dt_get_stdout_uart_info(&dt_uart_info);
 
 	if ((result <= 0) ||
@@ -481,6 +480,8 @@ skip_console_init:
 		panic();
 	}
 #endif
+
+	stm32mp1_syscfg_init();
 
 	if (stm32_iwdg_init() < 0) {
 		panic();
