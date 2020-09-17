@@ -197,6 +197,38 @@ void sp_min_plat_fiq_handler(uint32_t id)
 }
 
 /*******************************************************************************
+ * Return the value of the saved PC from the backup register if present
+ ******************************************************************************/
+static uintptr_t get_saved_pc(void)
+{
+	uint32_t bkpr_core1_addr =
+		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+	uint32_t saved_pc;
+	uint32_t bkpr_core1_magic =
+		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
+	uint32_t magic_nb;
+
+	stm32mp_clk_enable(RTCAPB);
+
+	magic_nb = mmio_read_32(bkpr_core1_magic);
+	saved_pc = mmio_read_32(bkpr_core1_addr);
+
+	stm32mp_clk_disable(RTCAPB);
+
+	if (magic_nb != BOOT_API_A7_CORE0_MAGIC_NUMBER) {
+		return 0U;
+	}
+
+	/* BL33 return address should be in DDR */
+	if ((saved_pc < STM32MP_DDR_BASE) ||
+	    (saved_pc > (STM32MP_DDR_BASE + (dt_get_ddr_size() - 1U)))) {
+		panic();
+	}
+
+	return saved_pc;
+}
+
+/*******************************************************************************
  * Return a pointer to the 'entry_point_info' structure of the next image for
  * the security state specified. BL33 corresponds to the non-secure image type
  * while BL32 corresponds to the secure image type. A NULL pointer is returned
@@ -204,13 +236,7 @@ void sp_min_plat_fiq_handler(uint32_t id)
  ******************************************************************************/
 entry_point_info_t *sp_min_plat_get_bl33_ep_info(void)
 {
-	entry_point_info_t *next_image_info;
-	uint32_t bkpr_core1_addr =
-		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
-	uint32_t bkpr_core1_magic =
-		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
-
-	next_image_info = &bl33_image_ep_info;
+	entry_point_info_t *next_image_info = &bl33_image_ep_info;
 
 	/*
 	 * PC is set to 0 when resetting after STANDBY
@@ -219,14 +245,7 @@ entry_point_info_t *sp_min_plat_get_bl33_ep_info(void)
 	 */
 	if (next_image_info->pc == 0U) {
 		void *cpu_context;
-		uint32_t magic_nb, saved_pc;
-
-		stm32mp_clk_enable(RTCAPB);
-
-		magic_nb = mmio_read_32(bkpr_core1_magic);
-		saved_pc = mmio_read_32(bkpr_core1_addr);
-
-		stm32mp_clk_disable(RTCAPB);
+		uintptr_t saved_pc;
 
 		if (stm32_restore_context() != 0) {
 			panic();
@@ -240,14 +259,8 @@ entry_point_info_t *sp_min_plat_get_bl33_ep_info(void)
 		/* PC should be retrieved in backup register if OK, else it can
 		 * be retrieved from non-secure context
 		 */
-		if (magic_nb == BOOT_API_A7_CORE0_MAGIC_NUMBER) {
-			/* BL33 return address should be in DDR */
-			if ((saved_pc < STM32MP_DDR_BASE) ||
-			    (saved_pc > (STM32MP_DDR_BASE +
-					 (dt_get_ddr_size() - 1U)))) {
-				panic();
-			}
-
+		saved_pc = get_saved_pc();
+		if (saved_pc != 0U) {
 			next_image_info->pc = saved_pc;
 		} else {
 			next_image_info->pc =
