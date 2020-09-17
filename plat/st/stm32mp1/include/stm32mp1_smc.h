@@ -127,6 +127,8 @@
 #define STM32_SMC_PROG_OTP		0x02
 #define STM32_SMC_WRITE_SHADOW		0x03
 #define STM32_SMC_READ_OTP		0x04
+#define STM32_SMC_READ_ALL		0x05
+#define STM32_SMC_WRITE_ALL		0x06
 #define STM32_SMC_WRLOCK_OTP		0x07
 
 /* SMC error codes */

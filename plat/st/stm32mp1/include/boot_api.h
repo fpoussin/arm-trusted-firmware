@@ -155,6 +155,10 @@ BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY_MCU_ABT_SEC_PERIMETER_ISSUE	0x07
 #define BOOT_API_CTX_EMMC_ERROR_STATUS_HEADER_SIZE_ZERO         0x6U
 #define BOOT_API_CTX_EMMC_ERROR_STATUS_IMAGE_NOT_COMPLETE       0x7U
 
+/* Definitions relative to 'p_rom_version_info->platform_type_ver' field */
+#define BOOT_API_CTX_ROM_VERSION_PLAT_VER_IC_EMU_FPGA           0xAA
+#define BOOT_API_CTX_ROM_VERSION_PLAT_VER_FPGA_ONLY             0xBB
+
 /* Image Header related definitions */
 
 /* Definition of header version */
@@ -186,6 +190,64 @@ BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY_MCU_ABT_SEC_PERIMETER_ISSUE	0x07
 #define BOOT_API_A7_CORE1_MAGIC_NUMBER				0xCA7FACE1U
 
 /*
+ * MCU Code Integrity Check related definitions
+ */
+
+/*
+ * Defines to identify RTC backup registers to be used for MCU code integrity
+ * check
+ */
+
+/*
+ * TAMP_BCK0R contains two bits
+ * bit 0 : wanted value of 'RCC_TZCR.TZEN'
+ * bit 1 : wanted value of 'RCC_TZCR.MCKPROT'
+ */
+
+/*
+ * TAMP_BCK0R bit position coding wanted value of 'RCC_TZCR.TZEN'
+ * trustZone aware domain enabling/disabling
+ */
+#define BOOT_API_MCIC_MCU_SECURITY_PERIMETER_TZEN_BIT			0
+
+/*
+ * TAMP_BCK0R bit position coding wanted value of 'RCC_TZCR.MCKPROT'
+ * ability of MCU to modify some clock settings in RCC
+ */
+#define BOOT_API_MCIC_MCU_SECURITY_PERIMETER_MCKPROT_BIT		1
+
+/* TAMP_BCK0R register index */
+#define \
+BOOT_API_MCIC_MCU_SECURITY_PERIMETER_TZEN_MCKPROT_TAMP_BCK_REG_IDX	0
+
+/*
+ * TAMP_BCK1R register index
+ * This register is coding the wanted value of register 'EXTI_TZENR1'
+ * to be programmed by bootROM on wakeup from STANDBY when MCUBEN=1
+ * that is MCU quick restart requested
+ */
+#define \
+BOOT_API_MCIC_MCU_SECURITY_PERIMETER_EXTI_TZENR1_TAMP_BCK_REG_IDX	1
+
+/*
+ * TAMP_BCK2R register index
+ * This register is coding the wanted value of register 'EXTI_TZENR2'
+ * to be programmed by bootROM on wakeup from STANDBY when MCUBEN=1
+ * that is MCU quick restart requested
+ */
+#define \
+BOOT_API_MCIC_MCU_SECURITY_PERIMETER_EXTI_TZENR2_TAMP_BCK_REG_IDX	2
+
+/*
+ * TAMP_BCK3R register index
+ * This register is coding the wanted value of register 'EXTI_TZENR3'
+ * to be programmed by bootROM on wakeup from STANDBY when MCUBEN=1
+ * that is MCU quick restart requested
+ */
+#define \
+BOOT_API_MCIC_MCU_SECURITY_PERIMETER_EXTI_TZENR3_TAMP_BCK_REG_IDX	3
+
+/*
  * TAMP_BCK4R register index
  * This register is used to write a Magic Number in order to restart
  * Cortex A7 Core 1 and make it execute @ branch address from TAMP_BCK5R
@@ -198,6 +260,39 @@ BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY_MCU_ABT_SEC_PERIMETER_ISSUE	0x07
  * Cortex A7 Core 1 when restarted by a TAMP_BCK4R magic number writing
  */
 #define BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX		5U
+
+/*
+ * TAMP_BCK22R register index
+ * This register contains offset in bytes of code to Hash in RETRAM region
+ * Note : offset is intended as relative value from start of RETRAM
+ */
+#define \
+BOOT_API_MCIC_OFFSET_IN_BYTES_CODE_TO_HASH_RETRAM_TAMP_BCK_REG_IDX	22
+
+/*
+ * TAMP_BCK23R register index
+ * This register contains the size in bytes of the single consecutive region
+ * of MCU Firmware in RETRAM (Retention RAM) to hash (by SHA-256)
+ * Note : This is required as a MCU firmware Code Integrity Check (aka : MCIC)
+ * to avoid bootROM restarting MCU on a corrupted firmware
+ */
+#define \
+BOOT_API_MCIC_RETRAM_REGION_TO_HASH_IN_BYTES_TAMP_BCK_REG_IDX		23
+
+/*
+ * TAMP_BCK24R to TAMP_BCK31R register indexes
+ * Those registers contains SHA-256 digest of RETRAM MCU Firmware code between
+ * [(RETRAM_start + offset) -- (RETRAM_start + offset + size_to_hash)]
+ * in this order
+ * This is the MCU Code Integrity Check MCU Firmware signature
+ * value on 256 bits
+ */
+
+/* First TAMP_BKP index of MCU Firmware signature : ie TAMP_BCK24R */
+#define BOOT_API_MCIC_SHA_DIGEST_FIRST_TAMP_BCK_REG_IDX			24
+
+/* Last TAMP_BKP index of MCU Firmware signature : ie TAMP_BCK31R */
+#define BOOT_API_MCIC_SHA_DIGEST_LAST_TAMP_BCK_REG_IDX			31
 
 /*
  * Possible value of boot context field 'hse_clock_value_in_hz'
@@ -224,6 +319,57 @@ BOOT_API_CTX_STBY_EXIT_STATUS_WKUP_MCU_ONLY_MCU_ABT_SEC_PERIMETER_ISSUE	0x07
 #define BOOT_API_OTP_MODE_CLOSED_BIT_POS			6
 
 #define BOOT_API_RETURN_OK					0x77U
+
+/* Mapping of OTP Word and OTP bits managing SSP and useful to FSBL-SSP */
+/* OTP_CFG8 */
+#define BOOT_API_OTP_SSP_WORD_NB				8U
+/* SSP_REQ = OTP_CFG8[8] */
+#define BOOT_API_OTP_SSP_REQ_BIT_POS				8
+/* SSP_SUCCESS = OTP_CFG8[9] */
+#define BOOT_API_OTP_SSP_SUCCESS_BIT_POS			9
+
+/*
+ * Possible values of boot context field
+ * 'ssp_config_ptr_in->ssp_cmd'
+ */
+/* 'K' 'B' 'U' 'P' -.> 'PUBK' */
+#define BOOT_API_CTX_SSP_CMD_CALC_CHIP_PUBK             0x4B425550
+
+/*
+ * Exported types
+ */
+
+/* SSP Configuration structure */
+typedef struct {
+	/* SSP Command*/
+	uint32_t ssp_cmd;
+	uint8_t	reserved[20];
+} boot_api_ssp_config_t;
+
+/*
+ * bootROM version information structure definition
+ * Total size = 24 bytes = 6 uint32_t
+ */
+typedef struct {
+	/* Chip Version */
+	uint32_t chip_ver;
+
+	/* Cut version within a fixed chip version */
+	uint32_t cut_ver;
+
+	/* Version of ROM Mask within a fixed cut version */
+	uint32_t rom_mask_ver;
+
+	/* Internal Version of bootROM code */
+	uint32_t bootrom_ver;
+
+	/* Version of bootROM adapted */
+	uint32_t for_chip_design_rtl_ver;
+
+	/* Restriction on compiled platform when it applies */
+	uint32_t platform_type_ver;
+
+} boot_api_rom_version_info_t;
 
 /*
  * Boot Context related definitions
@@ -305,6 +451,21 @@ typedef struct {
 	 * ie FSBL partition on which the boot was successful
 	 */
 	uint32_t boot_partition_used_toboot;
+	/*
+	 * Address of SSP configuration structure :
+	 * given and defined by bootROM
+	 * and used by FSBL. The structure is of type
+	 * 'boot_api_ssp_config_t'
+	 */
+	boot_api_ssp_config_t *p_ssp_config;
+	/*
+	 * boot context field containing bootROM updated SSP Status
+	 * Values can be of type BOOT_API_CTX_SSP_STATUS_XXX
+	 */
+	uint32_t	ssp_status;
+
+	/* Pointer on ROM constant containing ROM information */
+	const boot_api_rom_version_info_t *p_rom_version_info;
 
 } __packed boot_api_context_t;
 
