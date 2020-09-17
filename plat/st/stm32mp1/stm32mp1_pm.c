@@ -168,7 +168,7 @@ static void __dead2 stm32_pwr_domain_pwr_down_wfi(const psci_power_state_t
 		void (*warm_entrypoint)(void) =
 			(void (*)(void))stm32_sec_entrypoint;
 
-		stm32_pwr_down_wfi();
+		stm32_pwr_down_wfi(stm32_is_cstop_done());
 
 		stm32_exit_cstop();
 
@@ -206,7 +206,7 @@ static void __dead2 stm32_system_off(void)
 
 	stm32_enter_low_power(soc_mode, 0);
 
-	stm32_pwr_down_wfi();
+	stm32_pwr_down_wfi(false);
 
 	/* This shouldn't be reached */
 	panic();

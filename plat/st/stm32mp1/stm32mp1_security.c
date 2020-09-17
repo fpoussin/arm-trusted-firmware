@@ -89,7 +89,7 @@ static void init_tzc400(void)
 	region_top = ddr_ns_top;
 	tzc400_add_region(region_base, region_top, false);
 
-#ifdef AARCH32_SP_OPTEE
+#if (defined AARCH32_SP_OPTEE) || STM32MP_SP_MIN_IN_DDR
 	/* Region 2 set to cover all secure DRAM. */
 	region_base = region_top + 1U;
 	region_top += STM32MP_DDR_S_SIZE;

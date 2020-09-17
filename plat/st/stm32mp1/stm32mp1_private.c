@@ -99,8 +99,10 @@ static const mmap_region_t stm32mp1_mmap[] = {
 #endif
 #if defined(IMAGE_BL32)
 static const mmap_region_t stm32mp1_mmap[] = {
+#if !STM32MP_SP_MIN_IN_DDR
 	MAP_SEC_SYSRAM,
 	MAP_NS_SYSRAM,
+#endif
 	MAP_DEVICE1,
 	MAP_DEVICE2,
 	{0}
@@ -750,6 +752,9 @@ int plat_bind_regulator(struct stm32mp_regulator *regu)
 /* Get the non-secure DDR size */
 uint32_t stm32mp_get_ddr_ns_size(void)
 {
+#if STM32MP_SP_MIN_IN_DDR
+	return STM32MP_BL32_BASE - STM32MP_DDR_BASE;
+#else
 	static uint32_t ddr_ns_size;
 	uint32_t ddr_size;
 
@@ -766,6 +771,7 @@ uint32_t stm32mp_get_ddr_ns_size(void)
 	ddr_ns_size = ddr_size - (STM32MP_DDR_S_SIZE + STM32MP_DDR_SHMEM_SIZE);
 
 	return ddr_ns_size;
+#endif
 }
 
 bool stm32mp_boot_action_is_wakeup_from_standby(void)

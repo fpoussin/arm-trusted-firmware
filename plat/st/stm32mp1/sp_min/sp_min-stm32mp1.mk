@@ -52,3 +52,7 @@ BL32_SOURCES		+=	plat/st/stm32mp1/services/bsec_svc.c		\
 
 # Arm Archtecture services
 BL32_SOURCES		+=	services/arm_arch_svc/arm_arch_svc_setup.c
+
+ifneq ($(STM32MP_SP_MIN_IN_DDR),1)
+BL32_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power.c
+endif

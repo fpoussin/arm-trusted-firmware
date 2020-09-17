@@ -10,7 +10,6 @@
 
 #include <arch_helpers.h>
 #include <common/debug.h>
-#include <drivers/arm/gic_common.h>
 #include <drivers/arm/gicv2.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_iwdg.h>
@@ -39,10 +38,7 @@
 static unsigned int gicc_pmr;
 static struct stm32_rtc_calendar sleep_time;
 static bool enter_cstop_done;
-static uint32_t int_stack[STM32MP_INT_STACK_SIZE];
 static unsigned long long stgen_cnt;
-
-extern void wfi_svc_int_enable(uintptr_t stack_addr);
 
 struct pwr_lp_config {
 	uint32_t pwr_cr1;
@@ -196,14 +192,6 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 
 	zq0cr0_zdata = ddr_get_io_calibration_val();
 
-	/*
-	 * Set DDR in Self-refresh, even if no return address is given.
-	 * This is also the procedure awaited when switching off power supply.
-	 */
-	if (ddr_standby_sr_entry() != 0) {
-		panic();
-	}
-
 	stm32mp_clk_enable(RTCAPB);
 
 	mmio_write_32(bkpr_core1_addr, 0);
@@ -249,6 +237,11 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 	enter_cstop_done = true;
 }
 
+bool stm32_is_cstop_done(void)
+{
+	return enter_cstop_done;
+}
+
 /*
  * stm32_exit_cstop - Exit from CSTOP mode
  */
@@ -265,12 +258,6 @@ void stm32_exit_cstop(void)
 
 	enter_cstop_done = false;
 
-	if (ddr_sw_self_refresh_exit() != 0) {
-		panic();
-	}
-
-	/* Switch to memorized Self-Refresh mode */
-	ddr_restore_sr_mode();
 
 	plat_ic_set_priority_mask(gicc_pmr);
 
@@ -357,7 +344,7 @@ static void stm32_auto_stop_cpu0(void)
 
 	enter_cstop(STM32_PM_CSTOP_ALLOW_LP_STOP, 0);
 
-	stm32_pwr_down_wfi();
+	stm32_pwr_down_wfi(true);
 
 	stm32_exit_cstop();
 
@@ -419,7 +406,7 @@ static void enter_csleep(void)
 	mmio_clrsetbits_32(pwr_base + PWR_CR1, PWR_CR1_MASK,
 			   config_pwr[STM32_PM_CSLEEP_RUN].pwr_cr1);
 
-	stm32_pwr_down_wfi();
+	stm32_pwr_down_wfi(false);
 }
 
 void stm32_enter_low_power(uint32_t mode, uint32_t nsec_addr)
@@ -439,22 +426,3 @@ void stm32_enter_low_power(uint32_t mode, uint32_t nsec_addr)
 	}
 }
 
-void stm32_pwr_down_wfi(void)
-{
-	uint32_t interrupt = GIC_SPURIOUS_INTERRUPT;
-
-	stm32mp1_calib_set_wakeup(false);
-
-	while (interrupt == GIC_SPURIOUS_INTERRUPT &&
-	       !stm32mp1_calib_get_wakeup()) {
-		wfi_svc_int_enable((uintptr_t)&int_stack[0]);
-
-		interrupt = gicv2_acknowledge_interrupt();
-
-		if (interrupt != GIC_SPURIOUS_INTERRUPT) {
-			gicv2_end_of_interrupt(interrupt);
-		}
-
-		stm32_iwdg_refresh();
-	}
-}

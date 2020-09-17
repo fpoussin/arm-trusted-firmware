@@ -36,6 +36,7 @@
 
 #include <boot_api.h>
 #include <stm32mp1_context.h>
+#include <stm32mp1_critic_power.h>
 #include <stm32mp1_dbgmcu.h>
 
 #define PWRLP_TEMPO_5_HSI	5
@@ -60,6 +61,10 @@ static const char debug_msg[626] = {
 static console_t console;
 static enum boot_device_e boot_device = BOOT_DEVICE_BOARD;
 static bool wakeup_standby;
+
+#if STM32MP_SP_MIN_IN_DDR
+struct bl2_to_bl32_args bl2_to_bl32_args;
+#endif
 
 static void print_reset_reason(void)
 {
@@ -537,7 +542,10 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 	uint32_t fw_config_max_size;
 	uintptr_t nsec_base_address = 0U;
 	size_t nsec_size = 0U;
-#if defined(AARCH32_SP_OPTEE)
+#if STM32MP_SP_MIN_IN_DDR || defined(AARCH32_SP_OPTEE)
+#if STM32MP_SP_MIN_IN_DDR
+	bl_mem_params_node_t *tos_fw_mem_params;
+#endif
 	uintptr_t sec_base_address = 0U;
 	size_t sec_size = 0U;
 #endif
@@ -594,18 +602,28 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			switch (image_ids[i]) {
 			case BL32_IMAGE_ID:
 				bl_mem_params->ep_info.pc = config_info->config_addr;
-#if defined(AARCH32_SP_OPTEE)
+#if STM32MP_SP_MIN_IN_DDR || defined(AARCH32_SP_OPTEE)
 				sec_base_address += config_info->config_addr;
 				sec_size += config_info->config_max_size;
-
+#if defined(AARCH32_SP_OPTEE)
 				/* In case of OPTEE, initialize address space with tos_fw addr */
 				bl_mem_params = get_bl_mem_params_node(BL32_EXTRA1_IMAGE_ID);
 				bl_mem_params->image_info.image_base = config_info->config_addr;
 				bl_mem_params->image_info.image_max_size =
 					config_info->config_max_size;
 #endif
+#endif
 				break;
 			case TOS_FW_CONFIG_ID:
+#if STM32MP_SP_MIN_IN_DDR
+				if (config_info->config_addr < sec_base_address) {
+					sec_size += sec_base_address - config_info->config_addr;
+					sec_base_address = config_info->config_addr;
+				} else {
+					sec_size = config_info->config_addr - sec_base_address +
+						   config_info->config_max_size;
+				}
+#endif
 				break;
 			case BL33_IMAGE_ID:
 				if (!wakeup_standby) {
@@ -639,7 +657,8 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			bl_mem_params->image_info.image_base = sec_base_address;
 			bl_mem_params->image_info.image_max_size = sec_size;
 		}
-
+#endif
+#if STM32MP_SP_MIN_IN_DDR || defined(AARCH32_SP_OPTEE)
 		err = mmap_add_dynamic_region(sec_base_address,
 					      sec_base_address,
 					      sec_size,
@@ -656,7 +675,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		/* Configuration of TZC400 */
 		stm32mp1_security_setup_begin();
 
-#if defined(AARCH32_SP_OPTEE)
+#if STM32MP_SP_MIN_IN_DDR || defined(AARCH32_SP_OPTEE)
 		stm32mp1_security_add_region(sec_base_address, sec_size, true);
 
 		if (sec_base_address > STM32MP_DDR_BASE) {
@@ -703,6 +722,26 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 				paged_mem_params->image_info.image_base;
 		bl_mem_params->ep_info.args.arg1 = 0; /* Unused */
 		bl_mem_params->ep_info.args.arg2 = 0; /* No DT supported */
+#elif STM32MP_SP_MIN_IN_DDR
+		tos_fw_mem_params = get_bl_mem_params_node(TOS_FW_CONFIG_ID);
+		bl_mem_params->image_info.image_max_size +=
+			tos_fw_mem_params->image_info.image_max_size;
+
+		bl_mem_params->ep_info.args.arg0 = 0;
+
+		bl2_to_bl32_args.stm32_pwr_down_wfi =
+						&stm32_pwr_down_wfi_wrapper;
+		bl2_to_bl32_args.bl2_code_base = BL_CODE_BASE;
+		bl2_to_bl32_args.bl2_code_end = BL_CODE_END;
+		bl2_to_bl32_args.bl2_end = BL2_END;
+		dsb();
+		flush_dcache_range((uintptr_t)&bl2_to_bl32_args,
+				   sizeof(bl2_to_bl32_args));
+
+		bl_mem_params->ep_info.args.arg3 =
+					(u_register_t)&bl2_to_bl32_args;
+#else
+		/* Nothing to do, BL32 is loaded together with BL2 */
 #endif
 		break;
 

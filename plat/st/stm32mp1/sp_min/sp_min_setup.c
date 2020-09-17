@@ -40,6 +40,11 @@
 #include <platform_sp_min.h>
 #include <stm32mp1_context.h>
 #include <stm32mp1_power_config.h>
+#include <stm32mp1_critic_power.h>
+
+#if STM32MP_SP_MIN_IN_DDR
+void (*stm32_pwr_down_wfi)(bool is_cstop);
+#endif
 
 /******************************************************************************
  * Placeholder variables for copying the arguments that have been passed to
@@ -392,6 +397,11 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				  u_register_t arg2, u_register_t arg3)
 {
 	bl_params_t *params_from_bl2 = (bl_params_t *)arg0;
+#if STM32MP_SP_MIN_IN_DDR
+	struct bl2_to_bl32_args *bl2_to_bl32_args_p;
+	uintptr_t bl2_code_end = 0U;
+	uintptr_t bl2_end = 0U;
+#endif
 	uintptr_t dt_addr = arg1;
 	uintptr_t sec_base = 0U;
 	size_t sec_size = 0U;
@@ -402,6 +412,39 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	mmap_add_region(BL_CODE_BASE, BL_CODE_BASE,
 			BL_CODE_END - BL_CODE_BASE,
 			MT_CODE | MT_SECURE);
+
+#if STM32MP_SP_MIN_IN_DDR
+	bl2_to_bl32_args_p = (struct bl2_to_bl32_args *)arg3;
+
+	stm32_pwr_down_wfi = bl2_to_bl32_args_p->stm32_pwr_down_wfi;
+
+	/* BL2 Code */
+	mmap_add_region(BL2_BASE, BL2_BASE,
+			bl2_to_bl32_args_p->bl2_code_end - BL2_BASE,
+			MT_CODE | MT_SECURE);
+
+	/* BL2 RW memory */
+	mmap_add_region(bl2_to_bl32_args_p->bl2_code_end,
+			bl2_to_bl32_args_p->bl2_code_end,
+			bl2_to_bl32_args_p->bl2_end -
+				bl2_to_bl32_args_p->bl2_code_end,
+			MT_RW_DATA | MT_SECURE);
+
+	/* BL32 data*/
+	mmap_add_region(BL_CODE_END, BL_CODE_END,
+			BL_END - BL_CODE_END,
+			MT_RW_DATA | MT_SECURE);
+
+	/* BL32 Device Tree Blob */
+	mmap_add_region(STM32MP_BL32_DTB_BASE, STM32MP_BL32_DTB_BASE,
+			STM32MP_BL32_DTB_SIZE,
+			MT_RO_DATA | MT_SECURE);
+
+	/* Map SCMI shared buffers */
+	mmap_add_region(STM32MP_SCMI_NS_SHM_BASE, STM32MP_SCMI_NS_SHM_BASE,
+			STM32MP_SCMI_NS_SHM_SIZE,
+			MT_DEVICE | MT_RW | MT_NS | MT_EXECUTE_NEVER);
+#endif
 
 	configure_mmu();
 
