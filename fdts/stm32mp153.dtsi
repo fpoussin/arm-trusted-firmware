@@ -14,6 +14,7 @@
 			reg = <1>;
 			clocks = <&rcc CK_MPU>;
 			clock-names = "cpu";
+			operating-points-v2 = <&cpu0_opp_table>;
 		};
 	};
 };

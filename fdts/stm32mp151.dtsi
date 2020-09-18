@@ -19,9 +19,17 @@
 			compatible = "arm,cortex-a7";
 			device_type = "cpu";
 			reg = <0>;
+			clocks = <&rcc CK_MPU>;
+			clock-names = "cpu";
+			operating-points-v2 = <&cpu0_opp_table>;
 			nvmem-cells = <&part_number_otp>;
 			nvmem-cell-names = "part_number";
 		};
+	};
+
+	cpu0_opp_table: cpu0-opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
 	};
 
 	nvmem_layout: nvmem_layout@0 {
@@ -112,7 +120,7 @@
 		usart2: serial@4000e000 {
 			compatible = "st,stm32h7-uart";
 			reg = <0x4000e000 0x400>;
-			interrupts-extended = <&exti 27 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc USART2_K>;
 			resets = <&rcc USART2_R>;
 			status = "disabled";
@@ -121,7 +129,7 @@
 		usart3: serial@4000f000 {
 			compatible = "st,stm32h7-uart";
 			reg = <0x4000f000 0x400>;
-			interrupts-extended = <&exti 28 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc USART3_K>;
 			resets = <&rcc USART3_R>;
 			status = "disabled";
@@ -140,7 +148,7 @@
 		uart5: serial@40011000 {
 			compatible = "st,stm32h7-uart";
 			reg = <0x40011000 0x400>;
-			interrupts-extended = <&exti 31 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc UART5_K>;
 			resets = <&rcc UART5_R>;
 			status = "disabled";
@@ -164,7 +172,7 @@
 		uart7: serial@40018000 {
 			compatible = "st,stm32h7-uart";
 			reg = <0x40018000 0x400>;
-			interrupts-extended = <&exti 32 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc UART7_K>;
 			resets = <&rcc UART7_R>;
 			status = "disabled";
@@ -173,7 +181,7 @@
 		uart8: serial@40019000 {
 			compatible = "st,stm32h7-uart";
 			reg = <0x40019000 0x400>;
-			interrupts-extended = <&exti 33 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc UART8_K>;
 			resets = <&rcc UART8_R>;
 			status = "disabled";
@@ -182,7 +190,7 @@
 		usart6: serial@44003000 {
 			compatible = "st,stm32h7-uart";
 			reg = <0x44003000 0x400>;
-			interrupts-extended = <&exti 29 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc USART6_K>;
 			resets = <&rcc USART6_R>;
 			status = "disabled";
@@ -206,7 +214,7 @@
 			clock-names = "otg";
 			resets = <&rcc USBO_R>;
 			reset-names = "dwc2";
-			interrupts-extended = <&exti 44 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 			g-rx-fifo-size = <512>;
 			g-np-tx-fifo-size = <32>;
 			g-tx-fifo-size = <256 16 16 16 16 16 16 16>;

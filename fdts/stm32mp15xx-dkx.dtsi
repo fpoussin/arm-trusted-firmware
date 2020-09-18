@@ -211,23 +211,18 @@
 			   "board_id";
 };
 
-&pwr {
+&pwr_regulators {
 	system_suspend_supported_soc_modes = <
 		STM32_PM_CSLEEP_RUN
 		STM32_PM_CSTOP_ALLOW_LP_STOP
 		STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
 	>;
-
 	system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
-};
-
-&pwr_regulators {
 	vdd-supply = <&vdd>;
 	vdd_3v3_usbfs-supply = <&vdd_usb>;
 };
 
 &rcc {
-	secure-status = "okay";
 	st,hsi-cal;
 	st,csi-cal;
 	st,cal-sec = <60>;
@@ -471,7 +466,7 @@
 
 &vdd_usb {
 	standby-ddr-sr {
-		regulator-off-in-suspend;
+		regulator-on-in-suspend;
 	};
 	standby-ddr-off {
 		regulator-off-in-suspend;

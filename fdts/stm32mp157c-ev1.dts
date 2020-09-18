@@ -37,9 +37,19 @@
 	};
 };
 
+&i2c4 {
+	pmic: stpmic@33 {
+		regulators {
+			v1v8: ldo6 {
+				regulator-enable-ramp-delay = <300000>;
+			};
+		};
+	};
+};
+
 &qspi {
 	pinctrl-names = "default";
-	pinctrl-0 = <&qspi_clk_pins_a &qspi_bk1_pins_a>;
+	pinctrl-0 = <&qspi_clk_pins_a &qspi_bk1_pins_a &qspi_bk2_pins_a>;
 	reg = <0x58003000 0x1000>, <0x70000000 0x4000000>;
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -55,8 +65,25 @@
 	};
 };
 
+&timers12 {
+	status = "disabled";
+};
+
 &usart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&usart3_pins_a>;
+	uart-has-rtscts;
 	status = "disabled";
+};
+
+&usbotg_hs {
+	pinctrl-0 = <&usbotg_hs_pins_a>;
+	pinctrl-names = "default";
+	phys = <&usbphyc_port1 0>;
+	phy-names = "usb2-phy";
+	status = "okay";
+};
+
+&usbphyc {
+	status = "okay";
 };
