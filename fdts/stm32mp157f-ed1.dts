@@ -3,29 +3,34 @@
  * Copyright (C) STMicroelectronics 2019 - All Rights Reserved
  * Author: Alexandre Torgue <alexandre.torgue@st.com> for STMicroelectronics.
  */
-
 /dts-v1/;
 
 #include "stm32mp157.dtsi"
-#include "stm32mp15xa.dtsi"
+#include "stm32mp15xf.dtsi"
 #include "stm32mp15-pinctrl.dtsi"
-#include "stm32mp15xxac-pinctrl.dtsi"
-#include "stm32mp15xx-dkx.dtsi"
+#include "stm32mp15xxaa-pinctrl.dtsi"
+#include "stm32mp15xx-edx.dtsi"
 #include <dt-bindings/soc/st,stm32-etzpc.h>
 
 / {
-	model = "STMicroelectronics STM32MP157A-DK1 Discovery Board";
-	compatible = "st,stm32mp157a-dk1", "st,stm32mp157";
-
-	aliases {
-		serial0 = &uart4;
-		serial1 = &usart3;
-		serial2 = &uart7;
-	};
+	model = "STMicroelectronics STM32MP157F eval daughter";
+	compatible = "st,stm32mp157f-ed1", "st,stm32mp157";
 
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
+
+	aliases {
+		serial0 = &uart4;
+	};
+};
+
+&cpu1{
+	cpu-supply = <&vddcore>;
+};
+
+&cryp1 {
+	status = "okay";
 };
 
 &etzpc {
@@ -36,6 +41,7 @@
 		DECPROT(STM32MP1_ETZPC_I2C6_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 		DECPROT(STM32MP1_ETZPC_RNG1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 		DECPROT(STM32MP1_ETZPC_HASH1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+		DECPROT(STM32MP1_ETZPC_CRYP1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 		DECPROT(STM32MP1_ETZPC_DDRCTRL_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 		DECPROT(STM32MP1_ETZPC_DDRPHYC_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 		DECPROT(STM32MP1_ETZPC_STGENC_ID, DECPROT_S_RW, DECPROT_LOCK)
