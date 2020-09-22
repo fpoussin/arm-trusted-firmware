@@ -169,12 +169,15 @@ enum ddr_type {
 					 STM32MP_BL2_SIZE)
 #endif
 
-#if STM32MP_USB_PROGRAMMER
- /* BL2 and BL32/sp_min require 5 finer granularity tables */
- #define MAX_XLAT_TABLES			U(5)	/* 20 KB for mapping */
-#else
- /* BL2 and BL32/sp_min require 4 finer granularity tables */
+ /* BL2 and BL32/sp_min require finer granularity tables */
+#if defined(IMAGE_BL2)
  #define MAX_XLAT_TABLES			U(4)	/* 16 KB for mapping */
+#elif defined(IMAGE_BL32)
+#if STM32MP_SP_MIN_IN_DDR
+#define MAX_XLAT_TABLES				U(6)	/* 20 KB for mapping */
+#else
+#define MAX_XLAT_TABLES				U(4)	/* 16 KB for mapping */
+#endif
 #endif
 
 /*
@@ -182,7 +185,11 @@ enum ddr_type {
  * BL stm32mp1_mmap size + mmap regions in *_plat_arch_setup
  */
 #if defined(IMAGE_BL2)
-  #define MAX_MMAP_REGIONS		11
+ #if STM32MP_USB_PROGRAMMER
+  #define MAX_MMAP_REGIONS		8
+ #else
+  #define MAX_MMAP_REGIONS		7
+ #endif
 #endif
 #if defined(IMAGE_BL32)
  #define MAX_MMAP_REGIONS		10

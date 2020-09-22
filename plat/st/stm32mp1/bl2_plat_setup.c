@@ -322,12 +322,6 @@ void bl2_el3_plat_arch_setup(void)
 			BL_CODE_END - BL_CODE_BASE,
 			MT_CODE | MT_SECURE);
 
-#ifdef AARCH32_SP_OPTEE
-	mmap_add_region(STM32MP_OPTEE_BASE, STM32MP_OPTEE_BASE,
-			STM32MP_OPTEE_SIZE,
-			MT_MEMORY | MT_RW | MT_SECURE);
-#endif
-
 	/* Prevent corruption of preloaded Device Tree */
 	mmap_add_region(DTB_BASE, DTB_BASE,
 			DTB_LIMIT - DTB_BASE,
