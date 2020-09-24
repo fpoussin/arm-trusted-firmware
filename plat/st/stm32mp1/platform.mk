@@ -205,7 +205,6 @@ BL2_SOURCES		+=	lib/fconf/fconf.c				\
 				lib/fconf/fconf_dyn_cfg_getter.c
 
 BL2_SOURCES		+=	drivers/io/io_block.c					\
-				drivers/io/io_dummy.c					\
 				drivers/io/io_fip.c					\
 				drivers/io/io_mtd.c					\
 				drivers/io/io_storage.c					\

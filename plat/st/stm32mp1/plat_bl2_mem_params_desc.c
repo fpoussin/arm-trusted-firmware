@@ -34,6 +34,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
+
 	/* Fill BL32 related information */
 	{
 		.image_id = BL32_IMAGE_ID,
@@ -53,7 +54,6 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 		.next_handoff_image_id = BL33_IMAGE_ID,
 	},
 
-#if defined(AARCH32_SP_OPTEE)
 	/* Fill BL32 external 1 image related information */
 	{
 		.image_id = BL32_EXTRA1_IMAGE_ID,
@@ -82,7 +82,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 
 		.next_handoff_image_id = INVALID_IMAGE_ID,
 	},
-#endif /* AARCH32_SP_OPTEE */
+
 	/* Fill HW_CONFIG related information if it exists */
 	{
 	    .image_id = HW_CONFIG_ID,
@@ -95,7 +95,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
-#if !defined(AARCH32_SP_OPTEE)
+
 	{
 	    .image_id = TOS_FW_CONFIG_ID,
 	    SET_STATIC_PARAM_HEAD(ep_info, PARAM_IMAGE_BINARY,
@@ -107,7 +107,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
-#endif
+
 	/* Fill BL33 related information */
 	{
 		.image_id = BL33_IMAGE_ID,
