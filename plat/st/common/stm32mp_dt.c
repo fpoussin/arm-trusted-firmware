@@ -267,14 +267,21 @@ int dt_match_instance_by_compatible(const char *compatible, uintptr_t address)
  ******************************************************************************/
 uint32_t dt_get_ddr_size(void)
 {
+	static uint32_t size;
 	int node;
+
+	if (size != 0U) {
+		return size;
+	}
 
 	node = fdt_node_offset_by_compatible(fdt, -1, DT_DDR_COMPAT);
 	if (node < 0) {
 		return 0;
 	}
 
-	return fdt_read_uint32_default(fdt, node, "st,mem-size", 0);
+	size = fdt_read_uint32_default(fdt, node, "st,mem-size", 0U);
+
+	return size;
 }
 
 /*******************************************************************************
