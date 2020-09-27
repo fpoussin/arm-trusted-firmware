@@ -749,31 +749,6 @@ int plat_bind_regulator(struct stm32mp_regulator *regu)
 	return 0;
 }
 
-/* Get the non-secure DDR size */
-uint32_t stm32mp_get_ddr_ns_size(void)
-{
-#if STM32MP_SP_MIN_IN_DDR
-	return STM32MP_BL32_BASE - STM32MP_DDR_BASE;
-#else
-	static uint32_t ddr_ns_size;
-	uint32_t ddr_size;
-
-	if (ddr_ns_size != 0U) {
-		return ddr_ns_size;
-	}
-
-	ddr_size = dt_get_ddr_size();
-	if ((ddr_size <= (STM32MP_DDR_S_SIZE + STM32MP_DDR_SHMEM_SIZE)) ||
-	    (ddr_size > STM32MP_DDR_MAX_SIZE)) {
-		panic();
-	}
-
-	ddr_ns_size = ddr_size - (STM32MP_DDR_S_SIZE + STM32MP_DDR_SHMEM_SIZE);
-
-	return ddr_ns_size;
-#endif
-}
-
 bool stm32mp_boot_action_is_wakeup_from_standby(void)
 {
 	return (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY) ||

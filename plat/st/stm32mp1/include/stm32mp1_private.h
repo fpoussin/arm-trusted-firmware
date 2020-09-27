@@ -43,8 +43,6 @@ void stm32mp1_syscfg_init(void);
 void stm32mp1_syscfg_enable_io_compensation(void);
 void stm32mp1_syscfg_disable_io_compensation(void);
 
-uint32_t stm32mp_get_ddr_ns_size(void);
-
 void stm32mp1_init_scmi_server(void);
 void stm32mp1_pm_save_scmi_state(uint8_t *state, size_t size);
 void stm32mp1_pm_restore_scmi_state(uint8_t *state, size_t size);

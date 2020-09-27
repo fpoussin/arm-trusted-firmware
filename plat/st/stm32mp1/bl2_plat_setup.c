@@ -668,29 +668,6 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 					      MT_MEMORY | MT_RW | MT_NS);
 		assert(err == 0);
 
-		/* Configuration of TZC400 */
-		stm32mp1_security_setup_begin();
-
-#if STM32MP_SP_MIN_IN_DDR || defined(AARCH32_SP_OPTEE)
-		stm32mp1_security_add_region(sec_base_address, sec_size, true);
-
-		if (sec_base_address > STM32MP_DDR_BASE) {
-			stm32mp1_security_add_region(STM32MP_DDR_BASE,
-						     sec_base_address - STM32MP_DDR_BASE,
-						     false);
-		}
-
-		ddr_top = STM32MP_DDR_BASE + dt_get_ddr_size() - 1U;
-		if (sec_base_address + sec_size < ddr_top) {
-			stm32mp1_security_add_region(sec_base_address + sec_size,
-						     ddr_top - (sec_base_address + sec_size) + 1U,
-						     false);
-		}
-#else
-		stm32mp1_security_add_region(STM32MP_DDR_BASE, dt_get_ddr_size(), false);
-#endif
-		stm32mp1_security_setup_end();
-
 		break;
 	case BL32_IMAGE_ID:
 #if defined(AARCH32_SP_OPTEE)
@@ -758,4 +735,9 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 	}
 
 	return err;
+}
+
+void bl2_el3_plat_prepare_exit(void)
+{
+	stm32mp1_security_setup();
 }
