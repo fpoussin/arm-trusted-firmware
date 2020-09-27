@@ -90,6 +90,27 @@
 	}
 
 /*
+ * It is used to modify the filters status for a defined region.
+ */
+#define DEFINE_TZC_COMMON_UPDATE_FILTERS(fn_name, macro_name)		\
+	static inline void _tzc##fn_name##_update_filters(		\
+						uintptr_t base,		\
+						unsigned int region_no,	\
+						unsigned int nbfilters, \
+						unsigned int filters)	\
+	{								\
+		uint32_t filters_mask = GENMASK(nbfilters - 1U, 0);	\
+									\
+		mmio_clrsetbits_32(base +				\
+			TZC_REGION_OFFSET(				\
+				TZC_##macro_name##_REGION_SIZE,		\
+				region_no) +				\
+			TZC_##macro_name##_REGION_ATTR_0_OFFSET,	\
+			filters_mask << TZC_REGION_ATTR_F_EN_SHIFT,	\
+			filters << TZC_REGION_ATTR_F_EN_SHIFT);		\
+	}
+
+/*
  * It is used to program region 0 ATTRIBUTES and ACCESS register.
  */
 #define DEFINE_TZC_COMMON_CONFIGURE_REGION0(fn_name)			\

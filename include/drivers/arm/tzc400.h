@@ -104,11 +104,12 @@ void tzc400_init(uintptr_t base);
 void tzc400_configure_region0(unsigned int sec_attr,
 			   unsigned int ns_device_access);
 void tzc400_configure_region(unsigned int filters,
-			  unsigned int region,
-			  unsigned long long region_base,
-			  unsigned long long region_top,
-			  unsigned int sec_attr,
-			  unsigned int nsaid_permissions);
+			     unsigned int region,
+			     unsigned long long region_base,
+			     unsigned long long region_top,
+			     unsigned int sec_attr,
+			     unsigned int nsaid_permissions);
+void tzc400_update_filters(unsigned int region, unsigned int filters);
 void tzc400_set_action(unsigned int action);
 void tzc400_enable_filters(void);
 void tzc400_disable_filters(void);
