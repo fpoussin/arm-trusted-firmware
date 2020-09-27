@@ -436,7 +436,7 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 			MT_RW_DATA | MT_SECURE);
 
 	/* BL32 Device Tree Blob */
-	mmap_add_region(STM32MP_BL32_DTB_BASE, STM32MP_BL32_DTB_BASE,
+	mmap_add_region(dt_addr, dt_addr,
 			STM32MP_BL32_DTB_SIZE,
 			MT_RO_DATA | MT_SECURE);
 
@@ -497,6 +497,14 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	stm32mp1_etzpc_early_setup();
 
 	if (arg2 != 0U) {
+		/* This will expect the BL32 DT and BL32 are grouped */
+		if (dt_addr < sec_base) {
+			sec_size = sec_size + sec_base - dt_addr;
+			sec_base = dt_addr;
+		} else {
+			sec_size = dt_addr - sec_base + STM32MP_BL32_DTB_SIZE;
+		}
+
 		populate_ns_dt(arg2, sec_base, sec_size);
 	} else {
 		INFO("Non-secure device tree not found\n");
