@@ -26,6 +26,7 @@
 #include <drivers/st/stm32_fmc2_nand.h>
 #include <drivers/st/stm32_qspi.h>
 #include <drivers/st/stm32_sdmmc2.h>
+#include <lib/fconf/fconf.h>
 #include <lib/mmio.h>
 #include <lib/utils.h>
 #include <lib/usb/usb_core.h>
@@ -34,6 +35,8 @@
 #include <tools_share/firmware_image_package.h>
 
 #include <stm32cubeprogrammer.h>
+
+#include <stm32mp_fconf_getter.h>
 
 /* IO devices */
 uintptr_t fip_dev_handle;
@@ -105,193 +108,17 @@ static const io_dev_connector_t *spi_dev_con;
 static const io_dev_connector_t *memmap_dev_con;
 #endif
 
-static const io_uuid_spec_t fw_config_uuid_spec = {
-	.uuid = UUID_FW_CONFIG,
-};
-
-static const io_uuid_spec_t bl33_partition_spec = {
-	.uuid = UUID_NON_TRUSTED_FIRMWARE_BL33
-};
-
-static const io_uuid_spec_t tos_fw_config_uuid_spec = {
-	.uuid = UUID_TOS_FW_CONFIG,
-};
-
-static const io_uuid_spec_t hw_config_uuid_spec = {
-	.uuid = UUID_HW_CONFIG,
-};
-
-#ifdef AARCH32_SP_OPTEE
-static const io_uuid_spec_t optee_header_partition_spec = {
-	.uuid = UUID_SECURE_PAYLOAD_BL32
-};
-
-static const io_uuid_spec_t optee_core_partition_spec = {
-	.uuid = UUID_SECURE_PAYLOAD_BL32_EXTRA1
-};
-
-static const io_uuid_spec_t optee_paged_partition_spec = {
-	.uuid = UUID_SECURE_PAYLOAD_BL32_EXTRA2
-};
-#else
-static const io_uuid_spec_t bl32_partition_spec = {
-	.uuid = UUID_SECURE_PAYLOAD_BL32
-};
-#endif
-#if TRUSTED_BOARD_BOOT
-static const io_uuid_spec_t stm32mp_tb_fw_cert_spec = {
-	.uuid = UUID_TRUSTED_BOOT_FW_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_trusted_key_cert_spec = {
-	.uuid = UUID_TRUSTED_KEY_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_soc_fw_key_cert_spec = {
-	.uuid = UUID_SOC_FW_KEY_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_tos_fw_key_cert_spec = {
-	.uuid = UUID_TRUSTED_OS_FW_KEY_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_nt_fw_key_cert_spec = {
-	.uuid = UUID_NON_TRUSTED_FW_KEY_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_soc_fw_cert_spec = {
-	.uuid = UUID_SOC_FW_CONTENT_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_tos_fw_cert_spec = {
-	.uuid = UUID_TRUSTED_OS_FW_CONTENT_CERT,
-};
-
-static const io_uuid_spec_t stm32mp_nt_fw_cert_spec = {
-	.uuid = UUID_NON_TRUSTED_FW_CONTENT_CERT,
-};
-#endif /* TRUSTED_BOARD_BOOT */
-
-static io_block_spec_t image_block_spec = {
+io_block_spec_t image_block_spec = {
 	.offset = 0,
 	.length = 0,
 };
 
-static int open_fip(const uintptr_t spec);
-static int open_storage(const uintptr_t spec);
-
-struct plat_io_policy {
-	uintptr_t *dev_handle;
-	uintptr_t image_spec;
-	int (*check)(const uintptr_t spec);
-};
-
-static const struct plat_io_policy policies[] = {
-	[FIP_IMAGE_ID] = {
-		.dev_handle = &storage_dev_handle,
-		.image_spec = (uintptr_t)&image_block_spec,
-		.check = open_storage
-	},
-#ifdef AARCH32_SP_OPTEE
-	[BL32_IMAGE_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&optee_header_partition_spec,
-		.check = open_fip
-	},
-	[BL32_EXTRA1_IMAGE_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&optee_core_partition_spec,
-		.check = open_fip
-	},
-	[BL32_EXTRA2_IMAGE_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&optee_paged_partition_spec,
-		.check = open_fip
-	},
-#else
-	[BL32_IMAGE_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&bl32_partition_spec,
-		.check = open_fip
-	},
-#endif
-	[BL33_IMAGE_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&bl33_partition_spec,
-		.check = open_fip
-	},
-	[FW_CONFIG_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&fw_config_uuid_spec,
-		.check = open_fip
-	},
-	[TOS_FW_CONFIG_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&tos_fw_config_uuid_spec,
-		.check = open_fip
-	},
-	[HW_CONFIG_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&hw_config_uuid_spec,
-		.check = open_fip
-	},
-#if TRUSTED_BOARD_BOOT
-	[TRUSTED_BOOT_FW_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_tb_fw_cert_spec,
-		.check = open_fip
-	},
-	[TRUSTED_KEY_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_trusted_key_cert_spec,
-		.check = open_fip
-	},
-	[SOC_FW_KEY_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_soc_fw_key_cert_spec,
-		.check = open_fip
-	},
-	[TRUSTED_OS_FW_KEY_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_tos_fw_key_cert_spec,
-		.check = open_fip
-	},
-	[NON_TRUSTED_FW_KEY_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_nt_fw_key_cert_spec,
-		.check = open_fip
-	},
-	[SOC_FW_CONTENT_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_soc_fw_cert_spec,
-		.check = open_fip
-	},
-	[TRUSTED_OS_FW_CONTENT_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_tos_fw_cert_spec,
-		.check = open_fip
-	},
-	[NON_TRUSTED_FW_CONTENT_CERT_ID] = {
-		.dev_handle = &fip_dev_handle,
-		.image_spec = (uintptr_t)&stm32mp_nt_fw_cert_spec,
-		.check = open_fip
-	},
-#endif
-#if STM32MP_SDMMC || STM32MP_EMMC
-	[GPT_IMAGE_ID] = {
-		.dev_handle = &storage_dev_handle,
-		.image_spec = (uintptr_t)&gpt_block_spec,
-		.check = open_storage
-	},
-#endif
-};
-
-static int open_fip(const uintptr_t spec)
+int open_fip(const uintptr_t spec)
 {
 	return io_dev_init(fip_dev_handle, (uintptr_t)FIP_IMAGE_ID);
 }
 
-static int open_storage(const uintptr_t spec)
+int open_storage(const uintptr_t spec)
 {
 	return io_dev_init(storage_dev_handle, 0);
 }
@@ -648,9 +475,7 @@ int plat_get_image_source(unsigned int image_id, uintptr_t *dev_handle,
 	int rc;
 	const struct plat_io_policy *policy;
 
-	assert(image_id < ARRAY_SIZE(policies));
-
-	policy = &policies[image_id];
+	policy = FCONF_GET_PROPERTY(stm32mp, io_policies, image_id);
 	rc = policy->check(policy->image_spec);
 	if (rc == 0) {
 		*image_spec = policy->image_spec;

@@ -516,6 +516,8 @@ skip_console_init:
 		print_pmic_info_and_debug();
 	}
 
+	fconf_populate("TB_FW", STM32MP_DTB_BASE);
+
 	stm32mp_io_setup();
 }
 
