@@ -107,9 +107,11 @@ static volatile int cpu1_state = STATE_NONE;
 
 void stm32_apply_pmic_suspend_config(uint32_t mode)
 {
-	const char *node_name = config_pwr[mode].regul_suspend_node_name;
+	const char *node_name;
 
 	assert(mode < ARRAY_SIZE(config_pwr));
+
+	node_name = config_pwr[mode].regul_suspend_node_name;
 
 	if (node_name != NULL) {
 		if (!initialize_pmic_i2c()) {
