@@ -269,6 +269,19 @@ static void print_boot_device(boot_api_context_t *boot_context)
 	}
 }
 
+static void stm32image_io_setup(void)
+{
+	int io_result __unused;
+
+	io_result = register_io_dev_stm32image(&stm32image_dev_con);
+	assert(io_result == 0);
+
+	io_result = io_dev_open(stm32image_dev_con,
+				(uintptr_t)&stm32image_dev_info_spec,
+				&image_dev_handle);
+	assert(io_result == 0);
+}
+
 #if STM32MP_SDMMC || STM32MP_EMMC
 static void boot_mmc(enum mmc_device_type mmc_dev_type,
 		     uint16_t boot_interface_instance)
@@ -348,14 +361,6 @@ static void boot_mmc(enum mmc_device_type mmc_dev_type,
 
 	io_result = io_dev_open(mmc_dev_con, 0, &storage_dev_handle);
 	assert(io_result == 0);
-
-	io_result = register_io_dev_stm32image(&stm32image_dev_con);
-	assert(io_result == 0);
-
-	io_result = io_dev_open(stm32image_dev_con,
-				(uintptr_t)&stm32image_dev_info_spec,
-				&image_dev_handle);
-	assert(io_result == 0);
 }
 #endif /* STM32MP_SDMMC || STM32MP_EMMC */
 
@@ -401,14 +406,6 @@ static void boot_spi_nor(boot_api_context_t *boot_context)
 	part->part_offset = STM32MP_NOR_TEEX_OFFSET;
 	part->bkp_offset = 0U;
 #endif
-
-	io_result = register_io_dev_stm32image(&stm32image_dev_con);
-	assert(io_result == 0);
-
-	io_result = io_dev_open(stm32image_dev_con,
-				(uintptr_t)&stm32image_dev_info_spec,
-				&image_dev_handle);
-	assert(io_result == 0);
 }
 #endif /* STM32MP_SPI_NOR */
 
@@ -454,14 +451,6 @@ static void boot_fmc2_nand(boot_api_context_t *boot_context)
 	part->part_offset = STM32MP_NAND_TEEX_OFFSET;
 	part->bkp_offset = nand_dev_spec.erase_size;
 #endif
-
-	io_result = register_io_dev_stm32image(&stm32image_dev_con);
-	assert(io_result == 0);
-
-	io_result = io_dev_open(stm32image_dev_con,
-				(uintptr_t)&stm32image_dev_info_spec,
-				&image_dev_handle);
-	assert(io_result == 0);
 }
 #endif /* STM32MP_RAW_NAND */
 
@@ -508,14 +497,6 @@ static void boot_spi_nand(boot_api_context_t *boot_context)
 	part->part_offset = STM32MP_NAND_TEEX_OFFSET;
 	part->bkp_offset = spi_nand_dev_spec.erase_size;
 #endif
-
-	io_result = register_io_dev_stm32image(&stm32image_dev_con);
-	assert(io_result == 0);
-
-	io_result = io_dev_open(stm32image_dev_con,
-				(uintptr_t)&stm32image_dev_info_spec,
-				&image_dev_handle);
-	assert(io_result == 0);
 }
 #endif /* STM32MP_SPI_NAND */
 
@@ -545,30 +526,35 @@ void stm32mp_io_setup(void)
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_SD:
 		dmbsy();
 		boot_mmc(MMC_IS_SD, boot_context->boot_interface_instance);
+		stm32image_io_setup();
 		break;
 #endif
 #if STM32MP_EMMC
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_EMMC:
 		dmbsy();
 		boot_mmc(MMC_IS_EMMC, boot_context->boot_interface_instance);
+		stm32image_io_setup();
 		break;
 #endif
 #if STM32MP_SPI_NOR
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NOR_QSPI:
 		dmbsy();
 		boot_spi_nor(boot_context);
+		stm32image_io_setup();
 		break;
 #endif
 #if STM32MP_RAW_NAND
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NAND_FMC:
 		dmbsy();
 		boot_fmc2_nand(boot_context);
+		stm32image_io_setup();
 		break;
 #endif
 #if STM32MP_SPI_NAND
 	case BOOT_API_CTX_BOOT_INTERFACE_SEL_FLASH_NAND_QSPI:
 		dmbsy();
 		boot_spi_nand(boot_context);
+		stm32image_io_setup();
 		break;
 #endif
 
