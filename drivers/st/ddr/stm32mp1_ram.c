@@ -22,6 +22,7 @@
 #define DDR_ANTIPATTERN	0x55555555U
 
 static struct ddr_info ddr_priv_data;
+static bool ddr_self_refresh;
 
 int stm32mp1_ddr_clk_enable(struct ddr_info *priv, uint32_t mem_speed)
 {
@@ -189,12 +190,8 @@ static int stm32mp1_ddr_setup(void)
 	int ret;
 	struct stm32mp1_ddr_config config;
 	int node, len;
-	uint32_t magic, uret, idx;
+	uint32_t uret, idx;
 	void *fdt;
-	uint32_t bkpr_core1_addr =
-		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
-	uint32_t bkpr_core1_magic =
-		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
 
 #define PARAM(x, y, z)							\
 	{								\
@@ -276,15 +273,10 @@ static int stm32mp1_ddr_setup(void)
 
 	config.self_refresh = false;
 
-	stm32mp_clk_enable(RTCAPB);
-
-	magic =	mmio_read_32(bkpr_core1_magic);
-	if (magic == BOOT_API_A7_CORE0_MAGIC_NUMBER) {
+	if (stm32mp1_is_wakeup_from_standby()) {
 		config.self_refresh = true;
 		config.zdata = stm32_get_zdata_from_context();
 	}
-
-	stm32mp_clk_disable(RTCAPB);
 
 	/* Disable axidcg clock gating during init */
 	mmio_clrbits_32(priv->rcc + RCC_DDRITFCR, RCC_DDRITFCR_AXIDCGEN);
@@ -293,14 +285,6 @@ static int stm32mp1_ddr_setup(void)
 
 	/* Enable axidcg clock gating */
 	mmio_setbits_32(priv->rcc + RCC_DDRITFCR, RCC_DDRITFCR_AXIDCGEN);
-
-	/* check if DDR content is lost (self-refresh aborted) */
-	if ((magic == BOOT_API_A7_CORE0_MAGIC_NUMBER) && !config.self_refresh) {
-		/* clear Backup register */
-		mmio_write_32(bkpr_core1_addr, 0);
-		/* clear magic number */
-		mmio_write_32(bkpr_core1_magic, 0);
-	}
 
 	priv->info.size = config.info.size;
 
@@ -355,7 +339,15 @@ static int stm32mp1_ddr_setup(void)
 		panic();
 	}
 
+	/* Save DDR self_refresh state */
+	ddr_self_refresh = config.self_refresh;
+
 	return 0;
+}
+
+bool stm32mp1_ddr_is_restored(void)
+{
+	return ddr_self_refresh;
 }
 
 int stm32mp1_ddr_probe(void)
