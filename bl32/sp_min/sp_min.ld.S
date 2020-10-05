@@ -102,8 +102,6 @@ SECTIONS
     BSS_SECTION >RAM
     XLAT_TABLE_SECTION >RAM
 
-     __BSS_SIZE__ = SIZEOF(.bss);
-
 #if USE_COHERENT_MEM
     /*
      * The base address of the coherent memory section must be page-aligned (4K)
@@ -129,9 +127,6 @@ SECTIONS
         . = ALIGN(PAGE_SIZE);
         __COHERENT_RAM_END__ = .;
     } >RAM
-
-    __COHERENT_RAM_UNALIGNED_SIZE__ =
-        __COHERENT_RAM_END_UNALIGNED__ - __COHERENT_RAM_START__;
 #endif
 
     /*

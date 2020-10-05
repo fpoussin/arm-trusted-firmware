@@ -119,6 +119,14 @@
 		RELOC_SECTIONS_PATTERN			\
 		__RELA_END__ = .;			\
 	}
+#else
+#define RELA_SECTION					\
+	.rel.dyn : ALIGN(STRUCT_ALIGN) {		\
+		__RELA_START__ = .;			\
+		*(.rel*)				\
+		__RELA_END__ = .;			\
+	}
+#endif
 
 #if !(defined(IMAGE_BL31) && RECLAIM_INIT_CODE)
 #define STACK_SECTION					\
