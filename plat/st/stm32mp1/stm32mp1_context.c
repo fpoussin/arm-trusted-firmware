@@ -33,3 +33,20 @@ int stm32_save_boot_interface(uint32_t interface, uint32_t instance)
 
 	return 0;
 }
+
+int stm32_get_boot_interface(uint32_t *interface, uint32_t *instance)
+{
+	uint32_t itf;
+	uint32_t bkpr = tamp_bkpr(TAMP_BOOT_ITF_BACKUP_REG_ID);
+
+	stm32mp_clk_enable(RTCAPB);
+
+	itf = (mmio_read_32(bkpr) & TAMP_BOOT_ITF_MASK) >> TAMP_BOOT_ITF_SHIFT;
+
+	stm32mp_clk_disable(RTCAPB);
+
+	*interface = itf >> 4;
+	*instance = itf & 0xFU;
+
+	return 0;
+}
