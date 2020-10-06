@@ -29,6 +29,7 @@
 #include <plat/common/platform.h>
 
 #include <platform_sp_min.h>
+#include <stm32mp1_context.h>
 
 /******************************************************************************
  * Placeholder variables for copying the arguments that have been passed to
@@ -116,11 +117,24 @@ static void setup_uart_console(void)
 	struct dt_node_info dt_uart_info;
 	unsigned int console_flags;
 	int result;
+#if STM32MP_UART_PROGRAMMER
+	uint32_t boot_itf;
+	uint32_t boot_instance;
+#endif
 
 	result = dt_get_stdout_uart_info(&dt_uart_info);
 	if ((result <= 0) || (dt_uart_info.status == DT_DISABLED)) {
 		return;
 	}
+
+#if STM32MP_UART_PROGRAMMER
+	stm32_get_boot_interface(&boot_itf, &boot_instance);
+
+	if ((boot_itf == BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART) &&
+	    (get_uart_address(boot_instance) == dt_uart_info.base)) {
+		return;
+	}
+#endif
 
 	if (console_stm32_register(dt_uart_info.base, 0,
 				   STM32MP_UART_BAUDRATE, &console) == 0U) {

@@ -18,6 +18,7 @@
 #include <drivers/st/bsec.h>
 #include <drivers/st/stm32_console.h>
 #include <drivers/st/stm32_iwdg.h>
+#include <drivers/st/stm32_uart.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp1_clk.h>
@@ -28,6 +29,7 @@
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
 
+#include <boot_api.h>
 #include <stm32mp1_context.h>
 #include <stm32mp1_dbgmcu.h>
 
@@ -185,6 +187,10 @@ void bl2_el3_plat_arch_setup(void)
 	uint32_t clk_rate;
 	uintptr_t pwr_base;
 	uintptr_t rcc_base;
+	bool serial_uart_interface __unused =
+				(boot_context->boot_interface_selected ==
+				 BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART);
+	uintptr_t uart_prog_addr __unused;
 
 	mmap_add_region(BL_CODE_BASE, BL_CODE_BASE,
 			BL_CODE_END - BL_CODE_BASE,
@@ -241,6 +247,14 @@ void bl2_el3_plat_arch_setup(void)
 
 	generic_delay_timer_init();
 
+#if STM32MP_UART_PROGRAMMER
+	uart_prog_addr = get_uart_address(boot_context->boot_interface_instance);
+
+	/* Disable programmer UART before changing clock tree */
+	if (serial_uart_interface) {
+		stm32_uart_stop(uart_prog_addr);
+	}
+#endif
 #if STM32MP_USB_PROGRAMMER
 	if (boot_context->boot_interface_selected ==
 	    BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB) {
@@ -260,7 +274,11 @@ void bl2_el3_plat_arch_setup(void)
 	result = dt_get_stdout_uart_info(&dt_uart_info);
 
 	if ((result <= 0) ||
-	    (dt_uart_info.status == 0U) ||
+	    (dt_uart_info.status == DT_DISABLED) ||
+#if STM32MP_UART_PROGRAMMER
+	    (serial_uart_interface &&
+	     (uart_prog_addr == dt_uart_info.base)) ||
+#endif
 	    (dt_uart_info.clock < 0) ||
 	    (dt_uart_info.reset < 0)) {
 		goto skip_console_init;
