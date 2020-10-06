@@ -14,6 +14,7 @@
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 
+#define DT_UART_COMPAT		"st,stm32h7-uart"
 /*
  * Get the frequency of an oscillator from its name in device tree.
  * @param name: oscillator name
@@ -290,4 +291,48 @@ int fdt_get_clock_id(int node)
 
 	cuint++;
 	return (int)fdt32_to_cpu(*cuint);
+}
+
+/*
+ * Get the frequency of the specified UART instance.
+ * @param instance: UART interface registers base address.
+ * @return: clock frequency on success, 0 value on failure.
+ */
+unsigned long fdt_get_uart_clock_freq(uintptr_t instance)
+{
+	int node;
+	void *fdt;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return 0UL;
+	}
+
+	/* Check for UART nodes */
+	for (node = fdt_node_offset_by_compatible(fdt, -1, DT_UART_COMPAT);
+	     node != -FDT_ERR_NOTFOUND;
+	     node = fdt_node_offset_by_compatible(fdt, node, DT_UART_COMPAT)) {
+		const fdt32_t *cuint;
+		unsigned long clk_id;
+
+		cuint = fdt_getprop(fdt, node, "reg", NULL);
+		if (cuint == NULL) {
+			continue;
+		}
+
+		if ((uintptr_t)fdt32_to_cpu(*cuint) != instance) {
+			continue;
+		}
+
+		cuint = fdt_getprop(fdt, node, "clocks", NULL);
+		if (cuint == NULL) {
+			continue;
+		}
+
+		cuint++;
+		clk_id = (unsigned long)(fdt32_to_cpu(*cuint));
+
+		return stm32mp_clk_get_rate(clk_id);
+	}
+
+	return 0UL;
 }

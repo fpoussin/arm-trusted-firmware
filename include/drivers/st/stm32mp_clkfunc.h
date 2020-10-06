@@ -27,5 +27,6 @@ const fdt32_t *fdt_rcc_read_prop(const char *prop_name, int *lenp);
 bool fdt_get_rcc_secure_status(void);
 
 int fdt_get_clock_id(int node);
+unsigned long fdt_get_uart_clock_freq(uintptr_t instance);
 
 #endif /* STM32MP_CLKFUNC_H */
