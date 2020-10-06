@@ -120,6 +120,32 @@ uint32_t stm32_get_gpio_bank_offset(unsigned int bank)
 	return bank * GPIO_BANK_OFFSET;
 }
 
+#if STM32MP_UART_PROGRAMMER
+/*
+ * UART Management
+ */
+static const uintptr_t stm32mp1_uart_addresses[8] = {
+	USART1_BASE,
+	USART2_BASE,
+	USART3_BASE,
+	UART4_BASE,
+	UART5_BASE,
+	USART6_BASE,
+	UART7_BASE,
+	UART8_BASE,
+};
+
+uintptr_t get_uart_address(uint32_t instance_nb)
+{
+	if ((instance_nb == 0U) ||
+	    (instance_nb > ARRAY_SIZE(stm32mp1_uart_addresses))) {
+		return 0U;
+	}
+
+	return stm32mp1_uart_addresses[instance_nb - 1U];
+}
+#endif
+
 unsigned long stm32_get_gpio_bank_clock(unsigned int bank)
 {
 	if (bank == GPIO_BANK_Z) {
