@@ -23,6 +23,7 @@ ifneq ($(STM32MP_USE_STM32IMAGE),1)
 ENABLE_PIE		:=	1
 endif
 TRUSTED_BOARD_BOOT	?=	0
+STM32MP_USE_EXTERNAL_HEAP ?=	0
 
 # Please don't increment this value without good understanding of
 # the monotonic counter
@@ -121,6 +122,11 @@ FDT_SOURCES		+=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NA
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_FW_CONFIG},--fw-config))
 # Add the NT_FW_CONFIG to FIP and specify the same to certtool
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_NT_FW_CONFIG},--hw-config))
+ifeq (${GENERATE_COT},1)
+$(eval $(call TOOL_ADD_PAYLOAD,${BUILD_PLAT}/tb_fw.crt,--tb-fw-cert))
+endif
+$(eval $(call CERT_ADD_CMD_OPT,${BUILD_PLAT}/bl2.bin,--tb-fw))
+CRT_DEPS+=${BUILD_PLAT}/bl2.bin
 ifeq ($(AARCH32_SP),sp_min)
 STM32MP_TOS_FW_CONFIG	:= $(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl32.dtb,$(DTB_FILE_NAME)))
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_TOS_FW_CONFIG},--tos-fw-config))
@@ -248,13 +254,24 @@ AUTH_SOURCES		:=	drivers/auth/auth_mod.c					\
 				drivers/auth/img_parser_mod.c
 
 ifneq (${STM32MP_USE_STM32IMAGE},1)
-IMG_PARSER_LIB_MK	:=	drivers/auth/mbedtls/mbedtls_x509.mk
+ifeq (${GENERATE_COT},1)
+TFW_NVCTR_VAL		:=	0
+NTFW_NVCTR_VAL		:=	0
+KEY_SIZE		:=
+KEY_ALG			:=	ecdsa
+HASH_ALG		:=	sha256
+endif
+TF_MBEDTLS_KEY_ALG 	:=	ecdsa
+MBEDTLS_CONFIG_FILE	?=	"<stm32mp15_mbedtls_config.h>"
 
-$(info Including ${IMG_PARSER_LIB_MK})
-include ${IMG_PARSER_LIB_MK}
+include drivers/auth/mbedtls/mbedtls_x509.mk
+
 
 AUTH_SOURCES		+=	drivers/auth/tbbr/tbbr_cot_common.c			\
+				lib/fconf/fconf_tbbr_getter.c				\
 				plat/st/common/stm32mp_crypto_lib.c
+
+BL2_SOURCES		+=	drivers/auth/tbbr/tbbr_cot_bl2.c
 else
 AUTH_SOURCES		+=	plat/st/common/stm32mp_cot.c				\
 				plat/st/common/stm32mp_crypto_lib.c			\
