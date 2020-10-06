@@ -45,10 +45,11 @@ STM32MP_SPI_NOR		?=	0
 
 # Serial boot devices
 STM32MP_USB_PROGRAMMER	?=	0
+STM32MP_UART_PROGRAMMER	?=	0
 
 ifeq ($(filter 1,${STM32MP_EMMC} ${STM32MP_SDMMC} ${STM32MP_RAW_NAND} \
 	${STM32MP_SPI_NAND} ${STM32MP_SPI_NOR} \
-	${STM32MP_USB_PROGRAMMER}),)
+	${STM32MP_UART_PROGRAMMER} ${STM32MP_USB_PROGRAMMER}),)
 $(error "No boot device driver is enabled")
 endif
 
@@ -82,6 +83,7 @@ $(eval $(call assert_booleans,\
 		STM32MP_SPI_NAND \
 		STM32MP_SPI_NOR \
 		PLAT_XLAT_TABLES_DYNAMIC \
+		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
 )))
 
@@ -101,6 +103,7 @@ $(eval $(call add_defines,\
 		PLAT_XLAT_TABLES_DYNAMIC \
 		STM32_TF_A_COPIES \
 		PLAT_PARTITION_MAX_ENTRIES \
+		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
 )))
 
@@ -188,6 +191,10 @@ endif
 
 ifneq ($(filter 1,${STM32MP_RAW_NAND} ${STM32MP_SPI_NAND} ${STM32MP_SPI_NOR}),)
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_boot_device.c
+endif
+
+ifeq (${STM32MP_UART_PROGRAMMER},1)
+BL2_SOURCES		+=	drivers/st/uart/stm32_uart.c
 endif
 
 ifeq (${STM32MP_USB_PROGRAMMER},1)
