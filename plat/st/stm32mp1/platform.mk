@@ -195,14 +195,17 @@ ifneq ($(filter 1,${STM32MP_RAW_NAND} ${STM32MP_SPI_NAND} ${STM32MP_SPI_NOR}),)
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_boot_device.c
 endif
 
+ifneq ($(filter 1,${STM32MP_UART_PROGRAMMER} ${STM32MP_USB_PROGRAMMER}),)
+BL2_SOURCES		+=	drivers/io/io_memmap.c
+endif
+
 ifeq (${STM32MP_UART_PROGRAMMER},1)
 BL2_SOURCES		+=	drivers/st/uart/stm32_uart.c				\
 				plat/st/common/stm32cubeprogrammer_uart.c
 endif
 
 ifeq (${STM32MP_USB_PROGRAMMER},1)
-BL2_SOURCES		+=	drivers/io/io_memmap.c					\
-				drivers/st/usb_dwc2/usb_dwc2.c				\
+BL2_SOURCES		+=	drivers/st/usb_dwc2/usb_dwc2.c				\
 				lib/usb/usb_core.c					\
 				lib/usb/usb_st_dfu.c					\
 				plat/st/common/stm32cubeprogrammer_usb.c		\
