@@ -749,8 +749,7 @@ int plat_bind_regulator(struct stm32mp_regulator *regu)
 	return 0;
 }
 
-bool stm32mp_boot_action_is_wakeup_from_standby(void)
+bool stm32mp1_is_wakeup_from_standby(void)
 {
-	return (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_CSTANDBY) ||
-	       (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY);
+	return (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY);
 }

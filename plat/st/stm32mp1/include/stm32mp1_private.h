@@ -37,6 +37,8 @@ void stm32mp1_security_add_region(unsigned long long region_base,
 
 enum boot_device_e get_boot_device(void);
 
+bool stm32mp1_is_wakeup_from_standby(void);
+
 enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode);
 
 void stm32mp1_syscfg_init(void);

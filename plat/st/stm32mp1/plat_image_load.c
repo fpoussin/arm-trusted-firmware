@@ -42,7 +42,7 @@ bl_load_info_t *plat_get_bl_image_load_info(void)
 	 * in DDR. For this, the BL33 part of the bl_mem_params_desc_ptr
 	 * struct should be modified to skip its loading
 	 */
-	if (stm32mp_boot_action_is_wakeup_from_standby() &&
+	if (stm32mp1_is_wakeup_from_standby() &&
 	    ((mmio_read_32(pwr_base + PWR_CR3) & PWR_CR3_DDRSREN) != 0U) &&
 	    ((rstsr & RCC_MP_RSTSCLRR_PADRSTF) == 0U)) {
 		uint32_t bkpr_core1_addr =
