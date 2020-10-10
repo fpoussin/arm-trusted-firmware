@@ -60,7 +60,6 @@ static const char debug_msg[626] = {
 
 static console_t console;
 static enum boot_device_e boot_device = BOOT_DEVICE_BOARD;
-static bool wakeup_standby;
 
 #if STM32MP_SP_MIN_IN_DDR
 struct bl2_to_bl32_args bl2_to_bl32_args;
@@ -180,8 +179,20 @@ void bl2_platform_setup(void)
 	INFO("BL2 runs SP_MIN setup\n");
 #endif
 
-	if ((dt_pmic_status() > 0) && (!wakeup_standby)) {
-		configure_pmic();
+	if (!stm32mp1_ddr_is_restored()) {
+		uint32_t bkpr_core1_magic =
+			tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
+		uint32_t bkpr_core1_addr =
+			tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+
+		/* Clear backup register */
+		mmio_write_32(bkpr_core1_addr, 0);
+		/* Clear backup register magic */
+		mmio_write_32(bkpr_core1_magic, 0);
+
+		if (dt_pmic_status() > 0) {
+			configure_pmic();
+		}
 	}
 }
 
@@ -225,7 +236,7 @@ static void initialize_clock(void)
 	uint32_t freq_khz = 0U;
 	int ret = 0;
 
-	if (wakeup_standby) {
+	if (stm32mp1_is_wakeup_from_standby()) {
 		ret = stm32_get_pll1_settings_from_context();
 	}
 
@@ -237,7 +248,7 @@ static void initialize_clock(void)
 	 * is consistent with it.
 	 */
 	if ((ret == 0) && !fdt_is_pll1_predefined()) {
-		if (wakeup_standby) {
+		if (stm32mp1_is_wakeup_from_standby()) {
 			ret = stm32mp1_clk_get_maxfreq_opp(&freq_khz,
 							   &voltage_mv);
 		} else {
@@ -309,10 +320,6 @@ void bl2_el3_plat_arch_setup(void)
 				(boot_context->boot_interface_selected ==
 				 BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART);
 	uintptr_t uart_prog_addr __unused;
-	uint32_t bkpr_core1_magic =
-		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
-	uint32_t bkpr_core1_addr =
-		tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
 
 	if (bsec_probe() != 0) {
 		panic();
@@ -385,13 +392,6 @@ void bl2_el3_plat_arch_setup(void)
 	mmio_write_32(TAMP_SMCR,
 		      TAMP_BKP_SEC_NUMBER << TAMP_BKP_SEC_WDPROT_SHIFT |
 		      TAMP_BKP_SEC_NUMBER << TAMP_BKP_SEC_RWDPROT_SHIFT);
-
-	if (!stm32mp1_is_wakeup_from_standby()) {
-		mmio_write_32(bkpr_core1_addr, 0);
-		mmio_write_32(bkpr_core1_magic, 0);
-	}
-
-	wakeup_standby = (mmio_read_32(bkpr_core1_addr) != 0U);
 
 	generic_delay_timer_init();
 
@@ -547,6 +547,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 #endif
 	unsigned int i;
 	unsigned long long ddr_top __unused;
+	bool wakeup_ddr_sr = stm32mp1_ddr_is_restored();
 	const unsigned int image_ids[] = {
 		BL32_IMAGE_ID,
 		BL33_IMAGE_ID,
@@ -595,6 +596,14 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			bl_mem_params->image_info.image_base = config_info->config_addr;
 			bl_mem_params->image_info.image_max_size = config_info->config_max_size;
 
+			/*
+			 * If going back from CSTANDBY / STANDBY and DDR was in Self-Refresh,
+			 * DDR partitions must not be reloaded.
+			 */
+			if (!(wakeup_ddr_sr && (config_info->config_addr >= STM32MP_DDR_BASE))) {
+				bl_mem_params->image_info.h.attr &= ~IMAGE_ATTRIB_SKIP_LOADING;
+			}
+
 			switch (image_ids[i]) {
 			case BL32_IMAGE_ID:
 				bl_mem_params->ep_info.pc = config_info->config_addr;
@@ -621,8 +630,15 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 				}
 #endif
 				break;
+
 			case BL33_IMAGE_ID:
-				if (!wakeup_standby) {
+				if (wakeup_ddr_sr) {
+					/*
+					 * Set ep_info PC to 0, to inform BL32 it is a reset
+					 * after STANDBY
+					 */
+					bl_mem_params->ep_info.pc = 0U;
+				} else {
 					bl_mem_params->ep_info.pc = config_info->config_addr;
 				}
 				nsec_base_address = config_info->config_addr;
