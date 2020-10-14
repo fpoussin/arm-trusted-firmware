@@ -109,13 +109,38 @@ static void stm32mp1_etzpc_early_setup(void)
 }
 
 /*******************************************************************************
+ * Setup UART console using device tree information.
+ ******************************************************************************/
+static void setup_uart_console(void)
+{
+	struct dt_node_info dt_uart_info;
+	unsigned int console_flags;
+	int result;
+
+	result = dt_get_stdout_uart_info(&dt_uart_info);
+	if ((result <= 0) || (dt_uart_info.status == DT_DISABLED)) {
+		return;
+	}
+
+	if (console_stm32_register(dt_uart_info.base, 0,
+				   STM32MP_UART_BAUDRATE, &console) == 0U) {
+		panic();
+	}
+
+	console_flags = CONSOLE_FLAG_BOOT | CONSOLE_FLAG_CRASH |
+			CONSOLE_FLAG_TRANSLATE_CRLF;
+#ifdef DEBUG
+	console_flags |= CONSOLE_FLAG_RUNTIME;
+#endif
+	console_set_scope(&console, console_flags);
+}
+
+/*******************************************************************************
  * Perform any BL32 specific platform actions.
  ******************************************************************************/
 void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				  u_register_t arg2, u_register_t arg3)
 {
-	struct dt_node_info dt_uart_info;
-	int result;
 	bl_params_t *params_from_bl2 = (bl_params_t *)arg0;
 
 	/* Imprecise aborts can be masked in NonSecure */
@@ -158,24 +183,7 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 		panic();
 	}
 
-	result = dt_get_stdout_uart_info(&dt_uart_info);
-
-	if ((result > 0) && (dt_uart_info.status != 0U)) {
-		unsigned int console_flags;
-
-		if (console_stm32_register(dt_uart_info.base, 0,
-					   STM32MP_UART_BAUDRATE, &console) ==
-		    0) {
-			panic();
-		}
-
-		console_flags = CONSOLE_FLAG_BOOT | CONSOLE_FLAG_CRASH |
-			CONSOLE_FLAG_TRANSLATE_CRLF;
-#ifdef DEBUG
-		console_flags |= CONSOLE_FLAG_RUNTIME;
-#endif
-		console_set_scope(&console, console_flags);
-	}
+	setup_uart_console();
 
 	stm32mp1_etzpc_early_setup();
 }
