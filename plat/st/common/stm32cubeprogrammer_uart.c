@@ -377,6 +377,7 @@ static int uart_start_cmd(unsigned int image_id, uintptr_t buffer)
 		return 0;
 	}
 
+#if !STM32MP_USE_STM32IMAGE
 	if (image_id == FIP_IMAGE_ID) {
 		if (!is_valid_header((fip_toc_header_t *)buffer)) {
 			STM32PROG_ERROR("FIP Header check failed at phase %d\n",
@@ -386,6 +387,7 @@ static int uart_start_cmd(unsigned int image_id, uintptr_t buffer)
 
 		VERBOSE("FIP header looks OK.\n");
 	}
+#else
 	if (image_id == STM32_IMAGE_ID) {
 		/* Verify header and checksum payload */
 		ret = stm32mp_check_header((boot_api_image_header_t *)buffer,
@@ -398,6 +400,7 @@ static int uart_start_cmd(unsigned int image_id, uintptr_t buffer)
 
 		VERBOSE("STM32 header looks OK.\n");
 	}
+#endif
 
 	return 0;
 }

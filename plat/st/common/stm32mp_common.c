@@ -108,6 +108,7 @@ void stm32mp_pwr_regs_unlock(void)
 	}
 }
 
+#if STM32MP_USE_STM32IMAGE
 int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 {
 	/*
@@ -144,6 +145,7 @@ int stm32mp_check_header(boot_api_image_header_t *header, uintptr_t buffer)
 
 	return 0;
 }
+#endif
 
 /* Return CPU supply name */
 const char *stm32mp_get_cpu_supply_name(void)
@@ -165,7 +167,7 @@ const char *stm32mp_get_cpu_supply_name(void)
 	return supply;
 }
 
-#if TRUSTED_BOARD_BOOT
+#if TRUSTED_BOARD_BOOT && STM32MP_USE_STM32IMAGE
 /* Save pointer to last loaded header */
 static boot_api_image_header_t *latest_stm32_header;
 

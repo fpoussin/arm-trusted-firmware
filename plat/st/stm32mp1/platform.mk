@@ -10,12 +10,18 @@ BL2_AT_EL3		:=	1
 USE_COHERENT_MEM	:=	0
 
 ENABLE_PIE		:=	1
+# Allow TF-A to concatenate BL2 & BL32 binaries in a single file,
+# share DTB file between BL2 and BL32
+# If it is set to 0, then FIP and FCONF are used
+STM32MP_USE_STM32IMAGE	?=	0
 
 # Add specific ST version
 ST_VERSION 		:=	r1.0
 VERSION_STRING		:=	v${VERSION_MAJOR}.${VERSION_MINOR}-${ST_VERSION}(${BUILD_TYPE}):${BUILD_STRING}
 
+ifneq ($(STM32MP_USE_STM32IMAGE),1)
 ENABLE_PIE		:=	1
+endif
 TRUSTED_BOARD_BOOT	?=	0
 
 # Please don't increment this value without good understanding of
@@ -50,6 +56,8 @@ STM32_TF_A_COPIES		:=	2
 STM32_BL33_PARTS_NUM		:=	1
 ifeq ($(AARCH32_SP),optee)
 STM32_RUNTIME_PARTS_NUM		:=	3
+else ifeq ($(STM32MP_USE_STM32IMAGE),1)
+STM32_RUNTIME_PARTS_NUM		:=	0
 else
 STM32_RUNTIME_PARTS_NUM		:=	1
 endif
@@ -76,11 +84,20 @@ endif
 
 # Device tree
 DTB_FILE_NAME		?=	stm32mp157c-ev1.dtb
+ifeq ($(STM32MP_USE_STM32IMAGE),1)
+ifeq ($(AARCH32_SP),optee)
+BL2_DTSI		:=	stm32mp15-bl2.dtsi
+FDT_SOURCES		:=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl2.dts,$(DTB_FILE_NAME)))
+else
+FDT_SOURCES		:=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(DTB_FILE_NAME)))
+endif
+else
 BL2_DTSI		:=	stm32mp15-bl2.dtsi
 FDT_SOURCES		:=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl2.dts,$(DTB_FILE_NAME)))
 ifeq ($(AARCH32_SP),sp_min)
 BL32_DTSI		:=	stm32mp15-bl32.dtsi
 FDT_SOURCES		+=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl32.dts,$(DTB_FILE_NAME)))
+endif
 endif
 DTC_FLAGS		+=	-Wno-unit_address_vs_reg
 
@@ -90,12 +107,18 @@ STM32_TF_STM32		:=	$(addprefix ${BUILD_PLAT}/tf-a-, $(patsubst %.dtb,%.stm32,$(D
 STM32_TF_LINKERFILE	:=	${BUILD_PLAT}/stm32mp1.ld
 
 ASFLAGS			+= -DBL2_BIN_PATH=\"${BUILD_PLAT}/bl2.bin\"
+ifeq ($(AARCH32_SP),sp_min)
+# BL32 is built only if using SP_MIN
+BL32_DEP		:= bl32
+ASFLAGS			+= -DBL32_BIN_PATH=\"${BUILD_PLAT}/bl32.bin\"
+endif
 
 # Variables for use with stm32image
 STM32IMAGEPATH		?= tools/stm32image
 STM32IMAGE		?= ${STM32IMAGEPATH}/stm32image${BIN_EXT}
 STM32IMAGE_SRC		:= ${STM32IMAGEPATH}/stm32image.c
 
+ifneq (${STM32MP_USE_STM32IMAGE},1)
 STM32MP_NT_FW_CONFIG	:=	${BL33_CFG}
 STM32MP_FW_CONFIG_NAME	:=	$(patsubst %.dtb,%-fw-config.dtb,$(DTB_FILE_NAME))
 STM32MP_FW_CONFIG	:=	${BUILD_PLAT}/fdts/$(STM32MP_FW_CONFIG_NAME)
@@ -117,6 +140,7 @@ ifneq ($(BL32_EXTRA2),)
 $(eval $(call TOOL_ADD_IMG,BL32_EXTRA2,--tos-fw-extra2))
 endif
 endif
+endif
 
 # Enable flags for C files
 $(eval $(call assert_booleans,\
@@ -129,6 +153,7 @@ $(eval $(call assert_booleans,\
 		PLAT_XLAT_TABLES_DYNAMIC \
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
+		STM32MP_USE_STM32IMAGE \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_SP_MIN_IN_DDR \
 )))
@@ -153,6 +178,7 @@ $(eval $(call add_defines,\
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
 		STM32_TF_VERSION \
+		STM32MP_USE_STM32IMAGE \
 		STM32MP_DDR_DUAL_AXI_PORT \
 		STM32MP_SP_MIN_IN_DDR \
 )))
@@ -200,17 +226,27 @@ PLAT_BL_COMMON_SOURCES	+=	drivers/arm/tzc/tzc400.c				\
 				plat/st/stm32mp1/stm32mp1_helper.S			\
 				plat/st/stm32mp1/stm32mp1_syscfg.c
 
-BL2_SOURCES		+=	lib/fconf/fconf.c				\
+ifneq (${STM32MP_USE_STM32IMAGE},1)
+BL2_SOURCES		+=	drivers/io/io_fip.c					\
+				plat/st/common/bl2_io_storage.c				\
+				plat/st/stm32mp1/plat_bl2_mem_params_desc.c
+
+BL2_SOURCES		+=	lib/fconf/fconf.c					\
 				lib/fconf/fconf_dyn_cfg_getter.c			\
 				plat/st/common/stm32mp_fconf_io.c			\
 				plat/st/stm32mp1/stm32mp1_fconf_firewall.c
+else
+BL2_SOURCES		+=	drivers/io/io_dummy.c					\
+				drivers/st/io/io_stm32image.c				\
+				plat/st/common/bl2_stm32_io_storage.c			\
+				plat/st/stm32mp1/plat_bl2_stm32_mem_params_desc.c	\
+				plat/st/stm32mp1/stm32mp1_security.c
+endif
 
 BL2_SOURCES		+=	drivers/io/io_block.c					\
-				drivers/io/io_fip.c					\
 				drivers/io/io_mtd.c					\
 				drivers/io/io_storage.c					\
 				drivers/st/crypto/stm32_hash.c				\
-				plat/st/common/bl2_io_storage.c				\
 				plat/st/stm32mp1/bl2_plat_setup.c
 
 ifeq (${TRUSTED_BOARD_BOOT},1)
@@ -218,6 +254,7 @@ AUTH_SOURCES		:=	drivers/auth/auth_mod.c					\
 				drivers/auth/crypto_mod.c				\
 				drivers/auth/img_parser_mod.c
 
+ifneq (${STM32MP_USE_STM32IMAGE},1)
 IMG_PARSER_LIB_MK	:=	drivers/auth/mbedtls/mbedtls_x509.mk
 
 $(info Including ${IMG_PARSER_LIB_MK})
@@ -225,6 +262,11 @@ include ${IMG_PARSER_LIB_MK}
 
 AUTH_SOURCES		+=	drivers/auth/tbbr/tbbr_cot_common.c			\
 				plat/st/common/stm32mp_crypto_lib.c
+else
+AUTH_SOURCES		+=	plat/st/common/stm32mp_cot.c				\
+				plat/st/common/stm32mp_crypto_lib.c			\
+				plat/st/common/stm32mp_img_parser_lib.c
+endif
 
 BL2_SOURCES		+=	$(AUTH_SOURCES)						\
 				plat/st/common/stm32mp_trusted_boot.c
@@ -286,7 +328,6 @@ BL2_SOURCES		+=	drivers/st/ddr/stm32mp1_ddr.c				\
 				drivers/st/ddr/stm32mp1_ram.c
 
 BL2_SOURCES		+=	common/desc_image_load.c				\
-				plat/st/stm32mp1/plat_bl2_mem_params_desc.c		\
 				plat/st/stm32mp1/plat_image_load.c
 
 BL2_SOURCES		+=	lib/optee/optee_utils.c
@@ -320,6 +361,13 @@ check_dtc_version:
 		false; \
 	fi
 
+ifeq ($(STM32MP_USE_STM32IMAGE)$(AARCH32_SP),1sp_min)
+${BUILD_PLAT}/stm32mp1-%.o: ${BUILD_PLAT}/fdts/%.dtb plat/st/stm32mp1/stm32mp1.S bl2 ${BL32_DEP}
+	@echo "  AS      stm32mp1.S"
+	${Q}${AS} ${ASFLAGS} ${TF_CFLAGS} \
+		-DDTB_BIN_PATH=\"$<\" \
+		-c $(word 2,$^) -o $@
+else
 # Create DTB file for BL2
 ${BUILD_PLAT}/fdts/%-bl2.dts: fdts/%.dts fdts/${BL2_DTSI} | ${BUILD_PLAT} fdt_dirs
 	@echo '#include "$(patsubst fdts/%,%,$<)"' > $@
@@ -341,6 +389,7 @@ ${BUILD_PLAT}/stm32mp1-%.o: ${BUILD_PLAT}/fdts/%-bl2.dtb plat/st/stm32mp1/stm32m
 	${Q}${AS} ${ASFLAGS} ${TF_CFLAGS} \
 		-DDTB_BIN_PATH=\"$<\" \
 		-c plat/st/stm32mp1/stm32mp1.S -o $@
+endif
 
 $(eval $(call MAKE_LD,${STM32_TF_LINKERFILE},plat/st/stm32mp1/stm32mp1.ld.S,2))
 

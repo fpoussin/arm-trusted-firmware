@@ -96,7 +96,14 @@
 /* DDR configuration */
 #define STM32MP_DDR_BASE		U(0xC0000000)
 #define STM32MP_DDR_MAX_SIZE		U(0x40000000)	/* Max 1GB */
+#if STM32MP_USE_STM32IMAGE
+#define STM32MP_DDR_S_SIZE		U(0x01E00000)	/* 30 MB */
+#ifdef AARCH32_SP_OPTEE
+#define STM32MP_DDR_SHMEM_SIZE		U(0x00200000)	/* 2 MB */
+#endif
+#else
 #define STM32MP_DDR_S_SIZE		U(0x02000000)	/* 32 MB */
+#endif
 
 /* DDR power initializations */
 #ifndef __ASSEMBLER__
@@ -122,29 +129,22 @@ enum ddr_type {
 					 (STM32MP_PARAM_LOAD_SIZE +	\
 					  STM32MP_HEADER_SIZE))
 
+#if STM32MP_USE_STM32IMAGE
+#define STM32MP_BL2_SIZE		U(0x0001C000)	/* 112 KB for BL2 */
+
 #ifdef AARCH32_SP_OPTEE
 #define STM32MP_OPTEE_BASE		STM32MP_SEC_SYSRAM_BASE
 
-#define STM32MP_OPTEE_SIZE		(STM32MP_DTB_BASE -  \
+#define STM32MP_OPTEE_SIZE		(TF_A_MAPPING_START -  \
 					 STM32MP_OPTEE_BASE)
 
-#define STM32MP_BL2_SIZE		U(0x0001B000)	/* 108 KB for BL2 */
-
 #define STM32MP_BL2_BASE		(STM32MP_SEC_SYSRAM_BASE + \
 					 STM32MP_SEC_SYSRAM_SIZE - \
 					 STM32MP_BL2_SIZE)
+
 #define STM32MP_BL32_BASE		STM32MP_SEC_SYSRAM_BASE
-#elif STM32MP_SP_MIN_IN_DDR
-#define STM32MP_BL32_SIZE		U(0x00025000)	/* 148 KB for BL32 */
-#define STM32MP_BL32_BIN_SIZE		(STM32MP_BL32_SIZE + \
-					 STM32MP_BL32_DTB_SIZE)
 
-#define STM32MP_BL2_SIZE		U(0x0001C000)	/* 112 KB for BL2 */
-
-#define STM32MP_BL2_BASE		(STM32MP_SEC_SYSRAM_BASE + \
-					 STM32MP_SEC_SYSRAM_SIZE - \
-					 STM32MP_BL2_SIZE)
-#else
+#else /* AARCH32_SP_OPTEE */
 #define STM32MP_BL32_SIZE		U(0x00019000)	/* 96 KB for BL32 */
 #define STM32MP_BL32_BIN_SIZE		STM32MP_BL32_SIZE
 
@@ -156,7 +156,16 @@ enum ddr_type {
 
 #define STM32MP_BL2_BASE		(STM32MP_BL32_BASE - \
 					 STM32MP_BL2_SIZE)
-#endif
+#endif /* AARCH32_SP_OPTEE */
+#else /* STM32MP_USE_STM32IMAGE */
+#define STM32MP_BL2_BASE		(STM32MP_SEC_SYSRAM_BASE + \
+					 STM32MP_SEC_SYSRAM_SIZE - \
+					 STM32MP_BL2_SIZE)
+
+#define STM32MP_BL2_SIZE		U(0x0001B000)	/* 108 KB for BL2 */
+
+#define STM32MP_BL32_SIZE		U(0x00019000)	/* 100 KB for BL32 */
+#endif /* STM32MP_USE_STM32IMAGE */
 
  /* BL2 and BL32/sp_min require finer granularity tables */
 #if defined(IMAGE_BL2)
@@ -185,16 +194,28 @@ enum ddr_type {
  #endif
 #endif
 #if defined(IMAGE_BL32)
- #define MAX_MMAP_REGIONS		10
+  #if STM32MP_USE_STM32IMAGE
+    #define MAX_MMAP_REGIONS		6
+  #else
+    #define MAX_MMAP_REGIONS		10
+  #endif
 #endif
 
+#if STM32MP_USE_STM32IMAGE
+/* DTB initialization value */
+#define STM32MP_DTB_SIZE		U(0x00006000)	/* 24 KB for DTB */
+
+#define STM32MP_DTB_BASE		(STM32MP_BL2_BASE -	\
+					 STM32MP_DTB_SIZE)
+#define TF_A_MAPPING_START		STM32MP_DTB_BASE
+#else /* STM32MP_USE_STM32IMAGE */
 #define STM32MP_BL2_DTB_SIZE		U(0x00006000)	/* 24 KB for DTB */
 #define STM32MP_BL2_DTB_BASE		(STM32MP_BL2_BASE - \
 					 STM32MP_BL2_DTB_SIZE)
 
 #define STM32MP_BL32_DTB_SIZE		U(0x00006000)	/* 24 KB for DTB */
-#define STM32MP_BL32_DTB_BASE		(STM32MP_BL32_BASE - \
-					 STM32MP_BL32_DTB_SIZE)
+#define STM32MP_BL32_DTB_BASE		(STM32MP_BL32_BASE + \
+					 STM32MP_BL32_SIZE)
 #if defined(IMAGE_BL2)
 #define STM32MP_DTB_SIZE		STM32MP_BL2_DTB_SIZE
 #define STM32MP_DTB_BASE		STM32MP_BL2_DTB_BASE
@@ -203,6 +224,8 @@ enum ddr_type {
 #define STM32MP_DTB_SIZE		STM32MP_BL32_DTB_SIZE
 #define STM32MP_DTB_BASE		STM32MP_BL32_DTB_BASE
 #endif
+#define TF_A_MAPPING_START		STM32MP_BL2_DTB_BASE
+#endif /* STM32MP_USE_STM32IMAGE */
 
 #define STM32MP_FW_CONFIG_BASE		(STM32MP_SYSRAM_BASE + \
 					 STM32MP_SYSRAM_SIZE - \
@@ -227,8 +250,24 @@ enum ddr_type {
 /*******************************************************************************
  * STM32MP1 RAW partition offset for MTD devices
  ******************************************************************************/
+#if STM32MP_USE_STM32IMAGE
+#define STM32MP_NOR_BL33_OFFSET		U(0x00080000)
+#ifdef AARCH32_SP_OPTEE
+#define STM32MP_NOR_TEEH_OFFSET		U(0x00300000)
+#define STM32MP_NOR_TEED_OFFSET		U(0x00340000)
+#define STM32MP_NOR_TEEX_OFFSET		U(0x003C0000)
+#endif
+
+#define STM32MP_NAND_BL33_OFFSET	U(0x00200000)
+#ifdef AARCH32_SP_OPTEE
+#define STM32MP_NAND_TEEH_OFFSET	U(0x00600000)
+#define STM32MP_NAND_TEED_OFFSET	U(0x00680000)
+#define STM32MP_NAND_TEEX_OFFSET	U(0x00700000)
+#endif
+#else /* STM32MP_USE_STM32IMAGE */
 #define STM32MP_NOR_FIP_OFFSET		U(0x00080000)
 #define STM32MP_NAND_FIP_OFFSET		U(0x00200000)
+#endif /* STM32MP_USE_STM32IMAGE */
 
 /*******************************************************************************
  * STM32MP1 device/io map related constants (used for MMU)

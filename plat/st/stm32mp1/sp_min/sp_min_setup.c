@@ -307,6 +307,7 @@ static void stm32mp1_etzpc_early_setup(void)
 	etzpc_configure_tzma(STM32MP1_ETZPC_TZMA_SYSRAM, TZMA1_SECURE_RANGE);
 }
 
+#if !STM32MP_USE_STM32IMAGE
 static void populate_ns_dt(u_register_t ns_dt_addr, uintptr_t sec_base, size_t sec_size)
 {
 	void *external_fdt = (void *)ns_dt_addr;
@@ -349,6 +350,7 @@ out:
 	ret = mmap_remove_dynamic_region(ns_dt_addr, STM32MP_HW_CONFIG_MAX_SIZE);
 	assert(ret == 0);
 }
+#endif
 
 /*******************************************************************************
  * Setup UART console using device tree information.
@@ -402,9 +404,13 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	uintptr_t bl2_code_end = 0U;
 	uintptr_t bl2_end = 0U;
 #endif
+#if STM32MP_USE_STM32IMAGE
+	uintptr_t dt_addr = STM32MP_DTB_BASE;
+#else
 	uintptr_t dt_addr = arg1;
 	uintptr_t sec_base = 0U;
 	size_t sec_size = 0U;
+#endif
 
 	/* Imprecise aborts can be masked in NonSecure */
 	write_scr(read_scr() | SCR_AW_BIT);
@@ -472,10 +478,12 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 			}
 		}
 
+#if !STM32MP_USE_STM32IMAGE
 		if (bl_params->image_id == BL32_IMAGE_ID) {
 			sec_base = bl_params->image_info->image_base;
 			sec_size = bl_params->image_info->image_max_size;
 		}
+#endif
 
 		bl_params = bl_params->next_params_info;
 	}
@@ -496,6 +504,7 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 
 	stm32mp1_etzpc_early_setup();
 
+#if !STM32MP_USE_STM32IMAGE
 	if (arg2 != 0U) {
 		/* This will expect the BL32 DT and BL32 are grouped */
 		if (dt_addr < sec_base) {
@@ -509,6 +518,7 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	} else {
 		INFO("Non-secure device tree not found\n");
 	}
+#endif
 
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();

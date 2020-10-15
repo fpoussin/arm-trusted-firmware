@@ -27,6 +27,9 @@
 	TZC_REGION_ACCESS_RDWR(STM32MP1_TZC_ETH_ID) | \
 	TZC_REGION_ACCESS_RDWR(STM32MP1_TZC_DAP_ID)
 
+#include <dt-bindings/soc/stm32mp1-tzc400.h>
+#include <lib/mmio.h>
+
 static unsigned int region_nb;
 
 static void init_tzc400_begin(unsigned int region0_attr)

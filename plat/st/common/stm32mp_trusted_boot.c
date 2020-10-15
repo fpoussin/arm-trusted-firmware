@@ -97,7 +97,9 @@ int plat_set_nv_ctr(void *cookie, unsigned int nv_ctr)
 	return -EINVAL;
 }
 
+#if !STM32MP_USE_STM32IMAGE
 int plat_get_mbedtls_heap(void **heap_addr, size_t *heap_size)
 {
 	return get_mbedtls_heap_helper(heap_addr, heap_size);
 }
+#endif

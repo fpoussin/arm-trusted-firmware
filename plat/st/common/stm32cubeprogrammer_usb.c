@@ -128,7 +128,9 @@ static int dfu_callback_download(uint8_t alt, uintptr_t *buffer, uint32_t *len,
 
 static int dfu_callback_manifestation(uint8_t alt, void *user_data)
 {
+#if STM32MP_USE_STM32IMAGE
 	int result;
+#endif
 	boot_api_image_header_t *header;
 	dfu_state_t *dfu = (dfu_state_t *)user_data;
 
@@ -149,6 +151,7 @@ static int dfu_callback_manifestation(uint8_t alt, void *user_data)
 				   header->image_length +
 				   sizeof(boot_api_image_header_t));
 
+#if STM32MP_USE_STM32IMAGE
 		/* Verify header and checksum payload */
 		INFO("Flashlayout Header check at %lx\n",
 		     (uintptr_t)header);
@@ -159,7 +162,7 @@ static int dfu_callback_manifestation(uint8_t alt, void *user_data)
 			DFU_ERROR("Header check failed for phase %d\n", alt);
 			return -EIO;
 		}
-
+#endif
 		/* Configure U-Boot loading */
 		dfu->phase = PHASE_SSBL;
 		dfu->address = dfu->ssbl_base;
@@ -168,6 +171,7 @@ static int dfu_callback_manifestation(uint8_t alt, void *user_data)
 		break;
 
 	case PHASE_SSBL:
+#if !STM32MP_USE_STM32IMAGE
 		if (dfu->image_id == FIP_IMAGE_ID) {
 			if (!is_valid_header((fip_toc_header_t *)dfu->base)) {
 				DFU_ERROR("FIP Header check failed for phase %d\n", alt);
@@ -176,6 +180,7 @@ static int dfu_callback_manifestation(uint8_t alt, void *user_data)
 
 			VERBOSE("FIP header looks OK.\n");
 		}
+#else
 		if (dfu->image_id == STM32_IMAGE_ID) {
 			header = (boot_api_image_header_t *)dfu->base;
 			/* Verify header and checksum payload */
@@ -189,7 +194,7 @@ static int dfu_callback_manifestation(uint8_t alt, void *user_data)
 
 			VERBOSE("STM32 header looks OK.\n");
 		}
-
+#endif
 		/* Configure End with request detach */
 		dfu->phase = PHASE_FLASHLAYOUT;
 		dfu->address = UNDEFINED_DOWN_ADDR;

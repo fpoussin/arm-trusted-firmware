@@ -749,6 +749,32 @@ int plat_bind_regulator(struct stm32mp_regulator *regu)
 	return 0;
 }
 
+#if STM32MP_USE_STM32IMAGE
+/* Get the non-secure DDR size */
+uint32_t stm32mp_get_ddr_ns_size(void)
+{
+	static uint32_t ddr_ns_size;
+	uint32_t ddr_size;
+
+	if (ddr_ns_size != 0U) {
+		return ddr_ns_size;
+	}
+
+	ddr_size = dt_get_ddr_size();
+	if ((ddr_size <= STM32MP_DDR_S_SIZE) || (ddr_size > STM32MP_DDR_MAX_SIZE)) {
+		panic();
+	}
+
+#if defined(AARCH32_SP_OPTEE)
+	ddr_ns_size = ddr_size - (STM32MP_DDR_S_SIZE + STM32MP_DDR_SHMEM_SIZE);
+#else
+	ddr_ns_size = ddr_size;
+#endif
+
+	return ddr_ns_size;
+}
+#endif
+
 bool stm32mp1_addr_inside_backupsram(uintptr_t addr)
 {
 	return (addr >= STM32MP_BACKUP_RAM_BASE) &&
