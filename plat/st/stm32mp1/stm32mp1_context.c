@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -31,7 +31,6 @@
 
 #define TRAINING_AREA_SIZE		64
 
-#ifdef AARCH32_SP_OPTEE
 /*
  * OPTEE_MAILBOX_MAGIC relates to struct backup_data_s as defined
  *
@@ -47,12 +46,21 @@
 #define OPTEE_MAILBOX_MAGIC		(OPTEE_MAILBOX_MAGIC_V2 | \
 					 TRAINING_AREA_SIZE)
 
+/*
+ * TFA_MAILBOX_MAGIC relates to struct backup_data_s as defined
+ *
+ * TFA_MAILBOX_MAGIC_V1:
+ * Aligned with the OPTEE context structure V2. Identifying the BL32
+ * exchange structure with a magic.
+ */
+#define TFA_MAILBOX_MAGIC_V1		(0x1000 << 16)
+#define TFA_MAILBOX_MAGIC		(TFA_MAILBOX_MAGIC_V1 | \
+					 TRAINING_AREA_SIZE)
 #define MAGIC_ID(magic)			((magic) & GENMASK_32(31, 16))
 #define MAGIC_AREA_SIZE(magic)		((magic) & GENMASK_32(15, 0))
 
 #if (PLAT_MAX_OPP_NB != 2) || (PLAT_MAX_PLLCFG_NB != 6)
 #error OPTEE_MAILBOX_MAGIC_V1 does not support expected PLL1 settings
-#endif
 #endif
 
 /* pll_settings structure size definitions (reference to clock driver) */
@@ -67,26 +75,19 @@
 #define SCMI_CONTEXT_SIZE		(sizeof(uint8_t) * 4)
 
 struct backup_data_s {
-#ifdef AARCH32_SP_OPTEE
 	uint32_t magic;
 	uint32_t core0_resume_hint;
 	uint32_t zq0cr0_zdata;
 	uint8_t ddr_training_backup[TRAINING_AREA_SIZE];
 	uint8_t pll1_settings[PLL1_SETTINGS_SIZE];
-#else
 	smc_ctx_t saved_smc_context[PLATFORM_CORE_COUNT];
 	cpu_context_t saved_cpu_context[PLATFORM_CORE_COUNT];
-	uint32_t zq0cr0_zdata;
 	struct stm32_rtc_calendar rtc;
-	uint8_t ddr_training_backup[TRAINING_AREA_SIZE];
-	uint8_t pll1_settings[PLL1_SETTINGS_SIZE];
 	unsigned long long stgen;
 	uint8_t clock_cfg[CLOCK_CONTEXT_SIZE];
 	uint8_t scmi_context[SCMI_CONTEXT_SIZE];
-#endif
 };
 
-#ifdef AARCH32_SP_OPTEE
 uint32_t stm32_pm_get_optee_ep(void)
 {
 	struct backup_data_s *backup_data;
@@ -115,7 +116,8 @@ uint32_t stm32_pm_get_optee_ep(void)
 
 	return ep;
 }
-#else /*AARCH32_SP_OPTEE*/
+
+#if defined(IMAGE_BL32)
 void stm32_clean_context(void)
 {
 	stm32mp_clk_enable(BKPSRAM);
@@ -172,6 +174,8 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	backup_data->magic = TFA_MAILBOX_MAGIC;
 
 	/* Retrieve smc context struct address */
 	smc_context = smc_get_ctx(NON_SECURE);
@@ -264,7 +268,7 @@ unsigned long long stm32_get_stgen_from_context(void)
 
 	return stgen_cnt;
 }
-#endif /*AARCH32_SP_OPTEE*/
+#endif /* IMAGE_BL32 */
 
 uint32_t stm32_get_zdata_from_context(void)
 {
@@ -283,7 +287,6 @@ uint32_t stm32_get_zdata_from_context(void)
 	return zdata;
 }
 
-#ifdef AARCH32_SP_OPTEE
 static int pll1_settings_in_context(struct backup_data_s *backup_data)
 {
 	switch (MAGIC_ID(backup_data->magic)) {
@@ -293,16 +296,12 @@ static int pll1_settings_in_context(struct backup_data_s *backup_data)
 		assert(MAGIC_AREA_SIZE(backup_data->magic) ==
 		       TRAINING_AREA_SIZE);
 		return 0;
+	case TFA_MAILBOX_MAGIC_V1:
+		return 0;
 	default:
 		panic();
 	}
 }
-#else
-static int pll1_settings_in_context(struct backup_data_s *backup_data)
-{
-	return 0;
-}
-#endif
 
 int stm32_get_pll1_settings_from_context(void)
 {

@@ -49,7 +49,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 
 		SET_STATIC_PARAM_HEAD(image_info, PARAM_EP,
 				      VERSION_2, image_info_t,
-				      0),
+				      IMAGE_ATTRIB_SKIP_LOADING),
 
 		.next_handoff_image_id = BL33_IMAGE_ID,
 	},
@@ -91,7 +91,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				  NON_SECURE | NON_EXECUTABLE),
 	    SET_STATIC_PARAM_HEAD(image_info, PARAM_IMAGE_BINARY,
 				  VERSION_2, image_info_t,
-				  0),
+				  IMAGE_ATTRIB_SKIP_LOADING),
 
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
@@ -103,7 +103,7 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 				  SECURE | NON_EXECUTABLE),
 	    SET_STATIC_PARAM_HEAD(image_info, PARAM_IMAGE_BINARY,
 				  VERSION_2, image_info_t,
-				  0),
+				  IMAGE_ATTRIB_SKIP_LOADING),
 
 	    .next_handoff_image_id = INVALID_IMAGE_ID,
 	},
@@ -121,7 +121,8 @@ static bl_mem_params_node_t bl2_mem_params_descs[] = {
 					    DISABLE_ALL_EXCEPTIONS),
 
 		SET_STATIC_PARAM_HEAD(image_info, PARAM_EP,
-				      VERSION_2, image_info_t, 0),
+				      VERSION_2, image_info_t,
+				      IMAGE_ATTRIB_SKIP_LOADING),
 
 		.next_handoff_image_id = INVALID_IMAGE_ID,
 	}

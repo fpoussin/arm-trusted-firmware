@@ -289,9 +289,7 @@ BL2_SOURCES		+=	common/desc_image_load.c				\
 				plat/st/stm32mp1/plat_bl2_mem_params_desc.c		\
 				plat/st/stm32mp1/plat_image_load.c
 
-ifeq ($(AARCH32_SP),optee)
 BL2_SOURCES		+=	lib/optee/optee_utils.c
-endif
 
 ifeq ($(STM32MP_SP_MIN_IN_DDR),1)
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power.c

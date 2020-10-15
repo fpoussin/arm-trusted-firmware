@@ -96,17 +96,7 @@
 /* DDR configuration */
 #define STM32MP_DDR_BASE		U(0xC0000000)
 #define STM32MP_DDR_MAX_SIZE		U(0x40000000)	/* Max 1GB */
-#ifdef AARCH32_SP_OPTEE
-#define STM32MP_DDR_S_SIZE		U(0x01E00000)	/* 30 MB */
-#define STM32MP_DDR_SHMEM_SIZE		U(0x00200000)	/* 2 MB */
-#elif STM32MP_SP_MIN_IN_DDR
-#define STM32MP_DDR_S_OFFSET		U(0x10000000)	/* 256 MB */
-#define STM32MP_DDR_S_SIZE		U(0x00100000)	/* 1 MB */
-#define STM32MP_DDR_SHMEM_SIZE		U(0)
-#else
-#define STM32MP_DDR_S_SIZE		U(0)
-#define STM32MP_DDR_SHMEM_SIZE		U(0)
-#endif
+#define STM32MP_DDR_S_SIZE		U(0x02000000)	/* 32 MB */
 
 /* DDR power initializations */
 #ifndef __ASSEMBLER__
@@ -143,12 +133,11 @@ enum ddr_type {
 #define STM32MP_BL2_BASE		(STM32MP_SEC_SYSRAM_BASE + \
 					 STM32MP_SEC_SYSRAM_SIZE - \
 					 STM32MP_BL2_SIZE)
+#define STM32MP_BL32_BASE		STM32MP_SEC_SYSRAM_BASE
 #elif STM32MP_SP_MIN_IN_DDR
 #define STM32MP_BL32_SIZE		U(0x00025000)	/* 148 KB for BL32 */
 #define STM32MP_BL32_BIN_SIZE		(STM32MP_BL32_SIZE + \
 					 STM32MP_BL32_DTB_SIZE)
-#define STM32MP_BL32_BASE		(STM32MP_DDR_BASE + \
-					 STM32MP_DDR_S_OFFSET)
 
 #define STM32MP_BL2_SIZE		U(0x0001C000)	/* 112 KB for BL2 */
 
@@ -171,13 +160,17 @@ enum ddr_type {
 
  /* BL2 and BL32/sp_min require finer granularity tables */
 #if defined(IMAGE_BL2)
- #define MAX_XLAT_TABLES			U(4)	/* 16 KB for mapping */
+ #if STM32MP_USB_PROGRAMMER
+  #define MAX_XLAT_TABLES			U(4)	/* 16 KB for mapping */
+ #else
+  #define MAX_XLAT_TABLES			U(3)	/* 12 KB for mapping */
+ #endif
 #elif defined(IMAGE_BL32)
-#if STM32MP_SP_MIN_IN_DDR
-#define MAX_XLAT_TABLES				U(6)	/* 20 KB for mapping */
-#else
-#define MAX_XLAT_TABLES				U(4)	/* 16 KB for mapping */
-#endif
+ #if STM32MP_SP_MIN_IN_DDR
+  #define MAX_XLAT_TABLES			U(6)	/* 24 KB for mapping */
+ #else
+  #define MAX_XLAT_TABLES			U(4)	/* 16 KB for mapping */
+ #endif
 #endif
 
 /*

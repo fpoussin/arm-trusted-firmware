@@ -30,13 +30,10 @@ void __dead2 stm32mp_wait_cpu_reset(void);
 
 void stm32mp1_arch_security_setup(void);
 void stm32mp1_security_setup(void);
-void stm32mp1_security_setup_begin(void);
-void stm32mp1_security_setup_end(void);
-void stm32mp1_security_add_region(unsigned long long region_base,
-				  unsigned long long region_size, bool sec);
 
 enum boot_device_e get_boot_device(void);
 
+bool stm32mp1_addr_inside_backupsram(uintptr_t addr);
 bool stm32mp1_is_wakeup_from_standby(void);
 
 enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode);

@@ -749,6 +749,12 @@ int plat_bind_regulator(struct stm32mp_regulator *regu)
 	return 0;
 }
 
+bool stm32mp1_addr_inside_backupsram(uintptr_t addr)
+{
+	return (addr >= STM32MP_BACKUP_RAM_BASE) &&
+		(addr < (STM32MP_BACKUP_RAM_BASE + STM32MP_BACKUP_RAM_SIZE));
+}
+
 bool stm32mp1_is_wakeup_from_standby(void)
 {
 	return (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY);
