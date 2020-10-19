@@ -475,7 +475,7 @@
 
 &vdd_usb {
 	standby-ddr-sr {
-		regulator-on-in-suspend;
+		regulator-off-in-suspend;
 	};
 	standby-ddr-off {
 		regulator-off-in-suspend;
