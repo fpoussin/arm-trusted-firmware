@@ -159,7 +159,13 @@ uint32_t fdt_clk_read_uint32_default(const char *node_label,
  */
 static int fdt_get_rcc_node(void *fdt)
 {
-	return fdt_node_offset_by_compatible(fdt, -1, DT_RCC_CLK_COMPAT);
+	static int node;
+
+	if (node <= 0) {
+		node = fdt_node_offset_by_compatible(fdt, -1, DT_RCC_CLK_COMPAT);
+	}
+
+	return node;
 }
 
 /*
