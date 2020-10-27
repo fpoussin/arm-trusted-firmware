@@ -10,6 +10,7 @@
 
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/spi_mem.h>
 #include <drivers/st/stm32_gpio.h>
@@ -363,7 +364,7 @@ static void stm32_qspi_release_bus(void)
 
 static int stm32_qspi_set_speed(unsigned int hz)
 {
-	unsigned long qspi_clk = stm32mp_clk_get_rate(stm32_qspi.clock_id);
+	unsigned long qspi_clk = clk_get_rate(stm32_qspi.clock_id);
 	uint32_t prescaler = UINT8_MAX;
 	uint32_t csht;
 	int ret;
@@ -493,7 +494,7 @@ int stm32_qspi_init(void)
 	stm32_qspi.clock_id = (unsigned long)info.clock;
 	stm32_qspi.reset_id = (unsigned int)info.reset;
 
-	stm32mp_clk_enable(stm32_qspi.clock_id);
+	clk_enable(stm32_qspi.clock_id);
 
 	ret = stm32mp_reset_assert(stm32_qspi.reset_id, TIMEOUT_US_1_MS);
 	if (ret != 0) {

@@ -17,6 +17,7 @@
 #include <arch.h>
 #include <arch_helpers.h>
 #include <common/debug.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_timer.h>
@@ -468,7 +469,7 @@ static void init_hsi_cal(void)
 		return;
 	}
 
-	stm32mp1_clk_cal_hsi.ref_freq = stm32mp_clk_get_rate(CK_HSI);
+	stm32mp1_clk_cal_hsi.ref_freq = clk_get_rate(CK_HSI);
 
 	/* Read initial value */
 	stm32mp1_clk_cal_hsi.cal_ref =
@@ -495,7 +496,7 @@ static void init_csi_cal(void)
 		return;
 	}
 
-	stm32mp1_clk_cal_csi.ref_freq = stm32mp_clk_get_rate(CK_CSI);
+	stm32mp1_clk_cal_csi.ref_freq = clk_get_rate(CK_CSI);
 
 	/* Read initial value */
 	stm32mp1_clk_cal_csi.cal_ref =

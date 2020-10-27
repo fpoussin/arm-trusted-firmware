@@ -14,6 +14,7 @@
 #include <common/bl_common.h>
 #include <common/debug.h>
 #include <common/desc_image_load.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/bsec.h>
@@ -466,11 +467,11 @@ void bl2_el3_plat_arch_setup(void)
 		panic();
 	}
 
-	stm32mp_clk_enable((unsigned long)dt_uart_info.clock);
+	clk_enable((unsigned long)dt_uart_info.clock);
 
 	reset_uart((uint32_t)dt_uart_info.reset);
 
-	clk_rate = stm32mp_clk_get_rate((unsigned long)dt_uart_info.clock);
+	clk_rate = clk_get_rate((unsigned long)dt_uart_info.clock);
 
 	if (console_stm32_register(dt_uart_info.base, clk_rate,
 				   STM32MP_UART_BAUDRATE, &console) == 0) {
@@ -690,7 +691,7 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 			if (wakeup_ddr_sr) {
 				bl_mem_params->ep_info.pc = stm32_pm_get_optee_ep();
 				if (stm32mp1_addr_inside_backupsram(bl_mem_params->ep_info.pc)) {
-					stm32mp_clk_enable(BKPSRAM);
+					clk_enable(BKPSRAM);
 				}
 
 				break;

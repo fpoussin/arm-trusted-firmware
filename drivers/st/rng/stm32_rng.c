@@ -13,6 +13,7 @@
 #include <platform_def.h>
 
 #include <arch_helpers.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_rng.h>
 #include <drivers/st/stm32mp_reset.h>
@@ -64,7 +65,7 @@ int stm32_rng_read(uint8_t *out, uint32_t size)
 		return -EPERM;
 	}
 
-	stm32mp_clk_enable(stm32_rng.clock);
+	clk_enable(stm32_rng.clock);
 
 	if ((mmio_read_32(stm32_rng.base + RNG_CR) & RNG_CR_RNGEN) == 0U) {
 		mmio_write_32(stm32_rng.base + RNG_CR,
@@ -121,7 +122,7 @@ int stm32_rng_read(uint8_t *out, uint32_t size)
 	}
 
 bail:
-	stm32mp_clk_disable(stm32_rng.clock);
+	clk_disable(stm32_rng.clock);
 
 	if (rc != 0) {
 		memset(out, 0, buf - out);
@@ -167,9 +168,6 @@ int stm32_rng_init(void)
 		panic();
 	}
 	stm32_rng.clock = (unsigned long)dt_rng.clock;
-
-	stm32mp_clk_enable(stm32_rng.clock);
-	stm32mp_clk_disable(stm32_rng.clock);
 
 	if (dt_rng.reset >= 0) {
 		int ret;

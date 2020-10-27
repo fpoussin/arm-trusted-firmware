@@ -12,6 +12,7 @@
 
 #include <arch_helpers.h>
 #include <common/fdt_wrappers.h>
+#include <drivers/clk.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -392,7 +393,7 @@ unsigned long fdt_get_uart_clock_freq(uintptr_t instance)
 		return 0UL;
 	}
 
-	return stm32mp_clk_get_rate((unsigned long)clk_id);
+	return clk_get_rate((unsigned long)clk_id);
 }
 
 /*******************************************************************************

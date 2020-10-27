@@ -18,6 +18,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_timer.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -1260,12 +1261,14 @@ static void __stm32mp1_clk_disable(unsigned long id, bool with_refcnt)
 	stm32mp1_clk_unlock(&refcount_lock);
 }
 
-void stm32mp_clk_enable(unsigned long id)
+static int stm32mp_clk_enable(unsigned long id)
 {
 	__stm32mp1_clk_enable(id, true);
+
+	return 0;
 }
 
-void stm32mp_clk_disable(unsigned long id)
+static void stm32mp_clk_disable(unsigned long id)
 {
 	__stm32mp1_clk_disable(id, true);
 }
@@ -1280,7 +1283,7 @@ void stm32mp1_clk_force_disable(unsigned long id)
 	__stm32mp1_clk_disable(id, false);
 }
 
-bool stm32mp_clk_is_enabled(unsigned long id)
+static bool stm32mp_clk_is_enabled(unsigned long id)
 {
 	int i;
 
@@ -1296,15 +1299,55 @@ bool stm32mp_clk_is_enabled(unsigned long id)
 	return __clk_is_enabled(gate_ref(i));
 }
 
-unsigned long stm32mp_clk_get_rate(unsigned long id)
+static unsigned long stm32mp_clk_get_rate(unsigned long id)
 {
+	uintptr_t rcc_base = stm32mp_rcc_base();
 	int p = stm32mp1_clk_get_parent(id);
+	uint32_t prescaler, timpre;
+	unsigned long parent_rate;
 
 	if (p < 0) {
 		return 0;
 	}
 
-	return get_clock_rate(p);
+	parent_rate = get_clock_rate(p);
+
+	switch (id) {
+	case TIM2_K:
+	case TIM3_K:
+	case TIM4_K:
+	case TIM5_K:
+	case TIM6_K:
+	case TIM7_K:
+	case TIM12_K:
+	case TIM13_K:
+	case TIM14_K:
+		prescaler = mmio_read_32(rcc_base + RCC_APB1DIVR) &
+			    RCC_APBXDIV_MASK;
+		timpre = mmio_read_32(rcc_base + RCC_TIMG1PRER) &
+			 RCC_TIMGXPRER_TIMGXPRE;
+		break;
+
+	case TIM1_K:
+	case TIM8_K:
+	case TIM15_K:
+	case TIM16_K:
+	case TIM17_K:
+		prescaler = mmio_read_32(rcc_base + RCC_APB2DIVR) &
+			    RCC_APBXDIV_MASK;
+		timpre = mmio_read_32(rcc_base + RCC_TIMG2PRER) &
+			 RCC_TIMGXPRER_TIMGXPRE;
+		break;
+
+	default:
+		return parent_rate;
+	}
+
+	if (prescaler == 0U) {
+		return parent_rate;
+	}
+
+	return parent_rate * (timpre + 1U) * 2U;
 }
 
 static void stm32mp1_ls_osc_set(bool enable, uint32_t offset, uint32_t mask_on)
@@ -1814,50 +1857,6 @@ static void stm32mp1_set_rtcsrc(unsigned int clksrc, bool lse_css)
 	if (lse_css) {
 		mmio_setbits_32(address, RCC_BDCR_LSECSSON);
 	}
-}
-
-unsigned long stm32mp_clk_timer_get_rate(unsigned long id)
-{
-	unsigned long parent_rate;
-	uint32_t prescaler, timpre;
-	uintptr_t rcc_base = stm32mp_rcc_base();
-
-	parent_rate = stm32mp_clk_get_rate(id);
-
-	switch (id) {
-	case TIM2_K:
-	case TIM3_K:
-	case TIM4_K:
-	case TIM5_K:
-	case TIM6_K:
-	case TIM7_K:
-	case TIM12_K:
-	case TIM13_K:
-	case TIM14_K:
-		prescaler = mmio_read_32(rcc_base + RCC_APB1DIVR) &
-			    RCC_APBXDIV_MASK;
-		timpre = mmio_read_32(rcc_base + RCC_TIMG1PRER) &
-			 RCC_TIMGXPRER_TIMGXPRE;
-		break;
-	case TIM1_K:
-	case TIM8_K:
-	case TIM15_K:
-	case TIM16_K:
-	case TIM17_K:
-		prescaler = mmio_read_32(rcc_base + RCC_APB2DIVR) &
-			    RCC_APBXDIV_MASK;
-		timpre = mmio_read_32(rcc_base + RCC_TIMG2PRER) &
-			 RCC_TIMGXPRER_TIMGXPRE;
-		break;
-	default:
-		return 0;
-	}
-
-	if (!prescaler) {
-		return parent_rate;
-	}
-
-	return parent_rate * (timpre + 1) * 2;
 }
 
 /*******************************************************************************
@@ -3416,6 +3415,14 @@ static void sync_earlyboot_clocks_state(void)
 	}
 }
 
+static const clk_ops_t stm32mp_clk_ops = {
+	.enable		= stm32mp_clk_enable,
+	.disable	= stm32mp_clk_disable,
+	.is_enabled	= stm32mp_clk_is_enabled,
+	.get_rate	= stm32mp_clk_get_rate,
+	.get_parent	= stm32mp1_clk_get_parent,
+};
+
 int stm32mp1_clk_probe(void)
 {
 	unsigned long freq_khz;
@@ -3433,6 +3440,8 @@ int stm32mp1_clk_probe(void)
 	}
 
 	current_opp_khz = (uint32_t)freq_khz;
+
+	clk_register(&stm32mp_clk_ops);
 
 	return 0;
 }

@@ -10,6 +10,7 @@
 
 #include <arch_helpers.h>
 #include <common/debug.h>
+#include <drivers/clk.h>
 #include <drivers/st/stm32_rtc.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <lib/mmio.h>
@@ -211,7 +212,7 @@ void stm32_rtc_get_calendar(struct stm32_rtc_calendar *calendar)
 	bool read_twice = stm32mp1_rtc_get_read_twice();
 
 	stm32_rtc_regs_lock();
-	stm32mp_clk_enable(rtc_dev.clock);
+	clk_enable(rtc_dev.clock);
 
 	stm32_rtc_read_calendar(calendar);
 
@@ -225,7 +226,7 @@ void stm32_rtc_get_calendar(struct stm32_rtc_calendar *calendar)
 		}
 	}
 
-	stm32mp_clk_disable(rtc_dev.clock);
+	clk_disable(rtc_dev.clock);
 	stm32_rtc_regs_unlock();
 }
 
@@ -379,7 +380,7 @@ unsigned long long stm32_rtc_diff_calendar(struct stm32_rtc_calendar *cur,
 	struct stm32_rtc_time curr_t;
 	struct stm32_rtc_time ref_t;
 
-	stm32mp_clk_enable(rtc_dev.clock);
+	clk_enable(rtc_dev.clock);
 
 	stm32_rtc_get_date(cur, &curr_t);
 	stm32_rtc_get_date(ref, &ref_t);
@@ -390,7 +391,7 @@ unsigned long long stm32_rtc_diff_calendar(struct stm32_rtc_calendar *cur,
 	diff_in_ms += stm32_rtc_diff_time(&curr_t, &ref_t);
 	diff_in_ms += stm32_rtc_diff_date(&curr_t, &ref_t);
 
-	stm32mp_clk_disable(rtc_dev.clock);
+	clk_disable(rtc_dev.clock);
 
 	return (unsigned long long)diff_in_ms;
 }
@@ -401,7 +402,7 @@ unsigned long long stm32_rtc_diff_calendar(struct stm32_rtc_calendar *cur,
 void stm32_rtc_get_timestamp(struct stm32_rtc_time *tamp_ts)
 {
 	stm32_rtc_regs_lock();
-	stm32mp_clk_enable(rtc_dev.clock);
+	clk_enable(rtc_dev.clock);
 
 	if ((mmio_read_32(rtc_dev.base + RTC_SR) & RTC_SR_TSF) != 0U) {
 		/* Print timestamp for tamper event */
@@ -414,7 +415,7 @@ void stm32_rtc_get_timestamp(struct stm32_rtc_time *tamp_ts)
 		}
 	}
 
-	stm32mp_clk_disable(rtc_dev.clock);
+	clk_disable(rtc_dev.clock);
 	stm32_rtc_regs_unlock();
 }
 
@@ -425,7 +426,7 @@ void stm32_rtc_get_timestamp(struct stm32_rtc_time *tamp_ts)
 void stm32_rtc_set_tamper_timestamp(void)
 {
 	stm32_rtc_regs_lock();
-	stm32mp_clk_enable(rtc_dev.clock);
+	clk_enable(rtc_dev.clock);
 
 	stm32_rtc_write_unprotect();
 
@@ -437,7 +438,7 @@ void stm32_rtc_set_tamper_timestamp(void)
 
 	stm32_rtc_write_protect();
 
-	stm32mp_clk_disable(rtc_dev.clock);
+	clk_disable(rtc_dev.clock);
 	stm32_rtc_regs_unlock();
 }
 
@@ -448,11 +449,11 @@ bool stm32_rtc_is_timestamp_enable(void)
 {
 	bool ret;
 
-	stm32mp_clk_enable(rtc_dev.clock);
+	clk_enable(rtc_dev.clock);
 
 	ret = (mmio_read_32(rtc_dev.base + RTC_CR) & RTC_CR_TAMPTS) != 0U;
 
-	stm32mp_clk_disable(rtc_dev.clock);
+	clk_disable(rtc_dev.clock);
 
 	return ret;
 }

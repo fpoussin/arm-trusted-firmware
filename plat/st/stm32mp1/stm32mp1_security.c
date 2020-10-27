@@ -10,6 +10,7 @@
 
 #include <common/debug.h>
 #include <drivers/arm/tzc400.h>
+#include <drivers/clk.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/mmio.h>
@@ -124,8 +125,8 @@ static void init_tzc400(void)
  ******************************************************************************/
 static void early_init_tzc400(void)
 {
-	stm32mp_clk_enable(TZC1);
-	stm32mp_clk_enable(TZC2);
+	clk_enable(TZC1);
+	clk_enable(TZC2);
 
 	/* Region 0 set to cover all DRAM secure at 0xC000_0000 */
 	init_tzc400_begin(TZC_REGION_S_RDWR);

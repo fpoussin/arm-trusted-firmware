@@ -15,6 +15,7 @@
 
 #include <common/debug.h>
 #include <common/fdt_wrappers.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32_i2c.h>
@@ -373,7 +374,7 @@ static int i2c_setup_timing(struct i2c_handle_s *hi2c,
 	int rc = 0;
 	uint32_t clock_src;
 
-	clock_src = (uint32_t)stm32mp_clk_get_rate(hi2c->clock);
+	clock_src = (uint32_t)clk_get_rate(hi2c->clock);
 	if (clock_src == 0U) {
 		ERROR("I2C clock rate is 0\n");
 		return -EINVAL;
@@ -522,7 +523,7 @@ int stm32_i2c_init(struct i2c_handle_s *hi2c,
 		return rc;
 	}
 
-	stm32mp_clk_enable(hi2c->clock);
+	clk_enable(hi2c->clock);
 
 	/* Disable the selected I2C peripheral */
 	mmio_clrbits_32(hi2c->i2c_base_addr + I2C_CR1, I2C_CR1_PE);
@@ -584,11 +585,11 @@ int stm32_i2c_init(struct i2c_handle_s *hi2c,
 						I2C_ANALOGFILTER_DISABLE);
 	if (rc != 0) {
 		ERROR("Cannot initialize I2C analog filter (%d)\n", rc);
-		stm32mp_clk_disable(hi2c->clock);
+		clk_disable(hi2c->clock);
 		return rc;
 	}
 
-	stm32mp_clk_disable(hi2c->clock);
+	clk_disable(hi2c->clock);
 
 	return rc;
 }
@@ -912,7 +913,7 @@ static int i2c_write(struct i2c_handle_s *hi2c, uint16_t dev_addr,
 		return -EINVAL;
 	}
 
-	stm32mp_clk_enable(hi2c->clock);
+	clk_enable(hi2c->clock);
 
 	hi2c->lock = 1;
 
@@ -1012,7 +1013,7 @@ static int i2c_write(struct i2c_handle_s *hi2c, uint16_t dev_addr,
 
 bail:
 	hi2c->lock = 0;
-	stm32mp_clk_disable(hi2c->clock);
+	clk_disable(hi2c->clock);
 
 	return rc;
 }
@@ -1093,7 +1094,7 @@ static int i2c_read(struct i2c_handle_s *hi2c, uint16_t dev_addr,
 		return  -EINVAL;
 	}
 
-	stm32mp_clk_enable(hi2c->clock);
+	clk_enable(hi2c->clock);
 
 	hi2c->lock = 1;
 
@@ -1181,7 +1182,7 @@ static int i2c_read(struct i2c_handle_s *hi2c, uint16_t dev_addr,
 
 bail:
 	hi2c->lock = 0;
-	stm32mp_clk_disable(hi2c->clock);
+	clk_disable(hi2c->clock);
 
 	return rc;
 }
@@ -1246,7 +1247,7 @@ bool stm32_i2c_is_device_ready(struct i2c_handle_s *hi2c,
 		return rc;
 	}
 
-	stm32mp_clk_enable(hi2c->clock);
+	clk_enable(hi2c->clock);
 
 	hi2c->lock = 1;
 	hi2c->i2c_mode = I2C_MODE_NONE;
@@ -1338,7 +1339,7 @@ bool stm32_i2c_is_device_ready(struct i2c_handle_s *hi2c,
 
 bail:
 	hi2c->lock = 0;
-	stm32mp_clk_disable(hi2c->clock);
+	clk_disable(hi2c->clock);
 
 	return rc;
 }

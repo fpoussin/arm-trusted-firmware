@@ -11,6 +11,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/arm/gicv2.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32_rtc.h>
@@ -192,7 +193,7 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 
 	zq0cr0_zdata = ddr_get_io_calibration_val();
 
-	stm32mp_clk_enable(RTCAPB);
+	clk_enable(RTCAPB);
 
 	mmio_write_32(bkpr_core1_addr, 0);
 	mmio_write_32(bkpr_core1_magic, 0);
@@ -232,7 +233,7 @@ static void enter_cstop(uint32_t mode, uint32_t nsec_addr)
 		}
 	}
 
-	stm32mp_clk_disable(RTCAPB);
+	clk_disable(RTCAPB);
 
 	enter_cstop_done = true;
 }

@@ -11,6 +11,7 @@
 
 #include <platform_def.h>
 
+#include <drivers/clk.h>
 #include <drivers/st/stm32_gpio.h>
 #include <drivers/st/stm32_rng.h>
 #include <drivers/st/stm32_rtc.h>
@@ -334,7 +335,7 @@ int stm32_tamp_init(void)
 	stm32_tamp.clock = (uint32_t)dt_tamp.clock;
 
 	/* Init Tamp clock */
-	stm32mp_clk_enable(stm32_tamp.clock);
+	clk_enable(stm32_tamp.clock);
 
 	/* Reset Tamp register without modifying backup registers conf */
 	stm32_tamp_reset_register(stm32_tamp.base);

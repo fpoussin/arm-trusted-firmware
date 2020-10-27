@@ -12,6 +12,7 @@
 
 #include <platform_def.h>
 
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_timer.h>
 #include <lib/mmio.h>
@@ -90,13 +91,13 @@ static int stm32_timer_get_dt_node(struct dt_node_info *info, int offset)
 
 static int stm32_timer_config(struct stm32_timer_instance *timer)
 {
-	stm32mp_clk_enable(timer->clk);
+	clk_enable(timer->clk);
 
-	timer->freq = stm32mp_clk_timer_get_rate(timer->clk);
+	timer->freq = clk_get_rate(timer->clk);
 
 	if (timer->freq < TIM_MIN_FREQ_CALIB) {
 		WARN("Timer is not accurate enough for calibration\n");
-		stm32mp_clk_disable(timer->clk);
+		clk_disable(timer->clk);
 		return -EINVAL;
 	}
 
@@ -119,7 +120,7 @@ static int stm32_timer_config(struct stm32_timer_instance *timer)
 		mmio_setbits_32(timer->base + TIM_CCER, TIM_CCER_CC1E);
 	}
 
-	stm32mp_clk_disable(timer->clk);
+	clk_disable(timer->clk);
 
 	return 0;
 }
@@ -135,7 +136,7 @@ static uint32_t stm32_timer_start_capture(struct stm32_timer_instance *timer)
 		return 0U;
 	}
 
-	stm32mp_clk_enable(timer->clk);
+	clk_enable(timer->clk);
 
 	mmio_write_32(timer->base + TIM_SR, 0U);
 	while (((mmio_read_32(timer->base + TIM_SR) &
@@ -175,7 +176,7 @@ static uint32_t stm32_timer_start_capture(struct stm32_timer_instance *timer)
 		 TIM_THRESHOLD);
 
 out:
-	stm32mp_clk_disable(timer->clk);
+	clk_disable(timer->clk);
 
 	if (timeout == 0U) {
 		return 0U;
@@ -285,8 +286,7 @@ int stm32_timer_init(void)
 				timer = &stm32_timer[HSI_CAL];
 				timer->base = dt_timer.base;
 				timer->clk = dt_timer.clock;
-				timer->freq =
-					stm32mp_clk_timer_get_rate(timer->clk);
+				timer->freq = clk_get_rate(timer->clk);
 				timer->cal_input =
 					(uint8_t)fdt32_to_cpu(*cuint);
 				if (stm32_timer_config(timer) < 0) {
@@ -301,8 +301,7 @@ int stm32_timer_init(void)
 				timer = &stm32_timer[CSI_CAL];
 				timer->base = dt_timer.base;
 				timer->clk = dt_timer.clock;
-				timer->freq =
-					stm32mp_clk_timer_get_rate(timer->clk);
+				timer->freq = clk_get_rate(timer->clk);
 				timer->cal_input =
 					(uint8_t)fdt32_to_cpu(*cuint);
 				if (stm32_timer_config(timer) < 0) {

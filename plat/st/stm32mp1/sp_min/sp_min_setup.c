@@ -16,6 +16,7 @@
 #include <context.h>
 #include <drivers/arm/gicv2.h>
 #include <drivers/arm/tzc400.h>
+#include <drivers/clk.h>
 #include <drivers/generic_delay_timer.h>
 #include <drivers/st/bsec.h>
 #include <drivers/st/etzpc.h>
@@ -208,12 +209,12 @@ static uintptr_t get_saved_pc(void)
 		tamp_bkpr(BOOT_API_CORE1_MAGIC_NUMBER_TAMP_BCK_REG_IDX);
 	uint32_t magic_nb;
 
-	stm32mp_clk_enable(RTCAPB);
+	clk_enable(RTCAPB);
 
 	magic_nb = mmio_read_32(bkpr_core1_magic);
 	saved_pc = mmio_read_32(bkpr_core1_addr);
 
-	stm32mp_clk_disable(RTCAPB);
+	clk_disable(RTCAPB);
 
 	if (magic_nb != BOOT_API_A7_CORE0_MAGIC_NUMBER) {
 		return 0U;

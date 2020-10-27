@@ -15,6 +15,7 @@
 #include <arch_helpers.h>
 #include <common/debug.h>
 #include <drivers/arm/gicv2.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -94,11 +95,11 @@ void __dead2 stm32_iwdg_it_handler(int id)
 
 	stm32_iwdg_refresh();
 
-	stm32mp_clk_enable(iwdg->clock);
+	clk_enable(iwdg->clock);
 
 	mmio_setbits_32(iwdg->base + IWDG_EWCR_OFFSET, IWDG_EWCR_EWIC);
 
-	stm32mp_clk_disable(iwdg->clock);
+	clk_disable(iwdg->clock);
 
 	/* Ack interrupt as we do not return from next call */
 	gicv2_end_of_interrupt(id);
@@ -145,11 +146,10 @@ static int stm32_iwdg_conf_etimeout(int node, struct stm32_iwdg_instance *iwdg)
 	}
 
 	/* Prescaler fix to 256 */
-	reload_ll = (unsigned long long)dt_secure_timeout *
-		   stm32mp_clk_get_rate(id_lsi);
+	reload_ll = (unsigned long long)dt_secure_timeout * clk_get_rate(id_lsi);
 	reload = ((uint32_t)(reload_ll >> 8) - 1U) & IWDG_EWCR_EWIT_MASK;
 
-	stm32mp_clk_enable(iwdg->clock);
+	clk_enable(iwdg->clock);
 
 	mmio_write_32(iwdg->base + IWDG_KR_OFFSET, IWDG_KR_START_KEY);
 	mmio_write_32(iwdg->base + IWDG_KR_OFFSET, IWDG_KR_ACCESS_KEY);
@@ -168,7 +168,7 @@ static int stm32_iwdg_conf_etimeout(int node, struct stm32_iwdg_instance *iwdg)
 		panic();
 	}
 
-	stm32mp_clk_disable(iwdg->clock);
+	clk_disable(iwdg->clock);
 
 	return (timeout == 0U) ? -ETIMEDOUT : 0;
 }
@@ -183,12 +183,12 @@ void stm32_iwdg_refresh(void)
 
 		/* 0x00000000 is not a valid address for IWDG peripherals */
 		if (iwdg->base != 0U) {
-			stm32mp_clk_enable(iwdg->clock);
+			clk_enable(iwdg->clock);
 
 			mmio_write_32(iwdg->base + IWDG_KR_OFFSET,
 				      IWDG_KR_RELOAD_KEY);
 
-			stm32mp_clk_disable(iwdg->clock);
+			clk_disable(iwdg->clock);
 		}
 	}
 }

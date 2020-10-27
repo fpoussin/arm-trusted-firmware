@@ -8,6 +8,7 @@
 
 #include <common/bl_common.h>
 #include <common/desc_image_load.h>
+#include <drivers/clk.h>
 #include <lib/mmio.h>
 #include <plat/common/platform.h>
 
@@ -45,7 +46,7 @@ bl_load_info_t *plat_get_bl_image_load_info(void)
 		bl32->ep_info.pc = stm32_pm_get_optee_ep();
 
 		if (stm32mp1_addr_inside_backupsram(bl32->ep_info.pc)) {
-			stm32mp_clk_enable(BKPSRAM);
+			clk_enable(BKPSRAM);
 		}
 #else
 		/* Set ep_info PC to 0, to inform BL32 it is a reset after STANDBY */

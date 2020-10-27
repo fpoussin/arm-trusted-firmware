@@ -8,8 +8,9 @@
 
 #include <platform_def.h>
 
-#include <drivers/scmi-msg.h>
-#include <drivers/scmi.h>
+#include <drivers/clk.h>
+#include <drivers/st/scmi-msg.h>
+#include <drivers/st/scmi.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp_reset.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
@@ -276,7 +277,7 @@ int32_t plat_scmi_clock_rates_array(unsigned int agent_id, unsigned int scmi_id,
 	if (array == NULL) {
 		*nb_elts = 1U;
 	} else if (*nb_elts == 1U) {
-		*array = stm32mp_clk_get_rate(clock->clock_id);
+		*array = clk_get_rate(clock->clock_id);
 	} else {
 		return SCMI_GENERIC_ERROR;
 	}
@@ -294,7 +295,7 @@ unsigned long plat_scmi_clock_get_rate(unsigned int agent_id,
 		return 0U;
 	}
 
-	return stm32mp_clk_get_rate(clock->clock_id);
+	return clk_get_rate(clock->clock_id);
 }
 
 int32_t plat_scmi_clock_get_state(unsigned int agent_id, unsigned int scmi_id)
@@ -325,13 +326,13 @@ int32_t plat_scmi_clock_set_state(unsigned int agent_id, unsigned int scmi_id,
 	if (enable_not_disable) {
 		if (!clock->enabled) {
 			VERBOSE("SCMI clock %u enable\n", scmi_id);
-			stm32mp_clk_enable(clock->clock_id);
+			clk_enable(clock->clock_id);
 			clock->enabled = true;
 		}
 	} else {
 		if (clock->enabled) {
 			VERBOSE("SCMI clock %u disable\n", scmi_id);
-			stm32mp_clk_disable(clock->clock_id);
+			clk_disable(clock->clock_id);
 			clock->enabled = false;
 		}
 	}
@@ -474,7 +475,7 @@ void stm32mp1_init_scmi_server(void)
 			/* Sync SCMI clocks with their targeted initial state */
 			if (clk->enabled &&
 			    stm32mp_nsec_can_access_clock(clk->clock_id)) {
-				stm32mp_clk_enable(clk->clock_id);
+				clk_enable(clk->clock_id);
 			}
 		}
 

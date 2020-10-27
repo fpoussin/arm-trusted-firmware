@@ -12,6 +12,7 @@
 
 #include <arch_helpers.h>
 #include <drivers/arm/gicv2.h>
+#include <drivers/clk.h>
 #include <drivers/st/stm32_iwdg.h>
 #include <drivers/st/stm32mp_dummy_regulator.h>
 #include <drivers/st/stm32mp_pmic.h>
@@ -214,7 +215,7 @@ void __dead2 stm32mp_plat_reset(int cpu)
 	stm32mp_mask_timer();
 
 	for (id = 0U; id < ARRAY_SIZE(tzc_source_ip); id++) {
-		if ((!stm32mp_clk_is_enabled(tzc_source_ip[id].clock_id)) ||
+		if ((!clk_is_enabled(tzc_source_ip[id].clock_id)) ||
 		    ((tzc_source_ip[id].decprot_id != STM32MP1_ETZPC_MAX_ID) &&
 		     (etzpc_get_decprot(tzc_source_ip[id].decprot_id) ==
 		      ETZPC_DECPROT_MCU_ISOLATION))) {

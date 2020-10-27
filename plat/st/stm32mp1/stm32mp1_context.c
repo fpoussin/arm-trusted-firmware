@@ -12,6 +12,7 @@
 #include <arch_helpers.h>
 #include <common/bl_common.h>
 #include <context.h>
+#include <drivers/clk.h>
 #include <drivers/st/stm32_rtc.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp1_ddr_regs.h>
@@ -113,7 +114,7 @@ uint32_t stm32_pm_get_optee_ep(void)
 	struct backup_data_s *backup_data;
 	uint32_t ep;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
@@ -133,14 +134,14 @@ uint32_t stm32_pm_get_optee_ep(void)
 
 	ep = backup_data->core0_resume_hint;
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	return ep;
 }
 
 void stm32_clean_context(void)
 {
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 #if defined(IMAGE_BL2)
 	zeromem((void *)STM32MP_BACKUP_RAM_BASE, sizeof(struct backup_data_s));
@@ -148,7 +149,7 @@ void stm32_clean_context(void)
 	zeromem((void *)get_bl32_backup_data(), sizeof(struct backup_bl32_data_s));
 #endif
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }
 
 #if defined(IMAGE_BL32)
@@ -160,11 +161,11 @@ void stm32mp1_pm_save_clock_cfg(size_t offset, uint8_t *data, size_t size)
 		panic();
 	}
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	memcpy(backup_data->clock_cfg + offset, data, size);
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }
 
 void stm32mp1_pm_restore_clock_cfg(size_t offset, uint8_t *data, size_t size)
@@ -174,11 +175,11 @@ void stm32mp1_pm_restore_clock_cfg(size_t offset, uint8_t *data, size_t size)
 	if (offset + size > sizeof(backup_data->clock_cfg))
 		panic();
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	memcpy(data, backup_data->clock_cfg + offset, size);
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }
 
 int stm32_save_context(uint32_t zq0cr0_zdata,
@@ -192,7 +193,7 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 
 	stm32mp1_clock_suspend();
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
@@ -230,7 +231,7 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 
 	save_clock_pm_context();
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	return 0;
 }
@@ -247,7 +248,7 @@ int stm32_restore_context(void)
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	stm32mp1_clk_lp_load_opp_pll1_settings(backup_data->pll1_settings,
 					       sizeof(backup_data->pll1_settings));
@@ -282,7 +283,7 @@ int stm32_restore_context(void)
 						   &backup_bl32_data->rtc);
 	stm32mp_stgen_restore_counter(backup_bl32_data->stgen, stdby_time_in_ms);
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	stm32mp1_clock_resume();
 
@@ -294,13 +295,13 @@ unsigned long long stm32_get_stgen_from_context(void)
 	struct backup_bl32_data_s *backup_data;
 	unsigned long long stgen_cnt;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = get_bl32_backup_data();
 
 	stgen_cnt = backup_data->stgen;
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	return stgen_cnt;
 }
@@ -311,7 +312,7 @@ void stm32_context_get_bl2_low_power_params(uintptr_t *bl2_code_base,
 {
 	struct backup_data_s *backup_data;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
@@ -326,7 +327,7 @@ void stm32_context_get_bl2_low_power_params(uintptr_t *bl2_code_base,
 	*bl2_code_end = (uintptr_t)backup_data->bl2_code_end;
 	*bl2_end = (uintptr_t)backup_data->bl2_end;
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }
 
 #endif /* IMAGE_BL32 */
@@ -336,7 +337,7 @@ void stm32_context_save_bl2_param(void)
 {
 	struct backup_data_s *backup_data;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
@@ -346,7 +347,7 @@ void stm32_context_save_bl2_param(void)
 	backup_data->bl2_end = BL2_END;
 	backup_data->magic = MAILBOX_MAGIC_V3;
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }
 #endif
 
@@ -355,14 +356,14 @@ uint32_t stm32_get_zdata_from_context(void)
 	struct backup_data_s *backup_data;
 	uint32_t zdata;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
 	zdata = (backup_data->zq0cr0_zdata >> DDRPHYC_ZQ0CRN_ZDATA_SHIFT) &
 		DDRPHYC_ZQ0CRN_ZDATA_MASK;
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	return zdata;
 }
@@ -389,7 +390,7 @@ int stm32_get_pll1_settings_from_context(void)
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	ret = pll1_settings_in_context(backup_data);
 	if (ret == 0) {
@@ -399,7 +400,7 @@ int stm32_get_pll1_settings_from_context(void)
 		stm32mp1_clk_lp_load_opp_pll1_settings(data, size);
 	}
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	return ret;
 }
@@ -410,14 +411,14 @@ bool stm32_are_pll1_settings_valid_in_context(void)
 	uint32_t *data;
 	bool is_valid;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 	data = (uint32_t *)backup_data->pll1_settings;
 
 	is_valid = (data[0] == PLL1_SETTINGS_VALID_ID);
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 
 	return is_valid;
 }
@@ -426,14 +427,14 @@ int stm32_save_boot_interface(uint32_t interface, uint32_t instance)
 {
 	uint32_t bkpr_itf_idx = tamp_bkpr(TAMP_BOOT_ITF_BACKUP_REG_ID);
 
-	stm32mp_clk_enable(RTCAPB);
+	clk_enable(RTCAPB);
 
 	mmio_clrsetbits_32(bkpr_itf_idx,
 			   TAMP_BOOT_ITF_MASK,
 			   ((interface << 4) | (instance & 0xFU)) <<
 			   TAMP_BOOT_ITF_SHIFT);
 
-	stm32mp_clk_disable(RTCAPB);
+	clk_disable(RTCAPB);
 
 	return 0;
 }
@@ -443,11 +444,11 @@ int stm32_get_boot_interface(uint32_t *interface, uint32_t *instance)
 	uint32_t itf;
 	uint32_t bkpr = tamp_bkpr(TAMP_BOOT_ITF_BACKUP_REG_ID);
 
-	stm32mp_clk_enable(RTCAPB);
+	clk_enable(RTCAPB);
 
 	itf = (mmio_read_32(bkpr) & TAMP_BOOT_ITF_MASK) >> TAMP_BOOT_ITF_SHIFT;
 
-	stm32mp_clk_disable(RTCAPB);
+	clk_disable(RTCAPB);
 
 	*interface = itf >> 4;
 	*instance = itf & 0xFU;
@@ -466,7 +467,7 @@ void stm32_save_ddr_training_area(void)
 	struct backup_data_s *backup_data;
 	int ret __unused;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
@@ -482,7 +483,7 @@ void stm32_save_ddr_training_area(void)
 	ret = mmap_remove_dynamic_region(STM32MP_DDR_BASE, PAGE_SIZE);
 	assert(ret == 0);
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }
 #endif
 
@@ -490,7 +491,7 @@ void stm32_restore_ddr_training_area(void)
 {
 	struct backup_data_s *backup_data;
 
-	stm32mp_clk_enable(BKPSRAM);
+	clk_enable(BKPSRAM);
 
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
@@ -499,5 +500,5 @@ void stm32_restore_ddr_training_area(void)
 	       TRAINING_AREA_SIZE);
 	dsb();
 
-	stm32mp_clk_disable(BKPSRAM);
+	clk_disable(BKPSRAM);
 }

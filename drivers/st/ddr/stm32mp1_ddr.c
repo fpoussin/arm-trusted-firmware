@@ -12,6 +12,7 @@
 #include <arch.h>
 #include <arch_helpers.h>
 #include <common/debug.h>
+#include <drivers/clk.h>
 #include <drivers/delay_timer.h>
 #include <drivers/st/stm32mp_pmic.h>
 #include <drivers/st/stm32mp1_ddr.h>
@@ -615,7 +616,7 @@ static void stm32mp1_ddr3_dll_off(struct ddr_info *priv)
 	 */
 
 	/* Change Bypass Mode Frequency Range */
-	if (stm32mp_clk_get_rate(DDRPHYC) < 100000000U) {
+	if (clk_get_rate(DDRPHYC) < 100000000U) {
 		mmio_clrbits_32((uintptr_t)&priv->phy->dllgcr,
 				DDRPHYC_DLLGCR_BPS200);
 	} else {
