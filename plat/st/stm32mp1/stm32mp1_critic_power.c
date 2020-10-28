@@ -34,12 +34,8 @@ static void cstop_critic_exit(void)
 	if (ddr_sw_self_refresh_exit() != 0) {
 		panic();
 	}
-
-	/* Switch to memorized Self-Refresh mode */
-	ddr_restore_sr_mode();
 }
 
-#if STM32MP_SP_MIN_IN_DDR
 void stm32_pwr_down_wfi_load(bool is_cstop)
 {
 	if (is_cstop) {
@@ -60,7 +56,8 @@ void stm32_pwr_down_wfi_load(bool is_cstop)
 		cstop_critic_exit();
 	}
 }
-#else
+
+#if defined(IMAGE_BL32) && !STM32MP_SP_MIN_IN_DDR
 extern void wfi_svc_int_enable(uintptr_t stack_addr);
 static uint32_t int_stack[STM32MP_INT_STACK_SIZE];
 

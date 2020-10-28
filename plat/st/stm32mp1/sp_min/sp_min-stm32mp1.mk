@@ -6,6 +6,13 @@
 
 SP_MIN_WITH_SECURE_FIQ	:=	1
 
+# Allow SP_min to be placed in DDR
+STM32MP_SP_MIN_IN_DDR	?=	0
+
+$(eval $(call assert_booleans, STM32MP_SP_MIN_IN_DDR))
+
+$(eval $(call add_defines, STM32MP_SP_MIN_IN_DDR))
+
 BL32_CFLAGS		+=	-DSTM32MP_SHARED_RESOURCES
 
 BL32_SOURCES		+=	drivers/st/clk/stm32mp1_calib.c			\

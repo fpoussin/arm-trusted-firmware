@@ -31,9 +31,6 @@ STM32_TF_VERSION	?=	0
 # Enable dynamic memory mapping
 PLAT_XLAT_TABLES_DYNAMIC :=	1
 
-# Allow SP_min to be placed in DDR
-STM32MP_SP_MIN_IN_DDR	:=	0
-
 # DDR controller with dual AXI port
 STM32MP_DDR_DUAL_AXI_PORT:= 	1
 
@@ -156,7 +153,6 @@ $(eval $(call assert_booleans,\
 		STM32MP_USB_PROGRAMMER \
 		STM32MP_USE_STM32IMAGE \
 		STM32MP_DDR_DUAL_AXI_PORT \
-		STM32MP_SP_MIN_IN_DDR \
 )))
 
 $(eval $(call assert_numerics,\
@@ -181,7 +177,6 @@ $(eval $(call add_defines,\
 		STM32_TF_VERSION \
 		STM32MP_USE_STM32IMAGE \
 		STM32MP_DDR_DUAL_AXI_PORT \
-		STM32MP_SP_MIN_IN_DDR \
 )))
 
 # Include paths and source files
@@ -333,10 +328,8 @@ BL2_SOURCES		+=	common/desc_image_load.c				\
 
 BL2_SOURCES		+=	lib/optee/optee_utils.c
 
-ifeq ($(STM32MP_SP_MIN_IN_DDR),1)
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power.c
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power_wrapper.S
-endif
 
 # Compilation rules
 .PHONY: check_dtc_version stm32image clean_stm32image

@@ -10,6 +10,7 @@
 #include <platform_def.h>
 
 #include <arch_helpers.h>
+#include <common/bl_common.h>
 #include <context.h>
 #include <drivers/st/stm32_rtc.h>
 #include <drivers/st/stm32mp_clkfunc.h>
@@ -24,6 +25,7 @@
 #include <stm32mp1_context.h>
 
 #include <boot_api.h>
+#include <stm32mp1_critic_power.h>
 
 #define TAMP_BOOT_ITF_BACKUP_REG_ID	U(20)
 #define TAMP_BOOT_ITF_MASK		U(0x0000FF00)
@@ -31,36 +33,34 @@
 
 #define TRAINING_AREA_SIZE		64
 
-/*
- * OPTEE_MAILBOX_MAGIC relates to struct backup_data_s as defined
- *
- * OPTEE_MAILBOX_MAGIC_V1:
- * Context provides magic, resume entry, zq0cr0 zdata and DDR training buffer.
- *
- * OPTEE_MAILBOX_MAGIC_V2:
- * Context provides magic, resume entry, zq0cr0 zdata, DDR training buffer
- * and PLL1 dual OPP settings structure (86 bytes).
- */
-#define OPTEE_MAILBOX_MAGIC_V1		(0x0001 << 16)
-#define OPTEE_MAILBOX_MAGIC_V2		(0x0002 << 16)
-#define OPTEE_MAILBOX_MAGIC		(OPTEE_MAILBOX_MAGIC_V2 | \
-					 TRAINING_AREA_SIZE)
+#define BL32_CANARY_ID			U(0x424c3332)
 
 /*
- * TFA_MAILBOX_MAGIC relates to struct backup_data_s as defined
+ * MAILBOX_MAGIC relates to struct backup_data_s as defined
  *
- * TFA_MAILBOX_MAGIC_V1:
- * Aligned with the OPTEE context structure V2. Identifying the BL32
- * exchange structure with a magic.
+ * MAILBOX_MAGIC_V1:
+ * Context provides magic, resume entry, zq0cr0 zdata and DDR training buffer.
+ *
+ * MAILBOX_MAGIC_V2:
+ * Context provides magic, resume entry, zq0cr0 zdata, DDR training buffer
+ * and PLL1 dual OPP settings structure (86 bytes).
+ *
+ * MAILBOX_MAGIC_V3:
+ * Context provides magic, resume entry, zq0cr0 zdata, DDR training buffer
+ * and PLL1 dual OPP settings structure, low power entry point, BL2 code start, end and BL2_END
+ * (102 bytes).
  */
-#define TFA_MAILBOX_MAGIC_V1		(0x1000 << 16)
-#define TFA_MAILBOX_MAGIC		(TFA_MAILBOX_MAGIC_V1 | \
+#define MAILBOX_MAGIC_V1		(0x0001 << 16)
+#define MAILBOX_MAGIC_V2		(0x0002 << 16)
+#define MAILBOX_MAGIC_V3		(0x0003 << 16)
+#define MAILBOX_MAGIC			(MAILBOX_MAGIC_V3 | \
 					 TRAINING_AREA_SIZE)
+
 #define MAGIC_ID(magic)			((magic) & GENMASK_32(31, 16))
 #define MAGIC_AREA_SIZE(magic)		((magic) & GENMASK_32(15, 0))
 
 #if (PLAT_MAX_OPP_NB != 2) || (PLAT_MAX_PLLCFG_NB != 6)
-#error OPTEE_MAILBOX_MAGIC_V1 does not support expected PLL1 settings
+#error MAILBOX_MAGIC_V2/_V3 does not support expected PLL1 settings
 #endif
 
 /* pll_settings structure size definitions (reference to clock driver) */
@@ -80,6 +80,15 @@ struct backup_data_s {
 	uint32_t zq0cr0_zdata;
 	uint8_t ddr_training_backup[TRAINING_AREA_SIZE];
 	uint8_t pll1_settings[PLL1_SETTINGS_SIZE];
+	uint32_t low_power_ep;
+	uint32_t bl2_code_base;
+	uint32_t bl2_code_end;
+	uint32_t bl2_end;
+};
+
+#if defined(IMAGE_BL32)
+struct backup_bl32_data_s {
+	uint32_t canary_id;
 	smc_ctx_t saved_smc_context[PLATFORM_CORE_COUNT];
 	cpu_context_t saved_cpu_context[PLATFORM_CORE_COUNT];
 	struct stm32_rtc_calendar rtc;
@@ -87,6 +96,17 @@ struct backup_data_s {
 	uint8_t clock_cfg[CLOCK_CONTEXT_SIZE];
 	uint8_t scmi_context[SCMI_CONTEXT_SIZE];
 };
+
+static struct backup_bl32_data_s *get_bl32_backup_data(void)
+{
+	return (struct backup_bl32_data_s *)(STM32MP_BACKUP_RAM_BASE +
+					     sizeof(struct backup_data_s));
+}
+
+#if STM32MP_SP_MIN_IN_DDR
+void (*stm32_pwr_down_wfi)(bool is_cstop);
+#endif
+#endif
 
 uint32_t stm32_pm_get_optee_ep(void)
 {
@@ -99,8 +119,9 @@ uint32_t stm32_pm_get_optee_ep(void)
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
 	switch (MAGIC_ID(backup_data->magic)) {
-	case OPTEE_MAILBOX_MAGIC_V1:
-	case OPTEE_MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V1:
+	case MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V3:
 		if (MAGIC_AREA_SIZE(backup_data->magic) != TRAINING_AREA_SIZE) {
 			panic();
 		}
@@ -117,25 +138,27 @@ uint32_t stm32_pm_get_optee_ep(void)
 	return ep;
 }
 
-#if defined(IMAGE_BL32)
 void stm32_clean_context(void)
 {
 	stm32mp_clk_enable(BKPSRAM);
 
+#if defined(IMAGE_BL2)
 	zeromem((void *)STM32MP_BACKUP_RAM_BASE, sizeof(struct backup_data_s));
+#elif defined(IMAGE_BL32)
+	zeromem((void *)get_bl32_backup_data(), sizeof(struct backup_bl32_data_s));
+#endif
 
 	stm32mp_clk_disable(BKPSRAM);
 }
 
+#if defined(IMAGE_BL32)
 void stm32mp1_pm_save_clock_cfg(size_t offset, uint8_t *data, size_t size)
 {
-	struct backup_data_s *backup_data;
+	struct backup_bl32_data_s *backup_data = get_bl32_backup_data();
 
 	if (offset + size > sizeof(backup_data->clock_cfg)) {
 		panic();
 	}
-
-	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
 	stm32mp_clk_enable(BKPSRAM);
 
@@ -146,12 +169,10 @@ void stm32mp1_pm_save_clock_cfg(size_t offset, uint8_t *data, size_t size)
 
 void stm32mp1_pm_restore_clock_cfg(size_t offset, uint8_t *data, size_t size)
 {
-	struct backup_data_s *backup_data;
+	struct backup_bl32_data_s *backup_data = get_bl32_backup_data();
 
 	if (offset + size > sizeof(backup_data->clock_cfg))
 		panic();
-
-	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
 	stm32mp_clk_enable(BKPSRAM);
 
@@ -167,6 +188,7 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 	void *smc_context;
 	void *cpu_context;
 	struct backup_data_s *backup_data;
+	struct backup_bl32_data_s *backup_bl32_data;
 
 	stm32mp1_clock_suspend();
 
@@ -175,7 +197,18 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
 
-	backup_data->magic = TFA_MAILBOX_MAGIC;
+	/* Save BL32 context data provided to BL2 */
+	backup_data->magic = MAILBOX_MAGIC;
+
+	backup_data->zq0cr0_zdata = zq0cr0_zdata;
+
+	stm32mp1_clk_lp_save_opp_pll1_settings(backup_data->pll1_settings,
+					       sizeof(backup_data->pll1_settings));
+
+	/* Save the BL32 specific data */
+	backup_bl32_data = get_bl32_backup_data();
+
+	backup_bl32_data->canary_id = BL32_CANARY_ID;
 
 	/* Retrieve smc context struct address */
 	smc_context = smc_get_ctx(NON_SECURE);
@@ -184,21 +217,16 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 	cpu_context = cm_get_context(NON_SECURE);
 
 	/* Save context in Backup SRAM */
-	memcpy(&backup_data->saved_smc_context[0], smc_context,
+	memcpy(&backup_bl32_data->saved_smc_context[0], smc_context,
 	       sizeof(smc_ctx_t) * PLATFORM_CORE_COUNT);
-	memcpy(&backup_data->saved_cpu_context[0], cpu_context,
+	memcpy(&backup_bl32_data->saved_cpu_context[0], cpu_context,
 	       sizeof(cpu_context_t) * PLATFORM_CORE_COUNT);
 
-	backup_data->zq0cr0_zdata = zq0cr0_zdata;
+	memcpy(&backup_bl32_data->rtc, rtc_time, sizeof(struct stm32_rtc_calendar));
+	backup_bl32_data->stgen = stgen_cnt;
 
-	memcpy(&backup_data->rtc, rtc_time, sizeof(struct stm32_rtc_calendar));
-	backup_data->stgen = stgen_cnt;
-
-	stm32mp1_clk_lp_save_opp_pll1_settings(backup_data->pll1_settings,
-					sizeof(backup_data->pll1_settings));
-
-	stm32mp1_pm_save_scmi_state(backup_data->scmi_context,
-				    sizeof(backup_data->scmi_context));
+	stm32mp1_pm_save_scmi_state(backup_bl32_data->scmi_context,
+				    sizeof(backup_bl32_data->scmi_context));
 
 	save_clock_pm_context();
 
@@ -212,11 +240,24 @@ int stm32_restore_context(void)
 	void *smc_context;
 	void *cpu_context;
 	struct backup_data_s *backup_data;
+	struct backup_bl32_data_s *backup_bl32_data;
 	struct stm32_rtc_calendar current_calendar;
 	unsigned long long stdby_time_in_ms;
 
 	/* Context & Data to be saved at the beginning of Backup SRAM */
 	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	stm32mp1_clk_lp_load_opp_pll1_settings(backup_data->pll1_settings,
+					       sizeof(backup_data->pll1_settings));
+
+	backup_bl32_data = get_bl32_backup_data();
+
+	if (backup_bl32_data->canary_id != BL32_CANARY_ID) {
+		ERROR("Incorrect BL32 backup data\n");
+		return -EINVAL;
+	}
 
 	/* Retrieve smc context struct address */
 	smc_context = smc_get_ctx(NON_SECURE);
@@ -224,27 +265,22 @@ int stm32_restore_context(void)
 	/* Retrieve smc context struct address */
 	cpu_context = cm_get_context(NON_SECURE);
 
-	stm32mp_clk_enable(BKPSRAM);
-
 	restore_clock_pm_context();
 
-	stm32mp1_pm_restore_scmi_state(backup_data->scmi_context,
-				       sizeof(backup_data->scmi_context));
+	stm32mp1_pm_restore_scmi_state(backup_bl32_data->scmi_context,
+				       sizeof(backup_bl32_data->scmi_context));
 
 	/* Restore data from Backup SRAM */
-	memcpy(smc_context, backup_data->saved_smc_context,
+	memcpy(smc_context, backup_bl32_data->saved_smc_context,
 	       sizeof(smc_ctx_t) * PLATFORM_CORE_COUNT);
-	memcpy(cpu_context, backup_data->saved_cpu_context,
+	memcpy(cpu_context, backup_bl32_data->saved_cpu_context,
 	       sizeof(cpu_context_t) * PLATFORM_CORE_COUNT);
 
 	/* Restore STGEN counter with standby mode length */
 	stm32_rtc_get_calendar(&current_calendar);
 	stdby_time_in_ms = stm32_rtc_diff_calendar(&current_calendar,
-						   &backup_data->rtc);
-	stm32mp_stgen_restore_counter(backup_data->stgen, stdby_time_in_ms);
-
-	stm32mp1_clk_lp_load_opp_pll1_settings(backup_data->pll1_settings,
-					sizeof(backup_data->pll1_settings));
+						   &backup_bl32_data->rtc);
+	stm32mp_stgen_restore_counter(backup_bl32_data->stgen, stdby_time_in_ms);
 
 	stm32mp_clk_disable(BKPSRAM);
 
@@ -255,12 +291,12 @@ int stm32_restore_context(void)
 
 unsigned long long stm32_get_stgen_from_context(void)
 {
-	struct backup_data_s *backup_data;
+	struct backup_bl32_data_s *backup_data;
 	unsigned long long stgen_cnt;
 
 	stm32mp_clk_enable(BKPSRAM);
 
-	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+	backup_data = get_bl32_backup_data();
 
 	stgen_cnt = backup_data->stgen;
 
@@ -268,7 +304,51 @@ unsigned long long stm32_get_stgen_from_context(void)
 
 	return stgen_cnt;
 }
+
+void stm32_context_get_bl2_low_power_params(uintptr_t *bl2_code_base,
+					    uintptr_t *bl2_code_end,
+					    uintptr_t *bl2_end)
+{
+	struct backup_data_s *backup_data;
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	if (MAGIC_ID(backup_data->magic) != MAILBOX_MAGIC_V3) {
+		panic();
+	}
+
+#if STM32MP_SP_MIN_IN_DDR
+	stm32_pwr_down_wfi = (void (*)(bool))backup_data->low_power_ep;
+#endif
+	*bl2_code_base = (uintptr_t)backup_data->bl2_code_base;
+	*bl2_code_end = (uintptr_t)backup_data->bl2_code_end;
+	*bl2_end = (uintptr_t)backup_data->bl2_end;
+
+	stm32mp_clk_disable(BKPSRAM);
+}
+
 #endif /* IMAGE_BL32 */
+
+#if defined(IMAGE_BL2)
+void stm32_context_save_bl2_param(void)
+{
+	struct backup_data_s *backup_data;
+
+	stm32mp_clk_enable(BKPSRAM);
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	backup_data->low_power_ep = (uint32_t)&stm32_pwr_down_wfi_wrapper;
+	backup_data->bl2_code_base = BL_CODE_BASE;
+	backup_data->bl2_code_end = BL_CODE_END;
+	backup_data->bl2_end = BL2_END;
+	backup_data->magic = MAILBOX_MAGIC_V3;
+
+	stm32mp_clk_disable(BKPSRAM);
+}
+#endif
 
 uint32_t stm32_get_zdata_from_context(void)
 {
@@ -290,13 +370,12 @@ uint32_t stm32_get_zdata_from_context(void)
 static int pll1_settings_in_context(struct backup_data_s *backup_data)
 {
 	switch (MAGIC_ID(backup_data->magic)) {
-	case OPTEE_MAILBOX_MAGIC_V1:
+	case MAILBOX_MAGIC_V1:
 		return -ENOENT;
-	case OPTEE_MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V3:
 		assert(MAGIC_AREA_SIZE(backup_data->magic) ==
 		       TRAINING_AREA_SIZE);
-		return 0;
-	case TFA_MAILBOX_MAGIC_V1:
 		return 0;
 	default:
 		panic();

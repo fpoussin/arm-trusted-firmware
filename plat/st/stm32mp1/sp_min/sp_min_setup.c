@@ -40,11 +40,6 @@
 #include <platform_sp_min.h>
 #include <stm32mp1_context.h>
 #include <stm32mp1_power_config.h>
-#include <stm32mp1_critic_power.h>
-
-#if STM32MP_SP_MIN_IN_DDR
-void (*stm32_pwr_down_wfi)(bool is_cstop);
-#endif
 
 /******************************************************************************
  * Placeholder variables for copying the arguments that have been passed to
@@ -399,17 +394,18 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 				  u_register_t arg2, u_register_t arg3)
 {
 	bl_params_t *params_from_bl2 = (bl_params_t *)arg0;
-#if STM32MP_SP_MIN_IN_DDR
-	struct bl2_to_bl32_args *bl2_to_bl32_args_p;
-	uintptr_t bl2_code_end = 0U;
-	uintptr_t bl2_end = 0U;
-#endif
 #if STM32MP_USE_STM32IMAGE
 	uintptr_t dt_addr = STM32MP_DTB_BASE;
 #else
 	uintptr_t dt_addr = arg1;
 	uintptr_t sec_base = 0U;
 	size_t sec_size = 0U;
+#endif
+#if STM32MP_SP_MIN_IN_DDR
+	uintptr_t bl2_code_base = 0U;
+	uintptr_t bl2_code_end = 0U;
+	uintptr_t bl2_end = 0U;
+	int result __unused;
 #endif
 
 	/* Imprecise aborts can be masked in NonSecure */
@@ -420,22 +416,6 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 			MT_CODE | MT_SECURE);
 
 #if STM32MP_SP_MIN_IN_DDR
-	bl2_to_bl32_args_p = (struct bl2_to_bl32_args *)arg3;
-
-	stm32_pwr_down_wfi = bl2_to_bl32_args_p->stm32_pwr_down_wfi;
-
-	/* BL2 Code */
-	mmap_add_region(BL2_BASE, BL2_BASE,
-			bl2_to_bl32_args_p->bl2_code_end - BL2_BASE,
-			MT_CODE | MT_SECURE);
-
-	/* BL2 RW memory */
-	mmap_add_region(bl2_to_bl32_args_p->bl2_code_end,
-			bl2_to_bl32_args_p->bl2_code_end,
-			bl2_to_bl32_args_p->bl2_end -
-				bl2_to_bl32_args_p->bl2_code_end,
-			MT_RW_DATA | MT_SECURE);
-
 	/* BL32 data*/
 	mmap_add_region(BL_CODE_END, BL_CODE_END,
 			BL_END - BL_CODE_END,
@@ -453,6 +433,38 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 #endif
 
 	configure_mmu();
+
+	if (dt_open_and_check(dt_addr) < 0) {
+		panic();
+	}
+
+	if (bsec_probe() != 0) {
+		panic();
+	}
+
+	if (stm32mp1_clk_probe() < 0) {
+		panic();
+	}
+
+	setup_uart_console();
+
+	stm32mp1_etzpc_early_setup();
+
+#if STM32MP_SP_MIN_IN_DDR
+	stm32_context_get_bl2_low_power_params(&bl2_code_base, &bl2_code_end, &bl2_end);
+
+	/* BL2 Code */
+	result = mmap_add_dynamic_region(bl2_code_base, bl2_code_base,
+					 bl2_code_end - bl2_code_base,
+					 MT_CODE | MT_SECURE);
+	assert(result == 0);
+
+	/* BL2 RW memory */
+	result = mmap_add_dynamic_region(bl2_code_end, bl2_code_end,
+					 bl2_end - bl2_code_end,
+					 MT_RW_DATA | MT_SECURE);
+	assert(result == 0);
+#endif
 
 	assert(params_from_bl2 != NULL);
 	assert(params_from_bl2->h.type == PARAM_BL_PARAMS);
@@ -487,22 +499,6 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 
 		bl_params = bl_params->next_params_info;
 	}
-
-	if (dt_open_and_check(dt_addr) < 0) {
-		panic();
-	}
-
-	if (bsec_probe() != 0) {
-		panic();
-	}
-
-	if (stm32mp1_clk_probe() < 0) {
-		panic();
-	}
-
-	setup_uart_console();
-
-	stm32mp1_etzpc_early_setup();
 
 #if !STM32MP_USE_STM32IMAGE
 	if (arg2 != 0U) {

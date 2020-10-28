@@ -145,7 +145,7 @@ enum ddr_type {
 #define STM32MP_BL32_BASE		STM32MP_SEC_SYSRAM_BASE
 
 #else /* AARCH32_SP_OPTEE */
-#define STM32MP_BL32_SIZE		U(0x00019000)	/* 96 KB for BL32 */
+#define STM32MP_BL32_SIZE		U(0x0001A000)	/* 104 KB for BL32 */
 #define STM32MP_BL32_BIN_SIZE		STM32MP_BL32_SIZE
 
 #define STM32MP_BL32_BASE		(STM32MP_SEC_SYSRAM_BASE + \
@@ -164,7 +164,11 @@ enum ddr_type {
 
 #define STM32MP_BL2_SIZE		U(0x0001B000)	/* 108 KB for BL2 */
 
+#if STM32MP_SP_MIN_IN_DDR
+#define STM32MP_BL32_SIZE		U(0x00025000)	/* 148 KB for BL32 */
+#else
 #define STM32MP_BL32_SIZE		U(0x00019000)	/* 100 KB for BL32 */
+#endif
 #endif /* STM32MP_USE_STM32IMAGE */
 
  /* BL2 and BL32/sp_min require finer granularity tables */
@@ -176,7 +180,7 @@ enum ddr_type {
  #endif
 #elif defined(IMAGE_BL32)
  #if STM32MP_SP_MIN_IN_DDR
-  #define MAX_XLAT_TABLES			U(6)	/* 24 KB for mapping */
+  #define MAX_XLAT_TABLES			U(7)	/* 28 KB for mapping */
  #else
   #define MAX_XLAT_TABLES			U(4)	/* 16 KB for mapping */
  #endif
@@ -213,7 +217,7 @@ enum ddr_type {
 #define STM32MP_BL2_DTB_BASE		(STM32MP_BL2_BASE - \
 					 STM32MP_BL2_DTB_SIZE)
 
-#define STM32MP_BL32_DTB_SIZE		U(0x00006000)	/* 24 KB for DTB */
+#define STM32MP_BL32_DTB_SIZE		U(0x00005000)	/* 20 KB for DTB */
 #define STM32MP_BL32_DTB_BASE		(STM32MP_BL32_BASE + \
 					 STM32MP_BL32_SIZE)
 #if defined(IMAGE_BL2)

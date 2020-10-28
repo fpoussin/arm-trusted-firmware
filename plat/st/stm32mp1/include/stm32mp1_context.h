@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -21,6 +21,10 @@ int stm32_save_context(uint32_t zq0cr0_zdata,
 int stm32_restore_context(void);
 unsigned long long stm32_get_stgen_from_context(void);
 int stm32_restore_backup_reg(void);
+void stm32_context_get_bl2_low_power_params(uintptr_t *bl2_code_base,
+					    uintptr_t *bl2_code_end,
+					    uintptr_t *bl2_end);
+void stm32_context_save_bl2_param(void);
 uint32_t stm32_get_zdata_from_context(void);
 int stm32_get_pll1_settings_from_context(void);
 bool stm32_are_pll1_settings_valid_in_context(void);

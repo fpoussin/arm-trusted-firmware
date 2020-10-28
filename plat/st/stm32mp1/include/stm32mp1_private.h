@@ -16,13 +16,6 @@ enum boot_device_e {
 	BOOT_DEVICE_BOARD
 };
 
-struct bl2_to_bl32_args {
-	void (*stm32_pwr_down_wfi)(bool is_cstop);
-	uintptr_t bl2_code_base;
-	uintptr_t bl2_code_end;
-	uintptr_t bl2_end;
-};
-
 void configure_mmu(void);
 
 void stm32mp_mask_timer(void);

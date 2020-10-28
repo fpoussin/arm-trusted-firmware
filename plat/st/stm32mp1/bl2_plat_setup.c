@@ -61,10 +61,6 @@ static const char debug_msg[626] = {
 static console_t console;
 static enum boot_device_e boot_device = BOOT_DEVICE_BOARD;
 
-#if STM32MP_SP_MIN_IN_DDR
-struct bl2_to_bl32_args bl2_to_bl32_args;
-#endif
-
 static void print_reset_reason(void)
 {
 	uint32_t rstsr = mmio_read_32(stm32mp_rcc_base() + RCC_MP_RSTSCLRR);
@@ -204,6 +200,9 @@ void bl2_platform_setup(void)
 		mmio_write_32(bkpr_core1_addr, 0);
 		/* Clear backup register magic */
 		mmio_write_32(bkpr_core1_magic, 0);
+
+		/* Clear the context in BKPSRAM */
+		stm32_clean_context();
 
 		if (dt_pmic_status() > 0) {
 			configure_pmic();
@@ -727,16 +726,10 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 				tos_fw_mem_params->image_info.image_max_size;
 #endif
 			bl_mem_params->ep_info.args.arg0 = 0;
+		}
 
-#if STM32MP_SP_MIN_IN_DDR
-			bl2_to_bl32_args.stm32_pwr_down_wfi = &stm32_pwr_down_wfi_wrapper;
-			bl2_to_bl32_args.bl2_code_base = BL_CODE_BASE;
-			bl2_to_bl32_args.bl2_code_end = BL_CODE_END;
-			bl2_to_bl32_args.bl2_end = BL2_END;
-			dsb();
-			flush_dcache_range((uintptr_t)&bl2_to_bl32_args, sizeof(bl2_to_bl32_args));
-			bl_mem_params->ep_info.args.arg3 = (u_register_t)&bl2_to_bl32_args;
-#endif
+		if (bl_mem_params->ep_info.pc >= STM32MP_DDR_BASE) {
+			stm32_context_save_bl2_param();
 		}
 #endif
 		break;
