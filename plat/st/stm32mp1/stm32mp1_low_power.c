@@ -47,6 +47,8 @@ struct pwr_lp_config {
 	const char *regul_suspend_node_name;
 };
 
+#define PWRLP_TEMPO_5_HSI	5
+
 #define PWR_CR1_MASK	(PWR_CR1_LPDS | PWR_CR1_LPCFG | PWR_CR1_LVDS)
 #define PWR_MPUCR_MASK	(PWR_MPUCR_CSTDBYDIS | PWR_MPUCR_CSSF | PWR_MPUCR_PDDS)
 
@@ -427,3 +429,26 @@ void stm32_enter_low_power(uint32_t mode, uint32_t nsec_addr)
 	}
 }
 
+void stm32_init_low_power(void)
+{
+	uintptr_t pwr_base = stm32mp_pwr_base();
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	/*
+	 * Configure Standby mode available for MCU by default
+	 * and allow to switch in standby SoC in all case
+	 */
+	mmio_setbits_32(pwr_base + PWR_MCUCR, PWR_MCUCR_PDDS);
+
+	/* Disable STOP request */
+	mmio_setbits_32(rcc_base + RCC_MP_SREQCLRR,
+			RCC_MP_SREQSETR_STPREQ_P0 | RCC_MP_SREQSETR_STPREQ_P1);
+
+	/* Disable retention and backup RAM content after standby */
+	mmio_clrbits_32(pwr_base + PWR_CR2, PWR_CR2_BREN | PWR_CR2_RREN);
+
+	/* Wait 5 HSI periods before re-enabling PLLs after STOP modes */
+	mmio_clrsetbits_32(rcc_base + RCC_PWRLPDLYCR,
+			   RCC_PWRLPDLYCR_PWRLP_DLY_MASK,
+			   PWRLP_TEMPO_5_HSI);
+}

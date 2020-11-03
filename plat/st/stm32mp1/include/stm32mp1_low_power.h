@@ -18,5 +18,6 @@ bool stm32_is_cstop_done(void);
 void stm32_exit_cstop(void);
 void stm32_enter_low_power(uint32_t mode, uint32_t nsec_addr);
 void stm32_auto_stop(void);
+void stm32_init_low_power(void);
 
 #endif /* STM32MP1_LOW_POWER_H */
