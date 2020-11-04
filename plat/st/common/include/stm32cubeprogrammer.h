@@ -35,11 +35,19 @@
 /* Functions provided by plat */
 uint8_t usb_dfu_get_phase(uint8_t alt);
 
+typedef struct usb_handle usb_handle_t;
 int stm32cubeprog_usb_load(unsigned int image_id,
 			   usb_handle_t *usb_core_handle,
 			   uintptr_t flashlayout_base,
 			   size_t flashlayout_len,
 			   uintptr_t ssbl_base,
 			   size_t ssbl_len);
+
+int stm32cubeprog_uart_load(unsigned int image_id,
+			    uintptr_t instance,
+			    uintptr_t flashlayout_base,
+			    size_t flashlayout_len,
+			    uintptr_t ssbl_base,
+			    size_t ssbl_len);
 
 #endif /* STM32CUBEROGRAMMER_H */

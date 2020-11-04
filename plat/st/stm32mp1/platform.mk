@@ -91,6 +91,7 @@ $(eval $(call assert_numerics,\
 	$(sort \
 		STM32_TF_A_COPIES \
 		PLAT_PARTITION_MAX_ENTRIES \
+		STM32_TF_VERSION \
 )))
 
 $(eval $(call add_defines,\
@@ -105,6 +106,7 @@ $(eval $(call add_defines,\
 		PLAT_PARTITION_MAX_ENTRIES \
 		STM32MP_UART_PROGRAMMER \
 		STM32MP_USB_PROGRAMMER \
+		STM32_TF_VERSION \
 )))
 
 # Include paths and source files
@@ -194,7 +196,8 @@ BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_boot_device.c
 endif
 
 ifeq (${STM32MP_UART_PROGRAMMER},1)
-BL2_SOURCES		+=	drivers/st/uart/stm32_uart.c
+BL2_SOURCES		+=	drivers/st/uart/stm32_uart.c				\
+				plat/st/common/stm32cubeprogrammer_uart.c
 endif
 
 ifeq (${STM32MP_USB_PROGRAMMER},1)
