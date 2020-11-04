@@ -186,8 +186,23 @@ static void int_to_str(uint32_t value, uint8_t *pstr, uint8_t len)
  */
 static void update_serial_num_string(void)
 {
+	uint8_t i;
+	uint32_t result;
 	/* serial number is set to 0 */
-	uint32_t deviceserial[3] = {0U, 0U, 0U};
+	uint32_t deviceserial[UID_WORD_NB] = {0U, 0U, 0U};
+
+	for (i = 0; i < UID_WORD_NB; i++) {
+		result = bsec_shadow_register(i + UID0_OTP);
+		if (result != BSEC_OK) {
+			ERROR("BSEC: UID%d Shadowing Error\n", i);
+			return;
+		}
+		result = bsec_read_otp(&deviceserial[i], i + UID0_OTP);
+		if (result != BSEC_OK) {
+			ERROR("BSEC: UID%d Read Error\n", i);
+			return;
+		}
+	}
 
 	int_to_unicode(deviceserial[0], (uint8_t *)&usb_stm32mp1_serial[2], 8);
 	int_to_unicode(deviceserial[1], (uint8_t *)&usb_stm32mp1_serial[18], 8);
