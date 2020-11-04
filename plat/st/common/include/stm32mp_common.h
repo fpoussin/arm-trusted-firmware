@@ -64,6 +64,9 @@ uint32_t stm32_get_gpio_bank_offset(unsigned int bank);
 /* Return node offset for target GPIO bank ID @bank or a FDT error code */
 int stm32_get_gpio_bank_pinctrl_node(void *fdt, unsigned int bank);
 
+/* Get the chip revision */
+int stm32mp_get_chip_version(uint32_t *chip_version);
+
 /* Get SOC name */
 #define STM32_SOC_NAME_SIZE 20
 void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE]);

@@ -153,6 +153,11 @@ int stm32_get_gpio_bank_pinctrl_node(void *fdt, unsigned int bank)
 	}
 }
 
+int stm32mp_get_chip_version(uint32_t *chip_version)
+{
+	return stm32mp1_dbgmcu_get_chip_version(chip_version);
+}
+
 static int get_part_number(uint32_t *part_nb)
 {
 	uint32_t part_number;
@@ -277,7 +282,7 @@ void stm32mp_get_soc_name(char name[STM32_SOC_NAME_SIZE])
 	}
 
 	/* REVISION */
-	ret = stm32mp1_dbgmcu_get_chip_version(&chip_dev_id);
+	ret = stm32mp_get_chip_version(&chip_dev_id);
 	if (ret < 0) {
 		WARN("Cannot get CPU version\n");
 		return;
