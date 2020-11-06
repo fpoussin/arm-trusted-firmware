@@ -423,6 +423,31 @@ bool stm32_are_pll1_settings_valid_in_context(void)
 	return is_valid;
 }
 
+bool stm32_pm_context_is_valid(void)
+{
+	struct backup_data_s *backup_data;
+	bool ret;
+
+	clk_enable(BKPSRAM);
+
+	backup_data = (struct backup_data_s *)STM32MP_BACKUP_RAM_BASE;
+
+	switch (MAGIC_ID(backup_data->magic)) {
+	case MAILBOX_MAGIC_V1:
+	case MAILBOX_MAGIC_V2:
+	case MAILBOX_MAGIC_V3:
+		ret = true;
+		break;
+	default:
+		ret = false;
+		break;
+	}
+
+	clk_disable(BKPSRAM);
+
+	return ret;
+}
+
 int stm32_save_boot_interface(uint32_t interface, uint32_t instance)
 {
 	uint32_t bkpr_itf_idx = tamp_bkpr(TAMP_BOOT_ITF_BACKUP_REG_ID);
