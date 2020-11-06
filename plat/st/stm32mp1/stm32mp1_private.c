@@ -784,5 +784,20 @@ bool stm32mp1_addr_inside_backupsram(uintptr_t addr)
 
 bool stm32mp1_is_wakeup_from_standby(void)
 {
-	return (stm32mp_get_boot_action() == BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY);
+	uint32_t bkpr_core1_addr = tamp_bkpr(BOOT_API_CORE1_BRANCH_ADDRESS_TAMP_BCK_REG_IDX);
+	uint32_t nsec_address;
+
+	if (stm32mp_get_boot_action() != BOOT_API_CTX_BOOT_ACTION_WAKEUP_STANDBY) {
+		return false;
+	}
+
+	clk_enable(RTCAPB);
+	nsec_address = mmio_read_32(bkpr_core1_addr);
+	clk_disable(RTCAPB);
+
+	if (nsec_address == 0U) {
+		return false;
+	}
+
+	return stm32_pm_context_is_valid();
 }
