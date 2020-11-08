@@ -742,6 +742,10 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 
 		flush_dcache_range(bl_mem_params->image_info.image_base,
 				   bl_mem_params->image_info.image_max_size);
+#if STM32MP_USB_PROGRAMMER || STM32MP_UART_PROGRAMMER
+		/* Invalidate downloaded package from cache */
+		inv_dcache_range(DWL_BUFFER_BASE, DWL_BUFFER_SIZE);
+#endif
 		break;
 
 	default:
