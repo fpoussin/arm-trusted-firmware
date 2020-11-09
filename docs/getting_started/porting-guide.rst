@@ -796,6 +796,31 @@ The function returns 0 on success. Any other value means the counter value
 either could not be updated or the authentication image descriptor indicates
 that it is not allowed to be updated.
 
+Function: plat_get_hashed_pk()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Argument : void *, unsigned int, void **, unsigned int *
+    Return   : int
+
+This function is optional when Trusted Board Boot is enabled, and only
+used if the platform saves a hash of the ROTPK.
+First argument is the BER ROTPK.
+Second argument is its size.
+Third argument is used to return a pointer to a buffer, which hash should
+be the one saved in OTP
+Fourth argument is a pointer to return its size
+
+Most platforms save the hash of the BER ROTPK, but some may save the hash of
+a non encapsulated public key or a platform specific encapsulated ROT public
+key. Defining this function allows to transform the BER ROTPK used to verify
+the signature to the buffer (a platform specific encapsulated public key) which
+hash is saved in OTP.
+
+The function returns 0 on success. Any other value means the expected
+public key buffer cannot be extracted from the BER public key.
+
 Common mandatory function modifications
 ---------------------------------------
 
