@@ -44,4 +44,18 @@
 		};
 #endif
 	};
+
+	st-mem-firewall {
+		compatible = "st,mem-firewall";
+#ifdef AARCH32_SP_OPTEE
+		memory-ranges = <
+			0xc0000000 0x3e000000 TZC_REGION_S_NONE TZC_REGION_NSEC_ALL_ACCESS_RDWR
+			0xfe000000 0x01e00000 TZC_REGION_S_RDWR 0
+			0xffe00000 0x00200000 TZC_REGION_S_NONE
+			TZC_REGION_ACCESS_RDWR(STM32MP1_TZC_A7_ID)>;
+#else
+		memory-ranges = <
+			0xc0000000 0x40000000 TZC_REGION_S_NONE TZC_REGION_NSEC_ALL_ACCESS_RDWR>;
+#endif
+	};
 };
