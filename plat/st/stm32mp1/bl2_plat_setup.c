@@ -740,8 +740,6 @@ int bl2_plat_handle_post_image_load(unsigned int image_id)
 		assert(bl32_mem_params != NULL);
 		bl32_mem_params->ep_info.lr_svc = bl_mem_params->ep_info.pc;
 
-		flush_dcache_range(bl_mem_params->image_info.image_base,
-				   bl_mem_params->image_info.image_max_size);
 #if STM32MP_USB_PROGRAMMER || STM32MP_UART_PROGRAMMER
 		/* Invalidate downloaded package from cache */
 		inv_dcache_range(DWL_BUFFER_BASE, DWL_BUFFER_SIZE);
