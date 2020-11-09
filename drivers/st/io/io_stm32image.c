@@ -280,6 +280,9 @@ static int stm32image_partition_read(io_entity_t *entity, uintptr_t buffer,
 	/* Adding part of size already read from header */
 	*length_read += MAX_LBA_SIZE - hdr_sz;
 
+	inv_dcache_range(round_up((uintptr_t)(local_buffer + length - hdr_sz),
+				  CACHE_WRITEBACK_GRANULE), *length_read - length + hdr_sz);
+
 out:
 	io_close(backend_handle);
 	return result;
