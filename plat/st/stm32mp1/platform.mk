@@ -73,12 +73,6 @@ STM32MP_SPI_NOR		?=	0
 STM32MP_USB_PROGRAMMER	?=	0
 STM32MP_UART_PROGRAMMER	?=	0
 
-ifeq ($(filter 1,${STM32MP_EMMC} ${STM32MP_SDMMC} ${STM32MP_RAW_NAND} \
-	${STM32MP_SPI_NAND} ${STM32MP_SPI_NOR} \
-	${STM32MP_UART_PROGRAMMER} ${STM32MP_USB_PROGRAMMER}),)
-$(error "No boot device driver is enabled")
-endif
-
 # Device tree
 DTB_FILE_NAME		?=	stm32mp157c-ev1.dtb
 ifeq ($(STM32MP_USE_STM32IMAGE),1)
@@ -333,12 +327,26 @@ BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power.c
 BL2_SOURCES		+=	plat/st/stm32mp1/stm32mp1_critic_power_wrapper.S
 
 # Compilation rules
-.PHONY: check_dtc_version stm32image clean_stm32image
+.PHONY: check_dtc_version stm32image clean_stm32image check_boot_device
 .SUFFIXES:
 
 all: check_dtc_version stm32image ${STM32_TF_STM32}
 
 distclean realclean clean: clean_stm32image
+
+bl2: check_boot_device
+
+check_boot_device:
+	@if [ ${STM32MP_EMMC} != 1 ] && \
+	    [ ${STM32MP_SDMMC} != 1 ] && \
+	    [ ${STM32MP_RAW_NAND} != 1 ] && \
+	    [ ${STM32MP_SPI_NAND} != 1 ] && \
+	    [ ${STM32MP_SPI_NOR} != 1 ] && \
+	    [ ${STM32MP_UART_PROGRAMMER} != 1 ] && \
+	    [ ${STM32MP_USB_PROGRAMMER} != 1 ]; then \
+		echo "No boot device driver is enabled"; \
+		false; \
+	fi
 
 stm32image: ${STM32IMAGE}
 
