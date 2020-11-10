@@ -172,7 +172,7 @@ static unsigned int get_gpio_nbpin(unsigned int bank)
 	if (bank != GPIO_BANK_Z) {
 		int count = fdt_get_gpio_bank_pin_count(bank);
 
-		assert((count >= 0) || (count <= (GPIO_PIN_MAX + 1)));
+		assert((count >= 0) || ((unsigned int)count <= (GPIO_PIN_MAX + 1)));
 
 		return (unsigned int)count;
 	}
@@ -221,7 +221,7 @@ static void register_periph(enum stm32mp_shres id, unsigned int state)
 
 	if ((id >= STM32MP1_SHRES_GPIOZ(0)) &&
 	    (id <= STM32MP1_SHRES_GPIOZ(7)) &&
-	    ((id - STM32MP1_SHRES_GPIOZ(0)) >= get_gpioz_nbpin())) {
+	    ((unsigned int)(id - STM32MP1_SHRES_GPIOZ(0)) >= get_gpioz_nbpin())) {
 		ERROR("Invalid GPIO pin %u, %u pin(s) available\n",
 		      id - STM32MP1_SHRES_GPIOZ(0), get_gpioz_nbpin());
 		panic();
