@@ -13,6 +13,7 @@
 #define PHASE_FSBL2		2U
 #define PHASE_SSBL		3U
 #define PHASE_CMD		0xF1U
+#define PHASE_SSP		0xF3U
 #define PHASE_RESET		0xFFU
 
 /* Command definition */
@@ -20,6 +21,7 @@
 #define GET_VER_COMMAND		0x01U
 #define GET_ID_COMMAND		0x02U
 #define PHASE_COMMAND		0x03U
+#define READ_PART_COMMAND	0x12U
 #define START_COMMAND		0x21U
 #define DOWNLOAD_COMMAND	0x31U
 
@@ -49,5 +51,17 @@ int stm32cubeprog_uart_load(unsigned int image_id,
 			    size_t flashlayout_len,
 			    uintptr_t ssbl_base,
 			    size_t ssbl_len);
+
+int stm32cubeprog_usb_ssp(usb_handle_t *usb_core_handle,
+			  uintptr_t cert_base,
+			  size_t cert_len,
+			  uintptr_t ssp_base,
+			  size_t ssp_len);
+
+int stm32cubeprog_uart_ssp(uintptr_t instance,
+			   uintptr_t cert_base,
+			   size_t cert_len,
+			   uintptr_t ssp_base,
+			   size_t ssp_len);
 
 #endif /* STM32CUBEROGRAMMER_H */

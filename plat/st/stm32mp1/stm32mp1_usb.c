@@ -476,7 +476,11 @@ uint8_t usb_dfu_get_phase(uint8_t alt)
 {
 	switch (alt) {
 	case 0:
-		return PHASE_FLASHLAYOUT;
+#if STM32MP_SSP
+	return PHASE_SSP;
+#else
+	return PHASE_FLASHLAYOUT;
+#endif
 	case 3:
 		return PHASE_SSBL;
 	case 5:
