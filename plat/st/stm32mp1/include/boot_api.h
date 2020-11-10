@@ -335,15 +335,278 @@ BOOT_API_MCIC_RETRAM_REGION_TO_HASH_IN_BYTES_TAMP_BCK_REG_IDX		23
 /* 'K' 'B' 'U' 'P' -.> 'PUBK' */
 #define BOOT_API_CTX_SSP_CMD_CALC_CHIP_PUBK             0x4B425550
 
+#if STM32MP_SSP
+/* 'V' 'O' 'R' 'P' -.> 'PROV' */
+#define BOOT_API_CTX_SSP_CMD_PROV_SECRET		0x564F5250
+/*
+ * Possible values of boot context field
+ * 'ssp_config_ptr_in->ssp_cmd' written by bootROM as Acknowledge
+ * of a request of SSP by FSBL.
+ */
+
+/* Written by bootROM on SSP error */
+#define BOOT_API_CTX_SSP_CMD_INVALID			0x00000000
+/*
+ * 'A' 'B' 'U' 'P' -.> 'PUBA' : ACK of ECIES_CHIP_PUBK calculation
+ * request by bootROM.
+ */
+#define BOOT_API_CTX_SSP_CMD_CALC_CHIP_PUBK_ACK		0x41425550
+/*
+ * 'A' 'O' 'R' 'P' -.> 'PROA' : ACK of OEM Secret Provisioning request
+ * by bootROM.
+ */
+#define BOOT_API_CTX_SSP_CMD_PROV_SECRET_ACK		0x414F5250
+
+/*
+ * Constants required for SSP
+ */
+/* '.' 'P' 'S' 'S' -.> 'SSP.' */
+#define BOOT_API_SSP_BLOB_LICENSE_TYPE_SSP_NORMAL	0x2E505353
+/* 'L' 'P' 'S' 'S' -.> 'SSPL' */
+#define BOOT_API_SSP_BLOB_LICENSE_TYPE_SSP_LIVE		0x4C505353
+/* version 1 */
+#define BOOT_API_SSP_LICENSE_LAYOUT_VERSION_TO_MATCH	0x00000001
+/* 'P' 'P' 'S' 'S' -.> 'SSPP' */
+#define BOOT_API_SSP_BLOB_PAYLOAD_MAGIC_SSP		0x50505353
+/* IV AES on 128 bits = 16 bytes and KEY AES on 128 bits = 16 bytes */
+#define BOOT_API_SSP_ENCRYPTED_IV_AND_KEY_SIZE_BYTES	32
+/* version 1 */
+#define BOOT_API_SSP_PAYLOAD_PROTOCOL_VERSION_TO_MATCH	0x00000001
+/*
+ * Scalar in Elliptic curve cryptography is an integer (often a Prime)
+ * the number of bytes of this scalar is defined below.
+ */
+#define BOOT_API_SSP_SCALAR_SIZE_BYTES				32
+
+/*
+ * In Elliptic curve cryptography coordinates of points are 2D P
+ * (Px, Py) as concatenation of two scalars.
+ */
+#define BOOT_API_SSP_EC_COORDINATE_SIZE_BYTES \
+	(2 * BOOT_API_SSP_SCALAR_SIZE_BYTES)
+
+/* In Elliptic curve cryptography Private Keys are scalars */
+#define BOOT_API_SSP_PRIVK_KEY_SIZE_BYTES \
+	BOOT_API_SSP_SCALAR_SIZE_BYTES
+
+/*
+ * In ECIES algorithm the Shared Secret (SS) is
+ * the x coordinate (Px) of a point P(Px,Py) obtained on reference
+ * chosen NIST-P256 Elliptic curve.
+ */
+#define BOOT_API_SSP_ECDH_SHARED_SECRET_SIZE_BYTES \
+	BOOT_API_SSP_SCALAR_SIZE_BYTES
+
+/*
+ * In Elliptic curve cryptography Public Keys are Points on chosen
+ * Elliptic curve P(x,y).
+ * Public Key is the x, y coordinates concatenated
+ * Ecies_eph_pubk and OEM_ECDSA_PUBK are each 64 bytes = 512 bits key
+ * sizes.
+ */
+#define BOOT_API_SSP_PUBK_KEY_SIZE_BYTES \
+	BOOT_API_SSP_EC_COORDINATE_SIZE_BYTES
+
+/*
+ * Size in bytes of ECIES_Chip_pubk obtained from bootROM at end of SSP
+ * phase 1 : Chip public key calculation.
+ */
+#define BOOT_API_SSP_ECIES_CHIP_PUBK_SIZE_BYTES \
+	BOOT_API_SSP_PUBK_KEY_SIZE_BYTES
+
+/* AES-GCM authentication tag size is 16 bytes = 128 bits */
+#define BOOT_API_SSP_AES_GCM_AUTH_TAG_SIZE_BYTES		16
+
+/* AES-GCM Symmetric Key size is 16 bytes = 128 bits */
+#define BOOT_API_SSP_AES_GCM_KEY_SIZE_BYTES			16
+
+/* AES-GCM Initialization Vector (IV) size is of 16 bytes = 128 bits */
+#define BOOT_API_SSP_AES_GCM_IV_SIZE_BYTES			16
+
+/*
+ * 88 bytes (license_type, live_session_id, license_version,
+ * fsbl_min_version, rfu[8], eph_ecies_pubk[])
+ */
+#define BOOT_API_SSP_AES_GCM_LICENSE_AAD_NB_BYTES_FROM_LICENSE	88
+
+/*
+ * 32 bytes AAD License Secret from 2nd round KDF-SHA-256
+ * from ECDH Shared Secret hence KDF[32..63] aka "Authorization Token"
+ */
+#define BOOT_API_SSP_AES_GCM_LICENSE_AAD_NB_BYTES_FROM_KDF	32
+
+/*
+ * Total License AAD size = 88 + 32 = 120 bytes
+ */
+#define BOOT_API_SSP_AES_GCM_LICENSE_AAD_SIZE_BYTES \
+	(BOOT_API_SSP_AES_GCM_LICENSE_AAD_NB_BYTES_FROM_LICENSE + \
+	 BOOT_API_SSP_AES_GCM_LICENSE_AAD_NB_BYTES_FROM_KDF)
+
+/*
+ * AAD for Payload size : composed of :
+ * payload_magic, payload_protocol_version, oem_ecdsa_pubk[], oem_secret_size
+ * = 4 + 4 + 64 + 4 = 76 bytes AAD for Payload
+ */
+#define BOOT_API_SSP_AES_GCM_PAYLOAD_AAD_SIZE_BYTES		76
+
+/*
+ * OEM Secrets max size in bytes :
+ * [OTP[95:59] + OTP_CFG56 (RMA Unlock and Relock passwords)] x 4 bytes
+ * by OTP word = 152 bytes
+ */
+#define BOOT_API_SSP_OEM_SECRETS_MAX_SIZE_BYTES			152
+
+/*
+ * Possible values of boot context field 'ssp_status'
+ * as can be read by FSBL-SSP
+ */
+#define BOOT_API_CTX_SSP_STATUS_NO_SSP				0
+#define BOOT_API_CTX_SSP_STATUS_CHIP_PUBK_CALC_FINISHED		1
+#define BOOT_API_CTX_SSP_STATUS_OEM_SEC_PROV_FINISHED		2
+#define BOOT_API_CTX_SSP_STATUS_OEM_SEC_PROV_FORBIDDEN		3
+
+/*
+ * Reserved size for future use
+ */
+#define BOOT_API_SSP_HSM_OEM_RFU_SIZE				8
+
 /*
  * Exported types
  */
+
+/*
+ * SSP related definitions
+ */
+/*
+ * SSP BLOB License structure : Binary Large OBject License structure
+ * Should be written by FSBL-SSP to provide bootROM with SSP OEM Secret
+ * provisioning.
+ * License information data, the structure is read by bootROM.
+ */
+typedef struct {
+	/*
+	 * License Type provided by HSM-OEM tool
+	 * should match Normal SSP License of Live SSP License.
+	 */
+	uint32_t license_type;
+
+	/* Live Session ID provided by HSM-OEM tool */
+	uint32_t live_session_id;
+
+	/*
+	 * Version of the License Protocol (Structure)
+	 * should be incremented each time a new.
+	 */
+	uint32_t license_version;
+
+	/*
+	 * Minimum FSBL version to be compared
+	 * with FSBL Header field 'imageVersion'.
+	 */
+	uint32_t fsbl_min_version;
+
+	/* RFU provided by HSM-OEM tool */
+	uint8_t  rfu[BOOT_API_SSP_HSM_OEM_RFU_SIZE];
+
+	/*
+	 * Ephemeral ECIES Public Key from HSM-OEM
+	 * 64 bytes = 512 bits.
+	 */
+	uint8_t  eph_ecies_pubk[BOOT_API_SSP_PUBK_KEY_SIZE_BYTES];
+
+	/*
+	 * Encrypted (IV,Key) : with Shared Secret based on
+	 * 'Ephemeral ECIES Key pair' and 'ECIES Chip Key pair'.
+	 */
+	uint8_t encrypted_iv_and_key
+		[BOOT_API_SSP_ENCRYPTED_IV_AND_KEY_SIZE_BYTES];
+
+	/*
+	 * AUTH_TAG AES-GCM from encryption of (IV, Key)
+	 * in HSM-OEM with License AAD scheme
+	 * License Tag is 16 bytes = 128 bits.
+	 */
+	uint8_t  license_tag[BOOT_API_SSP_AES_GCM_AUTH_TAG_SIZE_BYTES];
+
+} boot_api_ssp_blob_license_t;
+
+/*
+ * SSP BLOB Payload structure : Binary Large OBject Payload Structure
+ * Should be written by FSBL-SSP to provide bootROM with SSP OEM Secret
+ * provisioning input data, the structure is read by bootROM
+ * The BLOB Payload size is fixed to a max size of 244 bytes based
+ * on a max number of bytes of OEM secret derived from OTP upper free
+ * area in STM32MP15xx cut 2.0.In this table oem_encrypted_secrets[]
+ * of max size only the first 'p_blob_payload->oem_secret_size_bytes'
+ * bytes will be considered and used by bootROM.
+ */
+typedef struct {
+	/*
+	 * BLOB Payload Magic : for memory validity check of BLOB Payload
+	 * to match against BOOT_API_SSP_BLOB_PAYLOAD_MAGIC_SSP by bootROM.
+	 */
+	uint32_t payload_magic;
+
+	/*
+	 * SSP Payload protocol version : on 32 bits
+	 * to be checked by bootROM for equality with
+	 * BOOT_API_SSP_PAYLOAD_PROTOCOL_VERSION_TO_MATCH
+	 * ie : 0x00000001 : version 1 of SSP Payload
+	 */
+	uint32_t payload_protocol_version;
+
+	/*
+	 * OEM_ECDSA_PUBK Public Key defined by OEM
+	 * 64 bytes = 512 bits
+	 */
+	uint8_t  oem_ecdsa_pubk[BOOT_API_SSP_PUBK_KEY_SIZE_BYTES];
+
+	/*
+	 * Size of Table of OEM Secrets encrypted with AES-GCM (Key,IV) from
+	 * License field 'encrypted_iv_and_key[]'
+	 * should be <= BOOT_API_SSP_OEM_SECRETS_MAX_SIZE_BYTES:
+	 * is verified by bootROM.
+	 */
+	uint32_t oem_secret_size_bytes;
+
+	/*
+	 * AUTH_TAG AES-GCM computed by HSM-OEM when encrypting OEM Secrets with
+	 * (Key,IV) using special AAD scheme for Payload.
+	 * 16 bytes = 128 bits
+	 */
+	uint8_t  payload_tag[BOOT_API_SSP_AES_GCM_AUTH_TAG_SIZE_BYTES];
+
+	/*
+	 * OEM Secrets encrypted with AES-GCM (IV, Key) from
+	 * License field 'encrypted_iv_and_key[]'.
+	 * The payload size is 'oem_secret_size_bytes'
+	 * should be <= BOOT_API_SSP_OEM_SECRETS_MAX_SIZE_BYTES =
+	 *  152 bytes : OEM Secrets max size in bytes :
+	 * [OTP_CFG56, OTP_CFG59, OTP_CFG60..95] x 4 bytes by OTP word.
+	 */
+	uint8_t oem_encrypted_secrets[BOOT_API_SSP_OEM_SECRETS_MAX_SIZE_BYTES];
+
+} boot_api_ssp_blob_payload_t;
+#endif
 
 /* SSP Configuration structure */
 typedef struct {
 	/* SSP Command*/
 	uint32_t ssp_cmd;
+#if STM32MP_SSP
+	/* ECIES chip public key */
+	uint8_t *p_chip_pubk;
+	/* Blob License Address */
+	boot_api_ssp_blob_license_t *p_blob_license;
+	/* Blob Payload Address */
+	boot_api_ssp_blob_payload_t *p_blob_payload;
+	/* Secrets Decrypted Address */
+	uint8_t *p_ssp_oem_secrets_decrypted;
+	/* Reserved for Future Use (RFU) */
+	uint32_t padding_rfu;
+#else
 	uint8_t	reserved[20];
+#endif
 } boot_api_ssp_config_t;
 
 /*

@@ -27,10 +27,6 @@
 
 #include "bsec_svc.h"
 
-#define SSP_OTP_REQ		BIT(BOOT_API_OTP_SSP_REQ_BIT_POS)
-#define SSP_OTP_SUCCESS		BIT(BOOT_API_OTP_SSP_SUCCESS_BIT_POS)
-#define SSP_OTP_MASK		(SSP_OTP_REQ | SSP_OTP_SUCCESS)
-
 enum bsec_ssp_status {
 	BSEC_NO_SSP = 0,
 	BSEC_SSP_SET,
