@@ -54,4 +54,9 @@ static inline void stm32mp_reset_release(uint32_t reset_id)
  */
 void stm32mp_reset_assert_deassert_to_mcu(bool assert_not_deassert);
 
+/*
+ * Manage system reset control
+ */
+void __dead2 stm32mp_system_reset(void);
+
 #endif /* STM32MP_RESET_H */

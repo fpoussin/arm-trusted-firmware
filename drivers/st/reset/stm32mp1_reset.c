@@ -83,3 +83,16 @@ void stm32mp_reset_assert_deassert_to_mcu(bool assert_not_deassert)
 		mmio_setbits_32(rcc_base + RCC_MP_GCR, RCC_MP_GCR_BOOT_MCU);
 	}
 }
+
+void __dead2 stm32mp_system_reset(void)
+{
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	mmio_setbits_32(rcc_base + RCC_MP_GRSTCSETR,
+			RCC_MP_GRSTCSETR_MPSYSRST);
+
+	/* Loop in case system reset is not immediately caught */
+	for ( ; ; ) {
+		;
+	}
+}
