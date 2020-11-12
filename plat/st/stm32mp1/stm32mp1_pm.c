@@ -16,6 +16,7 @@
 #include <drivers/arm/gicv2.h>
 #include <drivers/clk.h>
 #include <drivers/delay_timer.h>
+#include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp1_rcc.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
 #include <lib/mmio.h>
@@ -214,13 +215,7 @@ static void __dead2 stm32_system_off(void)
 
 static void __dead2 stm32_system_reset(void)
 {
-	mmio_setbits_32(stm32mp_rcc_base() + RCC_MP_GRSTCSETR,
-			RCC_MP_GRSTCSETR_MPSYSRST);
-
-	/* Loop in case system reset is not immediately caught */
-	for ( ; ; ) {
-		;
-	}
+	stm32mp_system_reset();
 }
 
 static int stm32_validate_power_state(unsigned int power_state,
