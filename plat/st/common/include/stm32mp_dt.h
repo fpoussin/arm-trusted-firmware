@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020, STMicroelectronics - All Rights Reserved
- * Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -44,6 +44,7 @@ int dt_get_max_opp_freqvolt(uint32_t *freq_khz, uint32_t *voltage_mv);
 int dt_get_all_opp_freqvolt(uint32_t *count, uint32_t *freq_khz_array,
 			    uint32_t *voltage_mv_array);
 uint32_t dt_get_pwr_vdd_voltage(void);
+const char *dt_get_vdd_regulator_name(void);
 const char *dt_get_cpu_regulator_name(void);
 const char *dt_get_board_model(void);
 int fdt_get_gpio_bank_pin_count(unsigned int bank);
