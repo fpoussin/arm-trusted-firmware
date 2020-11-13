@@ -57,7 +57,11 @@ SECTIONS
          * The strongest and only alignment contraint is MMU 4K page.
          * Indeed as images below will be removed, 4K pages will be re-used.
          */
+#if SEPARATE_CODE_AND_RODATA
+        . = ( STM32MP_BL2_RO_BASE - STM32MP_BINARY_BASE );
+#else
         . = ( STM32MP_BL2_BASE - STM32MP_BINARY_BASE );
+#endif
         __BL2_IMAGE_START__ = .;
         *(.bl2_image*)
         __BL2_IMAGE_END__ = .;
