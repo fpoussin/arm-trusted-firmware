@@ -16,7 +16,7 @@ endif
 MBEDTLS_INC		=	-I${MBEDTLS_DIR}/include
 
 # Specify mbed TLS configuration file
-MBEDTLS_CONFIG_FILE	:=	"<drivers/auth/mbedtls/mbedtls_config.h>"
+MBEDTLS_CONFIG_FILE	?=	"<drivers/auth/mbedtls/mbedtls_config.h>"
 $(eval $(call add_define,MBEDTLS_CONFIG_FILE))
 
 MBEDTLS_SOURCES	+=		drivers/auth/mbedtls/mbedtls_common.c
