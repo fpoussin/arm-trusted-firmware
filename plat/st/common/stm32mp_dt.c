@@ -281,6 +281,8 @@ uint32_t dt_get_ddr_size(void)
 
 	size = fdt_read_uint32_default(fdt, node, "st,mem-size", 0U);
 
+	flush_dcache_range((uintptr_t)&size, sizeof(uint32_t));
+
 	return size;
 }
 
