@@ -158,19 +158,6 @@ void bl2_el3_early_platform_setup(u_register_t arg0,
 	stm32mp_save_boot_ctx_address(arg0);
 }
 
-static int ddr_mapping_and_security(void)
-{
-	uint32_t ddr_size = dt_get_ddr_size();
-
-	if (ddr_size == 0U) {
-		return -EINVAL;
-	}
-
-	/* Map DDR for binary load, now with cacheable attribute */
-	return mmap_add_dynamic_region(STM32MP_DDR_BASE, STM32MP_DDR_BASE,
-				       ddr_size, MT_MEMORY | MT_RW | MT_SECURE);
-}
-
 void bl2_platform_setup(void)
 {
 	int ret;
@@ -208,7 +195,9 @@ void bl2_platform_setup(void)
 		}
 	}
 
-	ret = ddr_mapping_and_security();
+	/* Map DDR for binary load, now with cacheable attribute */
+	ret = mmap_add_dynamic_region(STM32MP_DDR_BASE, STM32MP_DDR_BASE,
+				      STM32MP_DDR_MAX_SIZE, MT_MEMORY | MT_RW | MT_SECURE);
 	if (ret < 0) {
 		ERROR("DDR mapping: error %d\n", ret);
 		panic();

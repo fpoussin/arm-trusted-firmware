@@ -82,7 +82,7 @@ static int crypto_verify_signature(void *data_ptr, unsigned int data_len,
 	}
 
 	result = mmap_add_dynamic_region(STM32MP_ROM_BASE, STM32MP_ROM_BASE,
-					 STM32MP_ROM_SIZE, MT_CODE | MT_SECURE);
+					 STM32MP_ROM_SIZE_2MB_ALIGNED, MT_CODE | MT_SECURE);
 	if (result != 0) {
 		return result;
 	}
@@ -110,7 +110,7 @@ static int crypto_verify_signature(void *data_ptr, unsigned int data_len,
 	}
 
 out:
-	mmap_remove_dynamic_region(STM32MP_ROM_BASE, STM32MP_ROM_SIZE);
+	mmap_remove_dynamic_region(STM32MP_ROM_BASE, STM32MP_ROM_SIZE_2MB_ALIGNED);
 	if (result != 0) {
 		stm32mp_delete_loaded_header();
 	}
