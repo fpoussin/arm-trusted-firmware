@@ -167,6 +167,8 @@ void stm32mp1_syscfg_disable_io_compensation(void)
 {
 	uint32_t value;
 
+	stm32mp1_clk_force_enable(SYSCFG);
+
 	/*
 	 * Deactivate automatic I/O compensation.
 	 * Warning: CSI is disabled automatically in STOP if not
