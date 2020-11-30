@@ -29,6 +29,7 @@
 #include <drivers/st/stm32_timer.h>
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp_pmic.h>
+#include <drivers/st/stm32mp_reset.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp1_ddr_helpers.h>
 #include <drivers/st/stpmic1.h>
@@ -116,7 +117,7 @@ static void stm32_sgi1_it_handler(void)
 static void stm32mp1_tamper_action(int id)
 {
 	ERROR("Tamper %s occurs\n", tamper_name[id]);
-	stm32mp_plat_reset(plat_my_core_pos());
+	stm32mp_system_reset();
 }
 
 static void configure_wakeup_interrupt(void)
