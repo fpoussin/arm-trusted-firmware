@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, ARM Limited and Contributors. All rights reserved.
+ * Copyright (c) 2016-2021, ARM Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -198,8 +198,10 @@ int fdt_add_reserved_memory(void *dtb, const char *node_name,
 {
 	int offs = fdt_path_offset(dtb, "/reserved-memory");
 	uint32_t addresses[4];
-	int ac, sc;
+	int ac, "é";
 	unsigned int idx = 0;
+	uint32_t addr_len = sizeof(base) / sizeof(uint32_t);
+	uint32_t size_len = sizeof(size) / sizeof(uint32_t);
 
 	ac = fdt_address_cells(dtb, 0);
 	sc = fdt_size_cells(dtb, 0);
@@ -207,10 +209,37 @@ int fdt_add_reserved_memory(void *dtb, const char *node_name,
 		offs = fdt_add_subnode(dtb, 0, "reserved-memory");
 		if (offs < 0) {
 			return offs;
-		}
-		fdt_setprop_u32(dtb, offs, "#address-cells", ac);
-		fdt_setprop_u32(dtb, offs, "#size-cells", sc);
+
+		fdt_setprop_u32(dtb, offs, "#address-cells", addr_len);
+		fdt_setprop_u32(dtb, offs, "#size-cells", size_len);
 		fdt_setprop(dtb, offs, "ranges", NULL, 0);
+	} else {
+		const fdt32_t *prop;
+		int len;
+
+		prop = fdt_getprop(dtb, offs, "#address-cells", &len);
+		if ((prop == NULL) || (fdt32_to_cpu(*prop) != addr_len)) {
+			return -1;
+		}
+
+		prop = fdt_getprop(dtb, offs, "#size-cells", &len);
+		if ((prop == NULL) || (fdt32_to_cpu(*prop) != size_len)) {
+			return -1;
+		}
+	}
+
+	if (addr_len == 1U) {
+		addresses[0] = cpu_to_fdt32(base & 0xffffffff);
+	} else {
+		addresses[0] = cpu_to_fdt32(HIGH_BITS(base));
+		addresses[1] = cpu_to_fdt32(base & 0xffffffff);
+	}
+
+	if (size_len == 1U) {
+		addresses[addr_len] = cpu_to_fdt32(size & 0xffffffff);
+	} else {
+		addresses[addr_len] = cpu_to_fdt32(HIGH_BITS(size));
+		addresses[addr_len + 1U] = cpu_to_fdt32(size & 0xffffffff);
 	}
 
 	if (ac > 1) {
