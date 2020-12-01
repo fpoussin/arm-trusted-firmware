@@ -118,7 +118,9 @@ FIP_DEPS		+=	dtbs
 STM32MP_NT_FW_CONFIG	:=	${BL33_CFG}
 STM32MP_FW_CONFIG_NAME	:=	$(patsubst %.dtb,%-fw-config.dtb,$(DTB_FILE_NAME))
 STM32MP_FW_CONFIG	:=	${BUILD_PLAT}/fdts/$(STM32MP_FW_CONFIG_NAME)
+ifneq (${AARCH32_SP},none)
 FDT_SOURCES		+=	$(addprefix fdts/, $(patsubst %.dtb,%.dts,$(STM32MP_FW_CONFIG_NAME)))
+endif
 # Add the FW_CONFIG to FIP and specify the same to certtool
 $(eval $(call TOOL_ADD_PAYLOAD,${STM32MP_FW_CONFIG},--fw-config))
 # Add the NT_FW_CONFIG to FIP and specify the same to certtool
