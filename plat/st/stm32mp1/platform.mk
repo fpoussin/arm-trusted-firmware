@@ -93,6 +93,7 @@ BL32_DTSI		:=	stm32mp15-bl32.dtsi
 FDT_SOURCES		+=	$(addprefix ${BUILD_PLAT}/fdts/, $(patsubst %.dtb,%-bl32.dts,$(DTB_FILE_NAME)))
 endif
 endif
+DTC_CPPFLAGS		+=	${INCLUDES}
 DTC_FLAGS		+=	-Wno-unit_address_vs_reg
 
 # Macros and rules to build TF binary
