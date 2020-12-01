@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2017-2021, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -75,7 +75,6 @@ static int stm32_iwdg_get_dt_node(struct dt_node_info *info, int offset)
 #if defined(IMAGE_BL32)
 void __dead2 stm32_iwdg_it_handler(int id)
 {
-	unsigned int cpu = plat_my_core_pos();
 	struct stm32_iwdg_instance *iwdg;
 	unsigned int instance;
 
@@ -91,20 +90,35 @@ void __dead2 stm32_iwdg_it_handler(int id)
 
 	iwdg = &stm32_iwdg[instance];
 
-	VERBOSE("CPU %x IT Watchdog %d\n", cpu, instance + 1);
+#if DEBUG
+	INFO("CPU %x IT Watchdog %u\n", plat_my_core_pos(), instance + 1U);
 
+	stm32mp_dump_core_registers(true);
+#endif
 	stm32_iwdg_refresh();
 
 	clk_enable(iwdg->clock);
 
-	mmio_setbits_32(iwdg->base + IWDG_EWCR_OFFSET, IWDG_EWCR_EWIC);
+	mmio_clrsetbits_32(iwdg->base + IWDG_EWCR_OFFSET,
+			   IWDG_EWCR_EWIE, IWDG_EWCR_EWIC);
 
 	clk_disable(iwdg->clock);
 
 	/* Ack interrupt as we do not return from next call */
 	gicv2_end_of_interrupt(id);
 
-	stm32mp_plat_reset(cpu);
+#if DEBUG
+	if (!stm32mp_is_single_core()) {
+		unsigned int sec_cpu = (plat_my_core_pos() == STM32MP_PRIMARY_CPU) ?
+			STM32MP_SECONDARY_CPU : STM32MP_PRIMARY_CPU;
+
+		gicv2_raise_sgi(ARM_IRQ_SEC_SGI_1, sec_cpu);
+	}
+#endif
+
+	for ( ; ; ) {
+		;
+	}
 }
 
 static int stm32_iwdg_get_secure_timeout(int node)
