@@ -21,6 +21,7 @@
 #include <lib/mmio.h>
 #include <lib/xlat_tables/xlat_tables_v2.h>
 #include <plat/common/platform.h>
+#include <smccc_helpers.h>
 
 /* Internal layout of the 32bit OTP word board_id */
 #define BOARD_ID_BOARD_NB_MASK		GENMASK(31, 16)
@@ -801,3 +802,55 @@ bool stm32mp1_is_wakeup_from_standby(void)
 
 	return stm32_pm_context_is_valid();
 }
+
+#if defined(IMAGE_BL32) && DEBUG
+static const char *const dump_table[] = {
+	"sp_usr  ",
+	"lr_usr  ",
+	"spsr_irq",
+	"sp_irq  ",
+	"lr_irq  ",
+	"spsr_fiq",
+	"sp_fiq  ",
+	"lr_fiq  ",
+	"spsr_svc",
+	"sp_svc  ",
+	"lr_svc  ",
+	"spsr_abt",
+	"sp_abt  ",
+	"lr_abt  ",
+	"spsr_und",
+	"sp_und  ",
+	"lr_und  ",
+	"spsr_mon",
+	"sp_mon",
+	"lr_mon",
+	"scr",
+	"pmcr",
+};
+
+/*
+ * Dump CPU registers when entering in monitor.
+ */
+void stm32mp_dump_core_registers(bool fcore)
+{
+	static bool firstcore;
+	unsigned int i;
+	smc_ctx_t *ctx = smc_get_ctx(NON_SECURE);
+	uint32_t *reg = (uint32_t *)&ctx->sp_usr;
+
+	if (fcore) {
+		firstcore = true;
+	}
+
+	if (!firstcore) {
+		return;
+	}
+
+	INFO("CPU : %i\n", plat_my_core_pos());
+
+	for (i = 0U; i < ARRAY_SIZE(dump_table); i++) {
+		INFO("%s : 0x%x\n", dump_table[i], reg[i]);
+	}
+}
+#endif

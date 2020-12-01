@@ -172,7 +172,7 @@ enum ddr_type {
 #if STM32MP_SP_MIN_IN_DDR
 #define STM32MP_BL32_SIZE		U(0x00025000)	/* 148 KB for BL32 */
 #else
-#define STM32MP_BL32_SIZE		U(0x00019000)	/* 100 KB for BL32 */
+#define STM32MP_BL32_SIZE		U(0x0001A000)	/* 100 KB for BL32 */
 #endif
 #endif /* STM32MP_USE_STM32IMAGE */
 

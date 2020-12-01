@@ -94,6 +94,10 @@ static void stm32_sgi1_it_handler(void)
 
 	stm32mp_mask_timer();
 
+#if DEBUG
+	stm32mp_dump_core_registers(false);
+#endif
+
 	gicv2_end_of_interrupt(ARM_IRQ_SEC_SGI_1);
 
 	do {
