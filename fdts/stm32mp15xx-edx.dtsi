@@ -178,6 +178,7 @@
 
 &iwdg2 {
 	timeout-sec = <32>;
+	secure-timeout-sec = <5>;
 	status = "okay";
 	secure-status = "okay";
 };
