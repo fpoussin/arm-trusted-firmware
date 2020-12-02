@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2015-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -105,7 +105,7 @@ uint32_t bsec_write_otp(uint32_t val, uint32_t otp);
 uint32_t bsec_program_otp(uint32_t val, uint32_t otp);
 uint32_t bsec_permanent_lock_otp(uint32_t otp);
 
-uint32_t bsec_write_debug_conf(uint32_t val);
+void bsec_write_debug_conf(uint32_t val);
 uint32_t bsec_read_debug_conf(void);
 
 uint32_t bsec_get_status(void);
