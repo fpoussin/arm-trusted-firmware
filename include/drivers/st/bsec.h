@@ -108,6 +108,9 @@ uint32_t bsec_permanent_lock_otp(uint32_t otp);
 void bsec_write_debug_conf(uint32_t val);
 uint32_t bsec_read_debug_conf(void);
 
+void bsec_write_scratch(uint32_t val);
+uint32_t bsec_read_scratch(void);
+
 uint32_t bsec_get_status(void);
 uint32_t bsec_get_hw_conf(void);
 uint32_t bsec_get_version(void);
