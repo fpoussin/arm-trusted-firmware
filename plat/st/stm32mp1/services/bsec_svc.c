@@ -267,10 +267,7 @@ static uint32_t bsec_write_all_bsec(struct otp_exchange *exchange,
 		}
 	}
 
-	ret = bsec_write_debug_conf(exchange->debug_conf);
-	if (ret != BSEC_OK) {
-		return ret;
-	}
+	bsec_write_debug_conf(exchange->debug_conf);
 
 	for (j = 0U; j < 3U; j++) {
 		if (exchange->permanent_lock[j] == 0U) {
