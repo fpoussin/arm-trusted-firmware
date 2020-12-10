@@ -19,15 +19,8 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
-
-	aliases {
-		serial0 = &uart4;
-	};
 };
 
-&cpu1 {
-	cpu-supply = <&vddcore>;
-};
 
 &etzpc {
 	st,decprot = <

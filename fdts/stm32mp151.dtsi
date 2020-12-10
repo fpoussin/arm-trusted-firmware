@@ -208,7 +208,7 @@
 		};
 
 		usbotg_hs: usb-otg@49000000 {
-			compatible = "st,stm32mp1-hsotg", "snps,dwc2";
+			compatible = "st,stm32mp15-hsotg", "snps,dwc2";
 			reg = <0x49000000 0x10000>;
 			clocks = <&rcc USBO_K>;
 			clock-names = "otg";
@@ -224,7 +224,7 @@
 		};
 
 		rcc: rcc@50000000 {
-			compatible = "st,stm32mp1-rcc", "syscon";
+			compatible = "st,stm32mp1-rcc-secure", "st,stm32mp1-rcc", "syscon";
 			reg = <0x50000000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -352,6 +352,8 @@
 			interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc QSPI_K>;
 			resets = <&rcc QSPI_R>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 
@@ -476,7 +478,7 @@
 			secure-status = "disabled";
 		};
 
-		bsec: nvmem@5c005000 {
+		bsec: efuse@5c005000 {
 			compatible = "st,stm32mp15-bsec";
 			reg = <0x5c005000 0x400>;
 			#address-cells = <1>;
@@ -512,7 +514,7 @@
 			pkh_otp: pkh_otp@60 {
 				reg = <0x60 0x20>;
 			};
-			mac_addr: mac_addr@e4 {
+			ethernet_mac_address: mac@e4 {
 				reg = <0xe4 0x8>;
 				st,non-secure-otp;
 			};

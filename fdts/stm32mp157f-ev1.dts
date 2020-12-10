@@ -17,6 +17,7 @@
 	};
 
 	aliases {
+		serial0 = &uart4;
 		serial1 = &usart3;
 	};
 };

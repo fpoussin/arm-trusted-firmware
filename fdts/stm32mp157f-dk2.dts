@@ -29,10 +29,6 @@
 	};
 };
 
-&cpu1 {
-	cpu-supply = <&vddcore>;
-};
-
 &cryp1 {
 	status = "okay";
 };

@@ -14,6 +14,10 @@
 		reg = <0xC0000000 0x40000000>;
 	};
 
+	aliases {
+		serial0 = &uart4;
+	};
+
 	vin: vin {
 		compatible = "regulator-fixed";
 		regulator-name = "vin";
@@ -35,6 +39,10 @@
 };
 
 &cpu0{
+	cpu-supply = <&vddcore>;
+};
+
+&cpu1{
 	cpu-supply = <&vddcore>;
 };
 
@@ -136,9 +144,6 @@
 
 			vdd_usb: ldo4 {
 				regulator-name = "vdd_usb";
-				regulator-min-microvolt = <3300000>;
-				regulator-max-microvolt = <3300000>;
-				regulator-always-on;
 			};
 
 			vdd_sd: ldo5 {
@@ -332,7 +337,6 @@
 	sd-uhs-sdr25;
 	sd-uhs-sdr50;
 	sd-uhs-ddr50;
-	sd-uhs-sdr104;
 	status = "okay";
 };
 
