@@ -287,7 +287,7 @@ uint32_t stm32_get_gpio_bank_offset(unsigned int bank)
 	return bank * GPIO_BANK_OFFSET;
 }
 
-#if STM32MP_UART_PROGRAMMER
+#if STM32MP_UART_PROGRAMMER || defined(IMAGE_BL32)
 /*
  * UART Management
  */
