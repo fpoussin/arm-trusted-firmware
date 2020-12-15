@@ -534,6 +534,9 @@ static void init_sec_peripherals(void)
 	uint32_t active_conf = 0;
 	int ret;
 
+	/* Disable MCU subsystem protection */
+	stm32mp1_clk_mcuss_protect(false);
+
 	/* Init rtc driver */
 	ret = stm32_rtc_init();
 	if (ret < 0) {
