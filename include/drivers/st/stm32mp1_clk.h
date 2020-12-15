@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, STMicroelectronics - All Rights Reserved
+ * Copyright (c) 2018-2020, STMicroelectronics - All Rights Reserved
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -56,6 +56,8 @@ int stm32mp1_clock_stopmode_resume(void);
 
 void restore_clock_pm_context(void);
 void save_clock_pm_context(void);
+
+void stm32mp1_clk_mcuss_protect(bool enable);
 
 void stm32mp1_dump_clocks_state(void);
 

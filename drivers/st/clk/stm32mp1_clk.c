@@ -3368,6 +3368,17 @@ int stm32mp1_clock_stopmode_resume(void)
 	return 0;
 }
 
+void stm32mp1_clk_mcuss_protect(bool enable)
+{
+	uintptr_t rcc_base = stm32mp_rcc_base();
+
+	if (enable) {
+		mmio_setbits_32(rcc_base + RCC_TZCR, RCC_TZCR_MCKPROT);
+	} else {
+		mmio_clrbits_32(rcc_base + RCC_TZCR, RCC_TZCR_MCKPROT);
+	}
+}
+
 /* Sync secure clock refcount after all drivers probe/inits,  */
 void stm32mp1_dump_clocks_state(void)
 {
