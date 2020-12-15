@@ -2500,11 +2500,6 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 		return -FDT_ERR_NOTFOUND;
 	}
 
-	/* Check status field to disable security */
-	if (!fdt_get_rcc_secure_status()) {
-		mmio_write_32(rcc_base + RCC_TZCR, 0);
-	}
-
 	ret = fdt_rcc_read_uint32_array("st,clksrc", (uint32_t)CLKSRC_NB,
 					clksrc);
 	if (ret < 0) {
@@ -3428,6 +3423,12 @@ int stm32mp1_clk_probe(void)
 	unsigned long freq_khz;
 
 	assert(PLLCFG_NB == PLAT_MAX_PLLCFG_NB);
+
+#if defined(IMAGE_BL32)
+	if (!fdt_get_rcc_secure_state()) {
+		mmio_write_32(stm32mp_rcc_base() + RCC_TZCR, 0U);
+	}
+#endif
 
 	stm32mp1_osc_init();
 

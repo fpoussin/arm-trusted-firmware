@@ -25,7 +25,7 @@ uint32_t fdt_rcc_read_uint32_default(const char *prop_name,
 				     uint32_t dflt_value);
 int fdt_rcc_subnode_offset(const char *name);
 const fdt32_t *fdt_rcc_read_prop(const char *prop_name, int *lenp);
-bool fdt_get_rcc_secure_status(void);
+bool fdt_get_rcc_secure_state(void);
 int fdt_rcc_enable_it(const char *name);
 
 int fdt_get_clock_id(int node);
