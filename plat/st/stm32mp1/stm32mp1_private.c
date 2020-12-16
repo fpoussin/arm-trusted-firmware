@@ -843,6 +843,21 @@ int stm32_get_boot_interface(uint32_t *interface, uint32_t *instance)
 	return 0;
 }
 
+bool stm32_boot_is_serial(void)
+{
+	uint32_t boot_itf;
+	uint32_t boot_instance;
+
+	stm32_get_boot_interface(&boot_itf, &boot_instance);
+
+	if ((boot_itf == BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_UART) ||
+	    (boot_itf == BOOT_API_CTX_BOOT_INTERFACE_SEL_SERIAL_USB)) {
+		return true;
+	}
+
+	return false;
+}
+
 #if defined(IMAGE_BL32) && DEBUG
 static const char *const dump_table[] = {
 	"sp_usr  ",

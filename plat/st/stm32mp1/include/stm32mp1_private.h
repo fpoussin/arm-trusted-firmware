@@ -31,6 +31,7 @@ bool stm32mp1_is_wakeup_from_standby(void);
 
 int stm32_save_boot_interface(uint32_t interface, uint32_t instance);
 int stm32_get_boot_interface(uint32_t *interface, uint32_t *instance);
+bool stm32_boot_is_serial(void);
 
 enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode);
 
