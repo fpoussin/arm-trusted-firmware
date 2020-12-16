@@ -28,10 +28,6 @@
 #include <boot_api.h>
 #include <stm32mp1_critic_power.h>
 
-#define TAMP_BOOT_ITF_BACKUP_REG_ID	U(20)
-#define TAMP_BOOT_ITF_MASK		U(0x0000FF00)
-#define TAMP_BOOT_ITF_SHIFT		8
-
 #define TRAINING_AREA_SIZE		64
 
 #define BL32_CANARY_ID			U(0x424c3332)
@@ -446,42 +442,6 @@ bool stm32_pm_context_is_valid(void)
 	clk_disable(BKPSRAM);
 
 	return ret;
-}
-
-int stm32_save_boot_interface(uint32_t interface, uint32_t instance)
-{
-	uint32_t bkpr_itf_idx = tamp_bkpr(TAMP_BOOT_ITF_BACKUP_REG_ID);
-
-	clk_enable(RTCAPB);
-
-	mmio_clrsetbits_32(bkpr_itf_idx,
-			   TAMP_BOOT_ITF_MASK,
-			   ((interface << 4) | (instance & 0xFU)) <<
-			   TAMP_BOOT_ITF_SHIFT);
-
-	clk_disable(RTCAPB);
-
-	return 0;
-}
-
-int stm32_get_boot_interface(uint32_t *interface, uint32_t *instance)
-{
-	static uint32_t itf;
-
-	if (itf == 0U) {
-		uint32_t bkpr = tamp_bkpr(TAMP_BOOT_ITF_BACKUP_REG_ID);
-
-		clk_enable(RTCAPB);
-
-		itf = (mmio_read_32(bkpr) & TAMP_BOOT_ITF_MASK) >> TAMP_BOOT_ITF_SHIFT;
-
-		clk_disable(RTCAPB);
-	}
-
-	*interface = itf >> 4;
-	*instance = itf & 0xFU;
-
-	return 0;
 }
 
 #if defined(IMAGE_BL32)
