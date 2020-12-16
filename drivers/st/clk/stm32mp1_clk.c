@@ -700,6 +700,10 @@ static uint32_t pll3cr;
 static uint32_t pll4cr;
 static uint32_t mssckselr;
 static uint32_t mcudivr;
+#if STM32MP_SP_MIN_IN_DDR
+static uint32_t mpapb_iwdg1;
+static uint32_t mpapb_iwdg2;
+#endif
 
 static const struct stm32mp1_clk_gate *gate_ref(unsigned int idx)
 {
@@ -3310,6 +3314,13 @@ void stm32mp1_clock_stopmode_save(void)
 	pll4cr = mmio_read_32(rcc_base + RCC_PLL4CR);
 	mssckselr = mmio_read_32(rcc_base + RCC_MSSCKSELR);
 	mcudivr = mmio_read_32(rcc_base + RCC_MCUDIVR) & RCC_MCUDIV_MASK;
+#if STM32MP_SP_MIN_IN_DDR
+	mpapb_iwdg2 = (mmio_read_32(rcc_base + RCC_MP_APB4ENSETR) &
+		    RCC_MP_APB4ENSETR_IWDG2APBEN);
+	mpapb_iwdg1 = (mmio_read_32(rcc_base + RCC_MP_APB5ENSETR) &
+		    RCC_MP_APB5ENSETR_IWDG1APBEN);
+#endif
+
 	enable_kernel_clocks();
 }
 
@@ -3362,6 +3373,17 @@ int stm32mp1_clock_stopmode_resume(void)
 	if (res != 0) {
 		return res;
 	}
+
+#if STM32MP_SP_MIN_IN_DDR
+	/* Restore IWDG clock */
+	mmio_clrsetbits_32(rcc_base + RCC_MP_APB5ENSETR,
+			   RCC_MP_APB5ENSETR_IWDG1APBEN,
+			   mpapb_iwdg1);
+
+	mmio_clrsetbits_32(rcc_base + RCC_MP_APB4ENSETR,
+			   RCC_MP_APB4ENSETR_IWDG2APBEN,
+			   mpapb_iwdg2);
+#endif
 
 	disable_kernel_clocks();
 

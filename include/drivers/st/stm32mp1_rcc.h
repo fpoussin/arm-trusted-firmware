@@ -463,6 +463,9 @@
 /* Values of RCC_MP_APB1ENSETR register */
 #define RCC_MP_APB1ENSETR_UART4EN	BIT(16)
 
+/* Values of RCC_MP_APB4ENSETR register */
+#define RCC_MP_APB4ENSETR_IWDG2APBEN	BIT(15)
+
 /* Values of RCC_MP_APB5ENSETR register */
 #define RCC_MP_APB5ENSETR_SPI6EN	BIT(0)
 #define RCC_MP_APB5ENSETR_I2C4EN	BIT(2)
