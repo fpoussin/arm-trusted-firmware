@@ -503,6 +503,8 @@ skip_console_init:
 
 	update_monotonic_counter();
 
+	stm32mp1_syscfg_enable_io_compensation_finish();
+
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();
 		print_pmic_info_and_debug();

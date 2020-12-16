@@ -261,6 +261,7 @@ void stm32_exit_cstop(void)
 
 	enter_cstop_done = false;
 
+	stm32mp1_syscfg_enable_io_compensation_start();
 
 	plat_ic_set_priority_mask(gicc_pmr);
 
@@ -284,11 +285,11 @@ void stm32_exit_cstop(void)
 						   &sleep_time);
 	stm32mp_stgen_restore_counter(stgen_cnt, stdby_time_in_ms);
 
-	stm32mp1_syscfg_enable_io_compensation();
-
 	if (stm32mp1_clock_stopmode_resume() != 0) {
 		panic();
 	}
+
+	stm32mp1_syscfg_enable_io_compensation_finish();
 }
 
 static int get_locked(volatile int *state)

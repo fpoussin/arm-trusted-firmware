@@ -36,7 +36,8 @@ bool stm32_boot_is_serial(void);
 enum etzpc_decprot_attributes stm32mp_etzpc_binding2decprot(uint32_t mode);
 
 void stm32mp1_syscfg_init(void);
-void stm32mp1_syscfg_enable_io_compensation(void);
+void stm32mp1_syscfg_enable_io_compensation_start(void);
+void stm32mp1_syscfg_enable_io_compensation_finish(void);
 void stm32mp1_syscfg_disable_io_compensation(void);
 
 #if STM32MP_USE_STM32IMAGE

@@ -129,13 +129,11 @@ void stm32mp1_syscfg_init(void)
 		}
 	}
 
-	stm32mp1_syscfg_enable_io_compensation();
+	stm32mp1_syscfg_enable_io_compensation_start();
 }
 
-void stm32mp1_syscfg_enable_io_compensation(void)
+void stm32mp1_syscfg_enable_io_compensation_start(void)
 {
-	uint64_t start;
-
 	/*
 	 * Activate automatic I/O compensation.
 	 * Warning: need to ensure CSI enabled and ready in clock driver.
@@ -145,6 +143,11 @@ void stm32mp1_syscfg_enable_io_compensation(void)
 
 	mmio_setbits_32(SYSCFG_BASE + SYSCFG_CMPENSETR,
 			SYSCFG_CMPENSETR_MPU_EN);
+}
+
+void stm32mp1_syscfg_enable_io_compensation_finish(void)
+{
+	uint64_t start;
 
 	start = timeout_init_us(SYSCFG_CMPCR_READY_TIMEOUT_US);
 
