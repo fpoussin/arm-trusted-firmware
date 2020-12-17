@@ -815,14 +815,12 @@ void stm32mp1_ddr_init(struct ddr_info *priv,
 			VERBOSE("self-refresh aborted: no retention\n");
 			config->self_refresh = false;
 		}
-	} else {
-		if (ddr_reten != 0U) {
-			VERBOSE("disable DDR PHY retention\n");
-			mmio_setbits_32((uint32_t)(priv->pwr) + PWR_CR3,
-					PWR_CR3_DDRSRDIS);
-			mmio_clrbits_32((uint32_t)(priv->pwr) + PWR_CR3,
-					PWR_CR3_DDRRETEN);
-		}
+	}
+
+	if (!config->self_refresh) {
+		VERBOSE("disable DDR PHY retention\n");
+		mmio_setbits_32((uint32_t)(priv->pwr) + PWR_CR3, PWR_CR3_DDRSRDIS);
+		mmio_clrbits_32((uint32_t)(priv->pwr) + PWR_CR3, PWR_CR3_DDRRETEN);
 	}
 
 	/* DDR INIT SEQUENCE */
