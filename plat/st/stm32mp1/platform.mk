@@ -35,6 +35,12 @@ STM32_TF_VERSION	?=	0
 # Enable dynamic memory mapping
 PLAT_XLAT_TABLES_DYNAMIC :=	1
 
+ifeq ($(STM32MP_USE_STM32IMAGE),1)
+BL2_IN_XIP_MEM 		:= 	0
+else
+BL2_IN_XIP_MEM 		:= 	1
+endif
+
 # DDR controller with dual AXI port
 STM32MP_DDR_DUAL_AXI_PORT:= 	1
 

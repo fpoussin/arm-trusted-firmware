@@ -68,7 +68,6 @@
 #define BL2_LIMIT			(STM32MP_BL2_BASE + \
 					 STM32MP_BL2_SIZE)
 
-#if SEPARATE_CODE_AND_RODATA
 #define BL2_RO_BASE			STM32MP_BL2_RO_BASE
 #define BL2_RO_LIMIT			(STM32MP_BL2_RO_BASE + \
 					 STM32MP_BL2_RO_SIZE)
@@ -76,7 +75,6 @@
 #define BL2_RW_BASE			STM32MP_BL2_RW_BASE
 #define BL2_RW_LIMIT			(STM32MP_BL2_RW_BASE + \
 					 STM32MP_BL2_RW_SIZE)
-#endif
 /*******************************************************************************
  * BL32 specific defines.
  ******************************************************************************/
