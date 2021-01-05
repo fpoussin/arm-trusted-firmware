@@ -9,7 +9,7 @@ V		?= 0
 DEBUG		:= 0
 CRTTOOL		?= cert_create${BIN_EXT}
 BINARY		:= $(notdir ${CRTTOOL})
-OPENSSL_DIR	:= /usr
+OPENSSL_DIR	?= /usr
 COT		:= tbbr
 
 MAKE_HELPERS_DIRECTORY := ../../make_helpers/
@@ -63,7 +63,7 @@ HOSTCCFLAGS += ${DEFINES}
 # could get pulled in from firmware tree.
 INC_DIR += -I ./include -I ${PLAT_INCLUDE} -I ${OPENSSL_DIR}/include
 LIB_DIR := -L ${OPENSSL_DIR}/lib
-LIB := -lssl -lcrypto
+LIB := -lssl -lcrypto -lpthread
 
 HOSTCC ?= gcc
 

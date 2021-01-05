@@ -8,6 +8,7 @@ MAKE_HELPERS_DIRECTORY := ../../make_helpers/
 include ${MAKE_HELPERS_DIRECTORY}build_macros.mk
 include ${MAKE_HELPERS_DIRECTORY}build_env.mk
 
+OPENSSL_DIR ?= /usr
 FIPTOOL ?= fiptool${BIN_EXT}
 PROJECT := $(notdir ${FIPTOOL})
 OBJECTS := fiptool.o tbbr_config.o
@@ -20,7 +21,8 @@ ifeq (${DEBUG},1)
 else
   HOSTCCFLAGS += -O2
 endif
-LDLIBS := -lcrypto
+LIB_DIR := -L ${OPENSSL_DIR}/lib
+LDLIBS := -lcrypto -lpthread
 
 ifeq (${V},0)
   Q := @
@@ -48,7 +50,7 @@ all: ${PROJECT}
 
 ${PROJECT}: ${OBJECTS} Makefile
 	@echo "  HOSTLD  $@"
-	${Q}${HOSTCC} ${OBJECTS} -o $@ ${LDLIBS}
+	${Q}${HOSTCC} ${OBJECTS} -o $@ ${LIB_DIR} ${LDLIBS}
 	@${ECHO_BLANK_LINE}
 	@echo "Built $@ successfully"
 	@${ECHO_BLANK_LINE}

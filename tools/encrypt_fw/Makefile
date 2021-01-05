@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020, Linaro Limited. All rights reserved.
+# Copyright (c) 2019-2021, Linaro Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -9,7 +9,7 @@ BUILD_INFO	?= 1
 DEBUG		:= 0
 ENCTOOL		?= encrypt_fw${BIN_EXT}
 BINARY		:= $(notdir ${ENCTOOL})
-OPENSSL_DIR	:= /usr
+OPENSSL_DIR	?= /usr
 
 OBJECTS := src/encrypt.o \
            src/cmd_opt.o \
@@ -40,7 +40,7 @@ endif
 # could get pulled in from firmware tree.
 INC_DIR := -I ./include -I ../../include/tools_share -I ${OPENSSL_DIR}/include
 LIB_DIR := -L ${OPENSSL_DIR}/lib
-LIB := -lssl -lcrypto
+LIB := -lssl -lcrypto -lpthread
 
 HOSTCC ?= gcc
 

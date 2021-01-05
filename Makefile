@@ -949,12 +949,9 @@ $(eval $(call assert_booleans,\
         RAS_TRAP_LOWER_EL_ERR_ACCESS \
         COT_DESC_IN_DTB \
         USE_SP804_TIMER \
-<<<<<<< HEAD
         ENABLE_FEAT_RNG \
         ENABLE_FEAT_SB \
-=======
         AARCH32_EXCEPTION_DEBUG \
->>>>>>> Add helpers for exception debug on AARCH32
 )))
 
 $(eval $(call assert_numerics,\
