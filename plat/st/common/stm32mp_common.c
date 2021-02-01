@@ -183,6 +183,22 @@ const char *stm32mp_get_vdd_supply_name(void)
 	return supply;
 }
 
+/* Return USB phy supply name */
+const char *stm32mp_get_usb_phy_supply_name(void)
+{
+	const char *supply = NULL;
+
+	if (dt_pmic_status() > 0) {
+		const char *regulator = dt_get_usb_phy_regulator_name();
+
+		if (regulator != NULL) {
+			dt_pmic_find_supply(&supply, regulator);
+		}
+	}
+
+	return supply;
+}
+
 #if TRUSTED_BOARD_BOOT && STM32MP_USE_STM32IMAGE
 /* Save pointer to last loaded header */
 static boot_api_image_header_t *latest_stm32_header;

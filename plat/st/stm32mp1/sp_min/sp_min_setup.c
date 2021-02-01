@@ -161,6 +161,23 @@ static void initialize_pll1_settings(void)
 	}
 }
 
+static void disable_usb_phy_regulator(void)
+{
+	if (dt_pmic_status() > 0) {
+		const char *name = stm32mp_get_usb_phy_supply_name();
+		int ret;
+
+		if (name == NULL) {
+			return;
+		}
+
+		ret = stpmic1_regulator_disable(name);
+		if (ret < 0) {
+			WARN("USBPHYC phy-supply (%s) disable failed\n", name);
+		}
+	}
+}
+
 /*******************************************************************************
  * Interrupt handler for FIQ (secure IRQ)
  ******************************************************************************/
@@ -522,6 +539,8 @@ void sp_min_early_platform_setup2(u_register_t arg0, u_register_t arg1,
 	if (dt_pmic_status() > 0) {
 		initialize_pmic();
 	}
+
+	disable_usb_phy_regulator();
 
 	initialize_pll1_settings();
 

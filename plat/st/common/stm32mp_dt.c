@@ -538,6 +538,30 @@ const char *dt_get_cpu_regulator_name(void)
 }
 
 /*******************************************************************************
+ * This function retrieves USB phy regulator name from DT.
+ * Returns string taken from supply node, NULL otherwise.
+ ******************************************************************************/
+const char *dt_get_usb_phy_regulator_name(void)
+{
+	int node = fdt_node_offset_by_compatible(fdt, -1, DT_USBPHYC_COMPAT);
+	int subnode;
+	const char *reg_name = NULL;
+
+	if (node < 0) {
+		return NULL;
+	}
+
+	fdt_for_each_subnode(subnode, fdt, node) {
+		reg_name = dt_get_regulator_name(subnode, "phy-supply");
+		if (reg_name != NULL) {
+			return reg_name;
+		}
+	}
+
+	return NULL;
+}
+
+/*******************************************************************************
  * This function retrieves board model from DT
  * Returns string taken from model node, NULL otherwise
  ******************************************************************************/

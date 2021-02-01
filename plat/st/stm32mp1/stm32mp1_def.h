@@ -668,6 +668,7 @@ static inline uint32_t tamp_bkpr(uint32_t idx)
 #define DT_PWR_COMPAT			"st,stm32mp1,pwr-reg"
 #define DT_RCC_CLK_COMPAT		"st,stm32mp1-rcc"
 #define DT_RCC_SEC_CLK_COMPAT		"st,stm32mp1-rcc-secure"
+#define DT_USBPHYC_COMPAT		"st,stm32mp1-usbphyc"
 
 #define DT_PLL1_NODE_NAME		"st,pll@0"
 
