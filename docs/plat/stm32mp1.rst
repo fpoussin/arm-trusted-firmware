@@ -37,6 +37,15 @@ The TF-A image must be properly formatted with a STM32 header structure
 for ROM code is able to load this image.
 Tool stm32image can be used to prepend this header to the generated TF-A binary.
 
+Boot with FIP
+~~~~~~~~~~~~~
+The use of FIP is now the recommended way to boot STM32MP1 platform.
+Only BL2 (with STM32 header) is loaded by ROM code. The other binaries are
+inside the FIP binary: BL32 (SP_min or OP-TEE), U-Boot and their respective
+device tree blobs.
+
+STM32IMAGE bootchain (deprecated)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 At compilation step, BL2, BL32 and DTB file are linked together in a single
 binary. The stm32image tool is also generated and the header is added to TF-A
 binary. This binary file with header is named tf-a-stm32mp157c-ev1.stm32.
@@ -55,15 +64,17 @@ Memory mapping
                |       ...       |
                |                 |
     0x2FFC0000 +-----------------+ \
-               |                 | |
-               |       ...       | |
-               |                 | |
-    0x2FFD8000 +-----------------+ |
-               |    TF-A DTB     | | Embedded SRAM
-    0x2FFDC000 +-----------------+ |
-               |       BL2       | |
-    0x2FFEF000 +-----------------+ |
+               |     BL32 DTB    | |
+    0x2FFC5000 +-----------------+ |
                |       BL32      | |
+    0x2FFDF000 +-----------------+ |
+               |       ...       | |
+    0x2FFE3000 +-----------------+ |
+               |     BL2 DTB     | | Embedded SRAM
+    0x2FFEA000 +-----------------+ |
+               |       BL2       | |
+    0x2FFFF000 +-----------------+ |
+               |  SCMI mailbox   | |
     0x30000000 +-----------------+ /
                |                 |
                |       ...       |
@@ -102,23 +113,142 @@ Available storage medias are:
 - ``STM32MP_SPI_NAND``
 - ``STM32MP_SPI_NOR``
 
-To build with SP_min and support for all bootable devices:
+Boot with FIP
+~~~~~~~~~~~~~
+You need to build BL2, BL32 (SP_min or OP-TEE) and BL33 (U-Boot) before building FIP binary.
+
+U-Boot
+______
 
 .. code:: bash
 
-    make CROSS_COMPILE=arm-linux-gnueabihf- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 AARCH32_SP=sp_min STM32MP_SDMMC=1 STM32MP_EMMC=1 STM32MP_RAW_NAND=1 STM32MP_SPI_NAND=1
-    STM32MP_SPI_NOR=1 DTB_FILE_NAME=stm32mp157c-ev1.dtb
     cd <u-boot_directory>
     make stm32mp15_trusted_defconfig
     make DEVICE_TREE=stm32mp157c-ev1 all
 
-To build TF-A with OP-TEE support for all bootable devices:
+OP-TEE (optional)
+_________________
 
 .. code:: bash
 
-    make CROSS_COMPILE=arm-linux-gnueabihf- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 AARCH32_SP=optee STM32MP_SDMMC=1 STM32MP_EMMC=1 STM32MP_RAW_NAND=1 STM32MP_SPI_NAND=1 STM32MP_SPI_NOR=1 DTB_FILE_NAME=stm32mp157c-ev1.dtb
     cd <optee_directory>
-    make CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm PLATFORM=stm32mp1 CFG_EMBED_DTB_SOURCE_FILE=stm32mp157c-ev1.dts
+    make CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm PLATFORM=stm32mp1 \
+        CFG_EMBED_DTB_SOURCE_FILE=stm32mp157c-ev1.dts
+
+
+TF-A BL32 (SP_min)
+__________________
+If you choose not to use OP-TEE, you can use TF-A SP_min.
+To build TF-A BL32, and its device tree file:
+
+.. code:: bash
+
+    make CROSS_COMPILE=arm-none-eabi- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
+        AARCH32_SP=sp_min DTB_FILE_NAME=stm32mp157c-ev1.dtb bl32 dtbs
+
+TF-A BL2
+________
+To build TF-A BL2 with its STM32 header for SD-card boot:
+
+.. code:: bash
+
+    make CROSS_COMPILE=arm-none-eabi- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
+        DTB_FILE_NAME=stm32mp157c-ev1.dtb
+
+This BL2 is independent of the BL32 used (SP_min or OP-TEE)
+
+
+FIP
+___
+With BL32 SP_min:
+
+.. code:: bash
+
+    make CROSS_COMPILE=arm-none-eabi- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
+        AARCH32_SP=sp_min \
+        DTB_FILE_NAME=stm32mp157c-ev1.dtb \
+        BL33=<u-boot_directory>/u-boot-nodtb.bin \
+        BL33_CFG=<u-boot_directory>/u-boot.dtb \
+        fip
+
+With OP-TEE:
+
+.. code:: bash
+
+    make CROSS_COMPILE=arm-none-eabi- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
+        DTB_FILE_NAME=stm32mp157c-ev1.dtb \
+        BL33=<u-boot_directory>/u-boot-nodtb.bin \
+        BL33_CFG=<u-boot_directory>/u-boot.dtb \
+        BL32=<optee_directory>/tee-header_v2.bin \
+        BL32_EXTRA1=<optee_directory>/tee-pager_v2.bin
+        BL32_EXTRA2=<optee_directory>/tee-pageable_v2.bin
+        fip
+
+Trusted Boot Board
+__________________
+
+.. code:: shell
+
+    tools/cert_create/cert_create -n --rot-key "build/stm32mp1/debug/rot_key.pem" \
+        --tfw-nvctr 0 \
+        --ntfw-nvctr 0 \
+        --key-alg ecdsa --hash-alg sha256 \
+        --trusted-key-cert build/stm32mp1/cert_images/trusted-key-cert.key-crt \
+        --tb-fw=build/stm32mp1/debug/bl2.bin \
+        --tb-fw-cert build/stm32mp1/cert_images/trusted-boot-fw.key-crt\
+        --tos-fw <optee_directory>/tee-header_v2.bin \
+        --tos-fw-cert build/stm32mp1/cert_images/tee-header_v2.bin.crt \
+        --tos-fw-key-cert build/stm32mp1/cert_images/tee-header_v2.bin.key-crt \
+        --tos-fw-extra1 <optee_directory>/tee-pager_v2.bin \
+        --tos-fw-extra2 <optee_directory>/tee-pageable_v2.bin \
+        --nt-fw <u-boot_directory>/u-boot-nodtb.bin \
+        --nt-fw-cert build/stm32mp1/cert_images/u-boot.bin.crt \
+        --nt-fw-key-cert build/stm32mp1/cert_images/u-boot.bin.key-crt \
+        --hw-config <u-boot_directory>/u-boot.dtb
+        --fw-config build/stm32mp1/debug/fdts/fw-config.dtb
+
+    tools/fiptool/fiptool create --tos-fw <optee_directory>/tee-header_v2.bin \
+        --tos-fw-extra1 <optee_directory>/tee-pager_v2.bin \
+        --tos-fw-extra2 <optee_directory>/tee-pageable_v2.bin \
+        --nt-fw <u-boot_directory>/u-boot-nodtb.bin \
+        --hw-config <u-boot_directory>/uboot-nodtb.dtb \
+        --tos-fw-cert build/stm32mp1/cert_images/tee-header_v2.bin.crt \
+        --tos-fw-key-cert build/stm32mp1/cert_images/tee-header_v2.bin.key-crt \
+        --nt-fw-cert build/stm32mp1/cert_images/u-boot.bin.crt \
+        --nt-fw-key-cert build/stm32mp1/cert_images/u-boot.bin.key-crt \
+        --trusted-key-cert build/stm32mp1/cert_images/trusted-key-cert.key-crt \
+        --tb-fw-cert build/stm32mp1/cert_images/trusted-boot-fw.key-crt stm32mp1.fip
+
+
+STM32IMAGE bootchain (deprecated)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You need to add the following flag to the make command:
+``STM32MP_USE_STM32IMAGE=1``
+
+To build with SP_min and support for SD-card boot:
+
+.. code:: bash
+
+    make CROSS_COMPILE=arm-linux-gnueabihf- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
+        AARCH32_SP=sp_min STM32MP_SDMMC=1 DTB_FILE_NAME=stm32mp157c-ev1.dtb \
+        STM32MP_USE_STM32IMAGE=1
+
+    cd <u-boot_directory>
+    make stm32mp15_trusted_defconfig
+    make DEVICE_TREE=stm32mp157c-ev1 all
+
+To build TF-A with OP-TEE support for SD-card boot:
+
+.. code:: bash
+
+    make CROSS_COMPILE=arm-linux-gnueabihf- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
+        AARCH32_SP=optee STM32MP_SDMMC=1 DTB_FILE_NAME=stm32mp157c-ev1.dtb \
+        STM32MP_USE_STM32IMAGE=1
+
+    cd <optee_directory>
+    make CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm PLATFORM=stm32mp1 \
+        CFG_EMBED_DTB_SOURCE_FILE=stm32mp157c-ev1.dts
+
     cd <u-boot_directory>
     make stm32mp15_trusted_defconfig
     make DEVICE_TREE=stm32mp157c-ev1 all
@@ -127,6 +257,18 @@ To build TF-A with OP-TEE support for all bootable devices:
 Populate SD-card
 ----------------
 
+Boot with FIP
+~~~~~~~~~~~~~
+The SD-card has to be formated with GPT.
+It should contain at least those partitions:
+
+- fsbl: to copy the tf-a-stm32mp157c-ev1.stm32 binary (BL2)
+- fip: which contains the FIP binary
+
+Usually, two copies of fsbl are used (fsbl1 and fsbl2) instead of one partition fsbl.
+
+STM32IMAGE bootchain (deprecated)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The SD-card has to be formated with GPT.
 It should contain at least those partitions:
 
