@@ -153,7 +153,10 @@ To build TF-A BL2 with its STM32 header for SD-card boot:
 .. code:: bash
 
     make CROSS_COMPILE=arm-none-eabi- PLAT=stm32mp1 ARCH=aarch32 ARM_ARCH_MAJOR=7 \
-        DTB_FILE_NAME=stm32mp157c-ev1.dtb
+        DTB_FILE_NAME=stm32mp157c-ev1.dtb STM32MP_SDMMC=1
+
+For other boot devices, you have to replace STM32MP_SDMMC in the previous command
+with the desired devive flag.
 
 This BL2 is independent of the BL32 used (SP_min or OP-TEE)
 
