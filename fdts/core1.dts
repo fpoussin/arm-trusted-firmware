@@ -4,15 +4,19 @@
  * Author: STM32CubeMX code generation for STMicroelectronics.
  */
 
-/dts-v1/;
+/* For more information on Device Tree configuration, please refer to
+ * https://wiki.st.com/stm32mpu/wiki/Category:Device_tree_configuration
+ */
 
+/dts-v1/;
 #include <dt-bindings/pinctrl/stm32-pinfunc.h>
 #include <dt-bindings/clock/stm32mp1-clksrc.h>
 #include <dt-bindings/soc/st,stm32-etzpc.h>
+#include <dt-bindings/power/stm32mp1-power.h>
 #include "stm32mp15-mx.dtsi"
 
 #include "stm32mp153.dtsi"
-#include "stm32mp15xc.dtsi"
+#include "stm32mp15xa.dtsi"
 #include "stm32mp15xxab-pinctrl.dtsi"
 #include "stm32mp15-ddr.dtsi"
 
@@ -20,8 +24,8 @@
 /* USER CODE END includes */
 
 / {
-	model = "Racebytes Core1";
-	compatible = "st,stm32mp153a-mp1-mx", "st,stm32mp153";
+	model = "Racebytes Core1 v0.1";
+	compatible = "st,stm32mp153a-mp1-rev-0.1-mx", "st,stm32mp153";
 
 	/* USER CODE BEGIN root */
 	aliases {
@@ -33,11 +37,6 @@
 		stdout-path = "serial0:115200n8";
 	};
 
-	memory@c0000000 {
-		device_type = "memory";
-		reg = <0xc0000000 0x10000000>;
-	};
-
 	vin: vin {
 		compatible = "regulator-fixed";
 		regulator-name = "vin";
@@ -46,16 +45,42 @@
 		regulator-always-on;
 	};
 
+	reg_3v3: reg_3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3v3";
+		regulator-min-microvolt = <3100000>;
+		regulator-max-microvolt = <3100000>;
+		regulator-always-on;
+		vin-supply = <&vin>;
+	};
+
+	reg_vdd: reg_vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd";
+		regulator-min-microvolt = <3150000>;
+		regulator-max-microvolt = <3150000>;
+		regulator-always-on;
+		vin-supply = <&vin>;
+	};
+
+	reg_vddcore: reg_vddcore {
+		compatible = "regulator-fixed";
+		regulator-name = "vddcore";
+		regulator-min-microvolt = <1320000>;
+		regulator-max-microvolt = <1320000>;
+		regulator-always-on;
+		vin-supply = <&reg_3v3>;
+	};
+
 	led-act {
 		compatible = "gpio-leds";
 
 		led-green {
-			label = "core1:green:act";
-			gpios = <&gpiod 11 0>;
-			linux,default-trigger = "heartbeat";
+		label = "core1:green:act";
+		gpios = <&gpiod 11 0>;
+		linux,default-trigger = "heartbeat";
 		};
 	};
-
 	/* USER CODE END root */
 
 	clocks {
@@ -114,6 +139,21 @@
 		};
 		pins2 {
 			pinmux = <STM32_PINMUX('D', 1, AF8)>; /* UART4_TX */
+			bias-disable;
+			drive-push-pull;
+			slew-rate = <0>;
+		};
+	};
+
+	uart8_pins_mx: uart8_mx-0 {
+		pins1 {
+			pinmux = <STM32_PINMUX('E', 0, AF8)>, /* UART8_RX */
+					 <STM32_PINMUX('E', 15, AF8)>; /* UART8_CTS */
+			bias-disable;
+		};
+		pins2 {
+			pinmux = <STM32_PINMUX('E', 1, AF8)>, /* UART8_TX */
+					 <STM32_PINMUX('E', 14, AF8)>; /* UART8_RTS */
 			bias-disable;
 			drive-push-pull;
 			slew-rate = <0>;
@@ -181,10 +221,10 @@
 		CLK_I2C12_DISABLED
 		CLK_I2C35_DISABLED
 		CLK_UART1_DISABLED
-		CLK_UART24_HSI
+		CLK_UART24_PLL4Q
 		CLK_UART35_DISABLED
 		CLK_UART6_DISABLED
-		CLK_UART78_HSI
+		CLK_UART78_PLL4Q
 		CLK_SPDIF_DISABLED
 		CLK_FDCAN_PLL4R
 		CLK_SAI1_DISABLED
@@ -195,6 +235,11 @@
 		CLK_LPTIM23_DISABLED
 		CLK_LPTIM45_DISABLED
 	>;
+	pll1:st,pll@0 {
+		compatible = "st,stm32mp1-pll";
+		reg = <0>;
+		cfg = < 1 53 0 1 1 PQR(1,0,0) >;
+	};
 	pll2:st,pll@1 {
 		compatible = "st,stm32mp1-pll";
 		reg = <1>;
@@ -225,18 +270,20 @@
 	/*"Non Secured" peripherals*/
 	DECPROT(STM32MP1_ETZPC_ADC_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_DMA1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_DMA2_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_DMAMUX_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_TT_FDCAN_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_UART4_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_UART8_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_OTG_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_VREFBUF_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	/*"NS_R S_W" peripherals*/
+	DECPROT(STM32MP1_ETZPC_DDRCTRL_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
+	DECPROT(STM32MP1_ETZPC_DDRPHYC_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 	/*"Secured" peripherals*/
-	DECPROT(STM32MP1_ETZPC_DDRCTRL_ID, DECPROT_S_RW, DECPROT_UNLOCK)
-	DECPROT(STM32MP1_ETZPC_DDRPHYC_ID, DECPROT_S_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_IWDG1_ID, DECPROT_S_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_STGENC_ID, DECPROT_S_RW, DECPROT_UNLOCK)
 	/*"Mcu Isolation" peripherals*/
-	DECPROT(STM32MP1_ETZPC_DMA2_ID, DECPROT_MCU_ISOLATION, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_UART7_ID, DECPROT_MCU_ISOLATION, DECPROT_UNLOCK)
 
 	/*Restriction: following IDs are not managed  - please to use User-Section if needed:
@@ -255,11 +302,32 @@
 	/* USER CODE END etzpc */
 };
 
+&iwdg1{
+	secure-status = "okay";
+
+	/* USER CODE BEGIN iwdg1 */
+	/* USER CODE END iwdg1 */
+};
+
+&iwdg2{
+	status = "okay";
+	secure-status = "okay";
+
+	/* USER CODE BEGIN iwdg2 */
+	/* USER CODE END iwdg2 */
+};
+
 &pwr_regulators{
 	status = "okay";
 	secure-status = "okay";
 
 	/* USER CODE BEGIN pwr_regulators */
+	system_suspend_supported_modes = <
+		STM32_PM_CSLEEP_RUN
+		STM32_PM_CSTOP_ALLOW_LP_STOP
+		STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
+	>;
+	system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
 	/* USER CODE END pwr_regulators */
 };
 
@@ -307,6 +375,15 @@
 	/* USER CODE END uart4 */
 };
 
+&uart8{
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart8_pins_mx>;
+	status = "okay";
+
+	/* USER CODE BEGIN uart8 */
+	/* USER CODE END uart8 */
+};
+
 &usbotg_hs{
 	pinctrl-names = "default";
 	pinctrl-0 = <&usb_otg_hs_pins_mx>;
@@ -339,4 +416,3 @@
 
 /* USER CODE BEGIN addons */
 /* USER CODE END addons */
-
