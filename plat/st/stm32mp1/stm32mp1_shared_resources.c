@@ -127,7 +127,7 @@ static unsigned int decprot2shres(unsigned int decprot_id)
 		}
 	}
 
-	VERBOSE("No shared resource %u", decprot_id);
+	VERBOSE("No shared resource %u\n", decprot_id);
 	return SHRES_INVALID;
 }
 
