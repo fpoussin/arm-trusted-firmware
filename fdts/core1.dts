@@ -12,7 +12,6 @@
 #include <dt-bindings/pinctrl/stm32-pinfunc.h>
 #include <dt-bindings/clock/stm32mp1-clksrc.h>
 #include <dt-bindings/soc/st,stm32-etzpc.h>
-#include <dt-bindings/power/stm32mp1-power.h>
 #include "stm32mp15-mx.dtsi"
 
 #include "stm32mp153.dtsi"
@@ -21,10 +20,11 @@
 #include "stm32mp15-ddr.dtsi"
 
 /* USER CODE BEGIN includes */
+#include <dt-bindings/power/stm32mp1-power.h>
 /* USER CODE END includes */
 
 / {
-	model = "Racebytes Core1 v0.1";
+	model = "RaceBytes Core1 v0.1";
 	compatible = "st,stm32mp153a-mp1-rev-0.1-mx", "st,stm32mp153";
 
 	/* USER CODE BEGIN root */
@@ -145,21 +145,6 @@
 		};
 	};
 
-	uart8_pins_mx: uart8_mx-0 {
-		pins1 {
-			pinmux = <STM32_PINMUX('E', 0, AF8)>, /* UART8_RX */
-					 <STM32_PINMUX('E', 15, AF8)>; /* UART8_CTS */
-			bias-disable;
-		};
-		pins2 {
-			pinmux = <STM32_PINMUX('E', 1, AF8)>, /* UART8_TX */
-					 <STM32_PINMUX('E', 14, AF8)>; /* UART8_RTS */
-			bias-disable;
-			drive-push-pull;
-			slew-rate = <0>;
-		};
-	};
-
 	usb_otg_hs_pins_mx: usb_otg_hs_mx-0 {
 		pins {
 			pinmux = <STM32_PINMUX('A', 10, ANALOG)>; /* USB_OTG_HS_ID */
@@ -231,6 +216,7 @@
 		CLK_SAI2_DISABLED
 		CLK_SAI3_DISABLED
 		CLK_SAI4_DISABLED
+		CLK_RNG1_CSI
 		CLK_LPTIM1_DISABLED
 		CLK_LPTIM23_DISABLED
 		CLK_LPTIM45_DISABLED
@@ -273,6 +259,8 @@
 	DECPROT(STM32MP1_ETZPC_DMA2_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_DMAMUX_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_TT_FDCAN_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_HASH1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_RNG1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_UART4_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_UART8_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_OTG_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
@@ -281,7 +269,6 @@
 	DECPROT(STM32MP1_ETZPC_DDRCTRL_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 	DECPROT(STM32MP1_ETZPC_DDRPHYC_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 	/*"Secured" peripherals*/
-	DECPROT(STM32MP1_ETZPC_IWDG1_ID, DECPROT_S_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_STGENC_ID, DECPROT_S_RW, DECPROT_UNLOCK)
 	/*"Mcu Isolation" peripherals*/
 	DECPROT(STM32MP1_ETZPC_UART7_ID, DECPROT_MCU_ISOLATION, DECPROT_UNLOCK)
@@ -302,11 +289,11 @@
 	/* USER CODE END etzpc */
 };
 
-&iwdg1{
-	secure-status = "okay";
+&hash1{
+	status = "okay";
 
-	/* USER CODE BEGIN iwdg1 */
-	/* USER CODE END iwdg1 */
+	/* USER CODE BEGIN hash1 */
+	/* USER CODE END hash1 */
 };
 
 &iwdg2{
@@ -314,6 +301,8 @@
 	secure-status = "okay";
 
 	/* USER CODE BEGIN iwdg2 */
+	timeout-sec = <32>;
+	secure-timeout-sec = <5>;
 	/* USER CODE END iwdg2 */
 };
 
@@ -339,6 +328,14 @@
 
 	/* USER CODE BEGIN rcc */
 	/* USER CODE END rcc */
+};
+
+&rng1{
+	status = "okay";
+	secure-status = "okay";
+
+	/* USER CODE BEGIN rng1 */
+	/* USER CODE END rng1 */
 };
 
 &rtc{
@@ -375,15 +372,6 @@
 	/* USER CODE END uart4 */
 };
 
-&uart8{
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart8_pins_mx>;
-	status = "okay";
-
-	/* USER CODE BEGIN uart8 */
-	/* USER CODE END uart8 */
-};
-
 &usbotg_hs{
 	pinctrl-names = "default";
 	pinctrl-0 = <&usb_otg_hs_pins_mx>;
@@ -415,4 +403,11 @@
 };
 
 /* USER CODE BEGIN addons */
+// gpio-poweroff {
+// 	compatible = "gpio-poweroff";
+// 	gpios = <&gpioa 2 GPIO_ACTIVE_LOW>;
+// 	active-delay-ms = <1000>;
+// 	timeout-ms = <3000>;
+// };
 /* USER CODE END addons */
+
