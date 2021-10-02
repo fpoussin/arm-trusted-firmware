@@ -311,12 +311,14 @@
 	secure-status = "okay";
 
 	/* USER CODE BEGIN pwr_regulators */
-	system_suspend_supported_modes = <
+	system_suspend_supported_soc_modes = <
 		STM32_PM_CSLEEP_RUN
 		STM32_PM_CSTOP_ALLOW_LP_STOP
 		STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
 	>;
 	system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
+	vdd-supply = <&reg_vdd>;
+	vdd_3v3_usbfs-supply = <&reg_3v3>;
 	/* USER CODE END pwr_regulators */
 };
 
