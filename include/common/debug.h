@@ -101,6 +101,7 @@ void __dead2 do_panic(void);
 #define panic()				\
 	do {				\
 		backtrace(__func__);	\
+		ERROR("PANIC\n");\
 		console_flush();	\
 		do_panic();		\
 	} while (false)
