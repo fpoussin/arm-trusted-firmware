@@ -354,6 +354,12 @@
 	status = "okay";
 
 	/* USER CODE BEGIN sdmmc1 */
+	non-removable;
+	disable-wp;
+	// st,neg-edge;
+	bus-width = <4>;
+	mmc-ddr-3_3v;
+	vmmc-supply = <&reg_3v3>;
 	/* USER CODE END sdmmc1 */
 };
 
