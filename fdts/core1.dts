@@ -48,8 +48,8 @@
 	reg_3v3: reg_3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "3v3";
-		regulator-min-microvolt = <3100000>;
-		regulator-max-microvolt = <3100000>;
+		regulator-min-microvolt = <3120000>;
+		regulator-max-microvolt = <3120000>;
 		regulator-always-on;
 		vin-supply = <&vin>;
 	};
@@ -57,8 +57,8 @@
 	reg_vdd: reg_vdd {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd";
-		regulator-min-microvolt = <3150000>;
-		regulator-max-microvolt = <3150000>;
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
 		regulator-always-on;
 		vin-supply = <&vin>;
 	};
@@ -88,7 +88,7 @@
 		/* USER CODE END clocks */
 
 		clk_lse: clk-lse {
-			st,drive = < LSEDRV_MEDIUM_HIGH >;
+			st,drive = < LSEDRV_MEDIUM_LOW >;
 
 			/* USER CODE BEGIN clk_lse */
 			/* USER CODE END clk_lse */
@@ -120,13 +120,13 @@
 					 <STM32_PINMUX('C', 10, AF12)>, /* SDMMC1_D2 */
 					 <STM32_PINMUX('C', 11, AF12)>, /* SDMMC1_D3 */
 					 <STM32_PINMUX('D', 2, AF12)>; /* SDMMC1_CMD */
-			bias-disable;
+			bias-pull-up;
 			drive-push-pull;
 			slew-rate = <1>;
 		};
 		pins2 {
 			pinmux = <STM32_PINMUX('C', 12, AF12)>; /* SDMMC1_CK */
-			bias-disable;
+			bias-pull-up;
 			drive-push-pull;
 			slew-rate = <3>;
 		};
@@ -189,9 +189,9 @@
 		0 		/*MCO2*/
 	>;
 	st,pkcs = <
-		CLK_CKPER_DISABLED
+		CLK_CKPER_HSE
 		CLK_ETH_DISABLED
-		CLK_SDMMC12_PLL3R
+		CLK_SDMMC12_PLL4P
 		CLK_STGEN_HSE
 		CLK_USBPHY_HSE
 		CLK_SPI2S1_DISABLED
@@ -201,12 +201,12 @@
 		CLK_I2C46_DISABLED
 		CLK_SDMMC3_DISABLED
 		CLK_USBO_USBPHY
-		CLK_ADC_PLL3Q
+		CLK_ADC_CKPER
 		CLK_CEC_DISABLED
 		CLK_I2C12_DISABLED
 		CLK_I2C35_DISABLED
 		CLK_UART1_DISABLED
-		CLK_UART24_PLL4Q
+		CLK_UART24_HSI
 		CLK_UART35_DISABLED
 		CLK_UART6_DISABLED
 		CLK_UART78_PLL4Q
@@ -234,12 +234,12 @@
 	pll3:st,pll@2 {
 		compatible = "st,stm32mp1-pll";
 		reg = <2>;
-		cfg = < 2 51 1 12 3 PQR(1,1,1) >;
+		cfg = < 2 51 1 12 3 PQR(1,0,0) >;
 	};
 	pll4:st,pll@3 {
 		compatible = "st,stm32mp1-pll";
 		reg = <3>;
-		cfg = < 2 99 15 15 9 PQR(0,1,1) >;
+		cfg = < 2 99 7 19 7 PQR(1,1,1) >;
 	};
 };
 
@@ -262,12 +262,15 @@
 	DECPROT(STM32MP1_ETZPC_TT_FDCAN_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_HASH1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_RNG1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_UART4_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_UART8_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_OTG_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	DECPROT(STM32MP1_ETZPC_VREFBUF_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	/*"NS_R S_W" peripherals*/
 	DECPROT(STM32MP1_ETZPC_DDRCTRL_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 	DECPROT(STM32MP1_ETZPC_DDRPHYC_ID, DECPROT_NS_R_S_W, DECPROT_LOCK)
 	/*"Secured" peripherals*/
+	DECPROT(STM32MP1_ETZPC_IWDG1_ID, DECPROT_S_RW, DECPROT_LOCK)
 	DECPROT(STM32MP1_ETZPC_STGENC_ID, DECPROT_S_RW, DECPROT_LOCK)
 	/*"Mcu Isolation" peripherals*/
 	DECPROT(STM32MP1_ETZPC_UART7_ID, DECPROT_MCU_ISOLATION, DECPROT_UNLOCK)
@@ -277,7 +280,13 @@
 
 	/* USER CODE BEGIN etzpc_decprot */
 	DECPROT(STM32MP1_ETZPC_BKPSRAM_ID, DECPROT_S_RW, DECPROT_LOCK)
-	DECPROT(STM32MP1_ETZPC_IWDG1_ID, DECPROT_S_RW, DECPROT_LOCK)
+
+	/* Clear warning messages "ETZPC: xxx could be non secure" */
+	DECPROT(STM32MP1_ETZPC_USART1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_SPI6_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_I2C4_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_I2C6_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
+	DECPROT(STM32MP1_ETZPC_CRYP1_ID, DECPROT_NS_RW, DECPROT_UNLOCK)
 	/* USER CODE END etzpc_decprot */
 	>;
 
@@ -287,11 +296,11 @@
 	/* USER CODE END etzpc */
 };
 
-&hash1{
-	status = "okay";
+&iwdg1{
+	secure-status = "okay";
 
-	/* USER CODE BEGIN hash1 */
-	/* USER CODE END hash1 */
+	/* USER CODE BEGIN iwdg1 */
+	/* USER CODE END iwdg1 */
 };
 
 &iwdg2{
@@ -323,8 +332,6 @@
 &rcc{
 	pinctrl-names = "default";
 	pinctrl-0 = <&rcc_pins_mx>;
-	/*status = "okay";
-	secure-status = "okay";*/
 
 	/* USER CODE BEGIN rcc */
 	/* USER CODE END rcc */
@@ -352,12 +359,15 @@
 	status = "okay";
 
 	/* USER CODE BEGIN sdmmc1 */
+	bus-width = <4>;
 	non-removable;
 	disable-wp;
-	// st,neg-edge;
-	bus-width = <4>;
-	mmc-ddr-3_3v;
+
+	st,neg-edge;
+	max-frequency = <50000000>;
+	
 	vmmc-supply = <&reg_3v3>;
+	vqmmc-supply = <&reg_vdd>;
 	/* USER CODE END sdmmc1 */
 };
 
