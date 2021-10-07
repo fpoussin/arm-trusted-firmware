@@ -244,10 +244,11 @@
 };
 
 &bsec{
-	status = "okay";
-	secure-status = "okay";
-
 	/* USER CODE BEGIN bsec */
+	board_id: board_id@ec {
+		reg = <0xec 0x4>;
+		st,non-secure-otp;
+	};
 	/* USER CODE END bsec */
 };
 
@@ -324,8 +325,8 @@
 &rcc{
 	pinctrl-names = "default";
 	pinctrl-0 = <&rcc_pins_mx>;
-	status = "okay";
-	secure-status = "okay";
+	/*status = "okay";
+	secure-status = "okay";*/
 
 	/* USER CODE BEGIN rcc */
 	/* USER CODE END rcc */
