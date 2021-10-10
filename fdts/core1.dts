@@ -221,11 +221,6 @@
 		CLK_LPTIM23_DISABLED
 		CLK_LPTIM45_DISABLED
 	>;
-	pll1:st,pll@0 {
-		compatible = "st,stm32mp1-pll";
-		reg = <0>;
-		cfg = < 1 53 0 1 1 PQR(1,0,0) >;
-	};
 	pll2:st,pll@1 {
 		compatible = "st,stm32mp1-pll";
 		reg = <1>;
@@ -244,6 +239,9 @@
 };
 
 &bsec{
+	status = "okay";
+	secure-status = "okay";
+
 	/* USER CODE BEGIN bsec */
 	board_id: board_id@ec {
 		reg = <0xec 0x4>;
@@ -324,14 +322,14 @@
 		STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
 	>;
 	system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
-	vdd-supply = <&reg_vdd>;
-	vdd_3v3_usbfs-supply = <&reg_3v3>;
 	/* USER CODE END pwr_regulators */
 };
 
 &rcc{
 	pinctrl-names = "default";
 	pinctrl-0 = <&rcc_pins_mx>;
+	status = "okay";
+	secure-status = "okay";
 
 	/* USER CODE BEGIN rcc */
 	/* USER CODE END rcc */
