@@ -608,6 +608,8 @@ void sp_min_platform_setup(void)
 	stm32mp_lock_periph_registering();
 
 	stm32mp1_init_scmi_server();
+
+	stm32mp1_clk_setup_mco_pins();
 }
 
 void sp_min_plat_arch_setup(void)

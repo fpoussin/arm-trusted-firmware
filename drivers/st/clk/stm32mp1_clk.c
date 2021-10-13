@@ -24,6 +24,7 @@
 #include <drivers/st/stm32mp_clkfunc.h>
 #include <drivers/st/stm32mp1_clk.h>
 #include <drivers/st/stm32mp1_rcc.h>
+#include <drivers/st/stm32_gpio.h>
 #include <dt-bindings/clock/stm32mp1-clksrc.h>
 #include <lib/mmio.h>
 #include <lib/spinlock.h>
@@ -2817,6 +2818,36 @@ int stm32mp1_clk_init(uint32_t pll1_freq_khz)
 			   RCC_DDRITFCR_DDRCKMOD_MASK,
 			   RCC_DDRITFCR_DDRCKMOD_SSR <<
 			   RCC_DDRITFCR_DDRCKMOD_SHIFT);
+
+
+
+	return 0;
+}
+
+int stm32mp1_clk_setup_mco_pins(void) {
+	int node;
+	void *fdt;
+	int ret;
+
+	if (fdt_get_address(&fdt) == 0) {
+		return -FDT_ERR_NOTFOUND;
+	}
+
+	node = fdt_node_offset_by_compatible(fdt, -1, DT_RCC_SEC_CLK_COMPAT);
+	if (node) {
+		ret = dt_set_pinctrl_config(node);
+		if (!ret) {
+			NOTICE("MCO pins configured\n");
+		}
+		else {
+			NOTICE("MCO pins configuration failed\n");
+			return ret;
+		}
+	}
+	else {
+		NOTICE("RCC node not found\n");
+		return -1;
+	}
 
 	return 0;
 }
