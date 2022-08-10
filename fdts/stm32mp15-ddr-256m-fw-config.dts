@@ -6,7 +6,7 @@
 #include <platform_def.h>
 
 #include <common/tbbr/tbbr_img_def.h>
-#include <dt-bindings/soc/stm32mp1-tzc400.h>
+#include <dt-bindings/soc/stm32mp15-tzc400.h>
 
 /dts-v1/;
 
