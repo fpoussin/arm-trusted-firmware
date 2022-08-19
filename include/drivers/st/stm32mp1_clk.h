@@ -26,7 +26,6 @@ extern const char *stm32mp_osc_node_label[NB_OSC];
 
 int stm32mp1_clk_probe(void);
 int stm32mp1_clk_init(uint32_t pll1_freq_mhz);
-int stm32mp1_clk_setup_mco_pins(void);
 
 int stm32mp1_clk_compute_all_pll1_settings(uint32_t buck1_voltage);
 void stm32mp1_clk_lp_save_opp_pll1_settings(uint8_t *data, size_t size);

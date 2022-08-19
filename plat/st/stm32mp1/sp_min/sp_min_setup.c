@@ -591,7 +591,6 @@ void sp_min_platform_setup(void)
 	if (get_saved_pc() == 0U) {
 		regulator_core_cleanup();
 	}
-	stm32mp1_clk_setup_mco_pins();
 }
 
 void sp_min_plat_arch_setup(void)
