@@ -104,14 +104,14 @@
 }; /*root*/
 
 &pinctrl {
-	rcc_pins_mx: rcc_mx-0 {
-		pins {
-			pinmux = <STM32_PINMUX('A', 8, AF0)>; /* RCC_MCO_1 */
-			bias-disable;
-			drive-push-pull;
-			slew-rate = <0>;
-		};
-	};
+	// rcc_pins_mx: rcc_mx-0 {
+	// 	pins {
+	// 		pinmux = <STM32_PINMUX('A', 8, AF0)>; /* RCC_MCO_1 */
+	// 		bias-disable;
+	// 		drive-push-pull;
+	// 		slew-rate = <0>;
+	// 	};
+	// };
 
 	sdmmc1_pins_mx: sdmmc1_mx-0 {
 		pins1 {
@@ -172,7 +172,7 @@
 		CLK_PLL3_HSE
 		CLK_PLL4_HSE
 		CLK_RTC_LSE
-		CLK_MCO1_LSE
+		CLK_MCO1_DISABLED
 		CLK_MCO2_DISABLED
 	>;
 	st,clkdiv = <
@@ -331,8 +331,8 @@
 };
 
 &rcc{
-	pinctrl-names = "default";
-	pinctrl-0 = <&rcc_pins_mx>;
+	// pinctrl-names = "default";
+	// pinctrl-0 = <&rcc_pins_mx>;
 	status = "okay";
 	secure-status = "okay";
 
